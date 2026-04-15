@@ -387,7 +387,7 @@ Perspective/
 │   ├── BookmarkStore.swift
 │   └── SplashView.swift
 ├── Config/
-│   └── AppConfig.swift          ← Supabase URL + anon key
+│   └── AppConfig.swift          ← Supabase URL + anon key (hardcoded, public-facing)
 ├── Core/
 │   ├── Models/
 │   │   ├── Story.swift          ← SpectrumPerspective, SpectrumSummary, Story
@@ -397,6 +397,7 @@ Perspective/
 │   │   ├── CoverageStats.swift  ← fiveBucketCoverage, coverageNarrative
 │   │   ├── StoryTopic.swift     ← enum for topic filtering (Tout | Politique | Économie | etc.)
 │   │   ├── PushNotification.swift ← notification model (id, title, body, storyCount, sentAt, createdAt)
+│   │   ├── AppError.swift       ← user-friendly error enum (networkUnavailable, serverError, dataCorrupted)
 │   │   └── PreviewData.swift
 │   ├── Repositories/
 │   │   ├── StoryRepository.swift
@@ -657,10 +658,14 @@ UPDATE articles SET clustered_at = NULL WHERE story_id IS NULL;
 - [x] HTTPS enforcement in web views
 - [x] App builds and runs successfully
 - [x] Legal links work in Settings
-- [ ] Screenshots captured (4-5 for iPhone 6.7")
-- [ ] Testing checklist completed
+- [x] Screenshots captured (4 screenshots for iPhone 6.7" - 1290×2796)
+  - Feed view with hero card and brief section
+  - Story detail with TL;DR spectrum summary
+  - Coverage charts (ownership + political breakdown)
+  - Sources list with political lean tags
+- [ ] Testing checklist completed (`TESTING-CHECKLIST.md`)
 - [ ] Apple Developer enrollment ($99/year)
-- [ ] App Store Connect setup (metadata, age rating, screenshots)
+- [ ] App Store Connect setup (metadata, age rating, screenshots upload)
 
 ### App Store Metadata (ready)
 - Files: `legal/app-store-metadata.md` (full submission guide)
@@ -673,8 +678,13 @@ UPDATE articles SET clustered_at = NULL WHERE story_id IS NULL;
 - Age rating: 12+ (Unrestricted Web Access + political content)
 
 ### Testing Documentation
-- `TESTING-CHECKLIST.md`: Pre-submission testing checklist
+- `TESTING-CHECKLIST.md`: Pre-submission testing checklist (comprehensive validation)
 - `screenshots/HOW-TO-CAPTURE.md`: Screenshot capture guide
+- `screenshots/iphone-6.7/`: 4 App Store screenshots ready (1290×2796 PNG)
+  - `01-feed.png`: Feed view with hero card
+  - `02-story-detail.png`: Story detail with spectrum summary
+  - `03-coverage-charts.png`: Ownership + political coverage charts
+  - `04-sources.png`: Sources list with lean tags
 - `README.md`: Setup and configuration instructions
 
 ## Known Gotchas & Critical Issues
