@@ -21,31 +21,31 @@ Perspective est une application iOS qui agrège et affiche des articles de press
 ### 1. Cloner le projet
 
 ```bash
-git clone https://github.com/[votre-username]/groundnewsfrance.git
-cd groundnewsfrance
+git clone https://github.com/LoyleP/Perspective.git
+cd Perspective
 ```
 
 ### 2. Configuration Supabase
 
 Le projet utilise Supabase pour accéder à la base de données d'articles. Les credentials sont configurés dans les build settings Xcode.
 
-**IMPORTANT :** Les clés Supabase sont déjà configurées dans `groundnewsfrance.xcodeproj/project.pbxproj` via les paramètres :
+**IMPORTANT :** Les clés Supabase sont déjà configurées dans `Perspective.xcodeproj/project.pbxproj` via les paramètres :
 - `INFOPLIST_KEY_SupabaseURL`
 - `INFOPLIST_KEY_SupabaseAnonKey`
 
 Si vous souhaitez utiliser votre propre instance Supabase :
 
-1. Ouvrez `groundnewsfrance.xcodeproj` dans Xcode
+1. Ouvrez `Perspective.xcodeproj` dans Xcode
 2. Sélectionnez le projet → Target "Perspective" → Build Settings
 3. Cherchez "SupabaseURL" et "SupabaseAnonKey"
 4. Modifiez les valeurs pour pointer vers votre instance Supabase
 
-Ou modifiez directement dans `groundnewsfrance.xcodeproj/project.pbxproj` (recherchez `INFOPLIST_KEY_SupabaseURL`).
+Ou modifiez directement dans `Perspective.xcodeproj/project.pbxproj` (recherchez `INFOPLIST_KEY_SupabaseURL`).
 
 ### 3. Ouvrir le projet
 
 ```bash
-open groundnewsfrance.xcodeproj
+open Perspective.xcodeproj
 ```
 
 ### 4. Compiler et exécuter
@@ -100,5 +100,5 @@ Ces fonctionnalités ne sont pas visibles dans les builds Release.
 
 ## Contact
 
-- GitHub : https://github.com/[votre-username]/groundnewsfrance
-- Email : [votre-email]
+- GitHub : https://github.com/LoyleP/Perspective
+- Email : arthur.fondevillepro@gmail.com

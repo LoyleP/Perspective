@@ -8,11 +8,11 @@ SwiftUI iOS app for French news consumers. Stories (news topics) are automatical
 
 ## Project Structure
 
-- **Main codebase:** `/Users/arthur/Desktop/Coding/Ground News France/groundnewsfrance`
-- **Xcode project:** `groundnewsfrance.xcodeproj`
+- **Main codebase:** `/Users/arthur/Desktop/Coding/Ground News France/Perspective`
+- **Xcode project:** `Perspective.xcodeproj`
 - **Main target:** Perspective (iOS app)
 - **Scripts:** `/Users/arthur/Desktop/Coding/Ground News France/scripts` (Node.js utilities)
-- **Migrations:** `/Users/arthur/Desktop/Coding/Ground News France/supabase/migrations` and `groundnewsfrance/supabase/migrations` (SQL schema files)
+- **Migrations:** `/Users/arthur/Desktop/Coding/Ground News France/supabase/migrations` and `Perspective/supabase/migrations` (SQL schema files)
 - **Claude outputs:** `/Users/arthur/Desktop/Coding/Ground News France/claude-outputs` (generated documentation)
 - **Legal docs:** `/Users/arthur/Desktop/Coding/Ground News France/legal` (privacy policy, terms of service, App Store metadata)
 - **GitHub Pages:** https://loylep.github.io/Perspective/legal/ (hosted legal documents)
@@ -25,7 +25,7 @@ This keeps all Claude-generated documentation organized and separate from codeba
 
 ## One codebase
 
-- `/Users/arthur/Desktop/Coding/Ground News France/groundnewsfrance` — active production codebase. Connected to Supabase. This is what is being actively developed.
+- `/Users/arthur/Desktop/Coding/Ground News France/Perspective` — active production codebase. Connected to Supabase. This is what is being actively developed.
 
 All current work happens in the **Ground News France** repo.
 
@@ -167,7 +167,7 @@ All tables are public read-only (anon key). No user authentication implemented.
 
 ### Edge Functions
 
-**Note:** Edge function source files live in `groundnewsfrance/supabase/functions/`. Three functions deployed.
+**Note:** Edge function source files live in `Perspective/supabase/functions/`. Three functions deployed.
 
 **`ingest-rss`** — Deno function, invoked manually or on a schedule.
 - Fetches all active source RSS feeds concurrently
@@ -176,7 +176,7 @@ All tables are public read-only (anon key). No user authentication implemented.
 - Calls `tagStory(title)` at story creation time for automatic topic tagging
 - **Note:** Clustering previously handled here has been moved to the dedicated `cluster-stories` function
 
-**`cluster-stories`** — Deno function, runs every 6 hours via pg_cron + pg_net. Source: `groundnewsfrance/supabase/functions/cluster-stories/index.ts` (360 lines).
+**`cluster-stories`** — Deno function, runs every 6 hours via pg_cron + pg_net. Source: `Perspective/supabase/functions/cluster-stories/index.ts` (360 lines).
 - Fetches up to 200 unclustered articles (`story_id IS NULL`) from the last 6-hour window
 - Computes TF-IDF weight vectors from title + summary (French stopword list of 69 words, NFD normalization, diacritics stripped)
 - Extracts named entities from titles: capitalized mid-sentence words (≥4 chars) + ALL-CAPS acronyms (≥2 chars)
@@ -207,7 +207,7 @@ All tables are public read-only (anon key). No user authentication implemented.
 
 **Migration files are split across two locations:**
 - `/Users/arthur/Desktop/Coding/Ground News France/supabase/migrations/` (legacy location)
-- `/Users/arthur/Desktop/Coding/Ground News France/groundnewsfrance/supabase/migrations/` (active location)
+- `/Users/arthur/Desktop/Coding/Ground News France/Perspective/supabase/migrations/` (active location)
 
 **Notable migrations:**
 - `20260320000000_initial_schema.sql` — base schema (sources, articles, stories tables + story_coverage_view as VIEW)
@@ -557,7 +557,7 @@ Perspective/
 ## Common Workflows
 
 ### Adding a new Story field
-1. Add column to `stories` table via SQL migration in `/groundnewsfrance/supabase/migrations/`
+1. Add column to `stories` table via SQL migration in `/Perspective/supabase/migrations/`
 2. Update `Story` struct in `Core/Models/Story.swift` with new property
 3. Add CodingKeys mapping if snake_case differs from camelCase
 4. Update StoryRepository select if new field needs joins
