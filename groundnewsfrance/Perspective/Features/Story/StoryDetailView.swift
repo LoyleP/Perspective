@@ -105,7 +105,7 @@ struct StoryDetailView: View {
                 }
             }
             .padding(.top, AppSpacing.xxl)
-            .padding(.bottom, showPaywallBanner ? 80 : AppSpacing.xxl)
+            .padding(.bottom, AppSpacing.xxl)
         }
         .background(AppColors.Adaptive.background.ignoresSafeArea())
         .tint(AppColors.Adaptive.textPrimary)
@@ -121,17 +121,18 @@ struct StoryDetailView: View {
         }
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarBackground(AppColors.Adaptive.background, for: .navigationBar)
-        .overlay(alignment: .bottom) {
-            if showPaywallBanner {
-                PaywallBannerView(isPresented: $showPaywallBanner) {
-                    showPaywallSheet = true
-                }
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
-        }
-        .sheet(isPresented: $showPaywallSheet) {
-            PaywallView()
-        }
+        // MARK: Paywall disabled for App Store compliance (no StoreKit implementation)
+        // .overlay(alignment: .bottom) {
+        //     if showPaywallBanner {
+        //         PaywallBannerView(isPresented: $showPaywallBanner) {
+        //             showPaywallSheet = true
+        //         }
+        //         .transition(.move(edge: .bottom).combined(with: .opacity))
+        //     }
+        // }
+        // .sheet(isPresented: $showPaywallSheet) {
+        //     PaywallView()
+        // }
         .sheet(item: $selectedArticle) { article in
             ArticleBrowserView(
                 articles: Array(viewModel.story.articles.prefix(30)),
@@ -140,11 +141,12 @@ struct StoryDetailView: View {
         }
         .onAppear {
             session.recordStoryOpen()
-            if session.shouldShowPaywall {
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                    showPaywallBanner = true
-                }
-            }
+            // Paywall disabled for App Store compliance
+            // if session.shouldShowPaywall {
+            //     withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            //         showPaywallBanner = true
+            //     }
+            // }
             Task { await viewModel.triggerSummaryGeneration() }
         }
     }

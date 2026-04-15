@@ -167,48 +167,12 @@ struct FeedView: View {
         ContentUnavailableView {
             Label("Impossible de charger", systemImage: "wifi.slash")
         } description: {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Error Type: \(String(describing: type(of: error)))")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                Text(error.localizedDescription)
-
-                if let decodingError = error as? DecodingError {
-                    switch decodingError {
-                    case .keyNotFound(let key, let context):
-                        Text("Missing key: '\(key.stringValue)'")
-                            .font(.caption2)
-                            .foregroundStyle(.red)
-                        Text("Path: \(context.codingPath.map { $0.stringValue }.joined(separator: " → "))")
-                            .font(.caption2)
-                    case .typeMismatch(let type, let context):
-                        Text("Type mismatch: \(type)")
-                            .font(.caption2)
-                            .foregroundStyle(.red)
-                        Text("Path: \(context.codingPath.map { $0.stringValue }.joined(separator: " → "))")
-                            .font(.caption2)
-                    case .valueNotFound(let type, let context):
-                        Text("Value not found: \(type)")
-                            .font(.caption2)
-                            .foregroundStyle(.red)
-                        Text("Path: \(context.codingPath.map { $0.stringValue }.joined(separator: " → "))")
-                            .font(.caption2)
-                    case .dataCorrupted(let context):
-                        Text("Data corrupted")
-                            .font(.caption2)
-                            .foregroundStyle(.red)
-                        Text("Debug: \(context.debugDescription)")
-                            .font(.caption2)
-                    @unknown default:
-                        Text("Unknown decoding error")
-                            .font(.caption2)
-                    }
-                }
-            }
+            Text(error.localizedDescription)
+                .foregroundStyle(AppColors.Adaptive.textMeta)
         } actions: {
             Button("Réessayer") { Task { await viewModel.load() } }
                 .buttonStyle(.borderedProminent)
+                .tint(AppColors.Adaptive.textPrimary)
         }
     }
 

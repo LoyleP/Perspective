@@ -70,7 +70,7 @@ final class StoryRepository {
             }
 
             log(error, context: "fetchFeed(topic: \(topic ?? "nil"), offset: \(offset))")
-            throw error
+            throw AppError.from(error)
         }
     }
 
@@ -87,7 +87,7 @@ final class StoryRepository {
             return stories.first
         } catch {
             log(error, context: "fetchStory(id: \(id))")
-            throw error
+            throw AppError.from(error)
         }
     }
 

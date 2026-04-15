@@ -23,7 +23,7 @@ final class SourceRepository {
             return sources
         } catch {
             log(error, context: "fetchAllSources")
-            throw error
+            throw AppError.from(error)
         }
     }
 
@@ -39,7 +39,7 @@ final class SourceRepository {
             return sources.first
         } catch {
             log(error, context: "fetchSource(id: \(id))")
-            throw error
+            throw AppError.from(error)
         }
     }
 
@@ -56,7 +56,7 @@ final class SourceRepository {
             return articles
         } catch {
             log(error, context: "fetchRecentArticles(sourceId: \(sourceId), limit: \(limit))")
-            throw error
+            throw AppError.from(error)
         }
     }
 

@@ -143,6 +143,48 @@ struct SettingsView: View {
 
                     Divider().padding(.leading, AppSpacing.m + 20 + AppSpacing.m)
 
+                    Button {
+                        if let url = URL(string: "https://loylep.github.io/Perspective/legal/privacy-policy") {
+                            UIApplication.shared.open(url)
+                        }
+                    } label: {
+                        settingsRowContent {
+                            Image(systemName: "hand.raised.fill")
+                                .foregroundStyle(AppColors.Adaptive.textSecondary)
+                                .frame(width: 20)
+                            Text("Politique de confidentialité")
+                                .font(.appBody)
+                                .foregroundStyle(AppColors.Adaptive.textPrimary)
+                            Spacer()
+                            Image(systemName: "arrow.up.right")
+                                .font(.appFootnote)
+                                .foregroundStyle(AppColors.Adaptive.textMeta)
+                        }
+                    }
+
+                    Divider().padding(.leading, AppSpacing.m + 20 + AppSpacing.m)
+
+                    Button {
+                        if let url = URL(string: "https://loylep.github.io/Perspective/legal/terms-of-service") {
+                            UIApplication.shared.open(url)
+                        }
+                    } label: {
+                        settingsRowContent {
+                            Image(systemName: "doc.plaintext")
+                                .foregroundStyle(AppColors.Adaptive.textSecondary)
+                                .frame(width: 20)
+                            Text("Conditions d'utilisation")
+                                .font(.appBody)
+                                .foregroundStyle(AppColors.Adaptive.textPrimary)
+                            Spacer()
+                            Image(systemName: "arrow.up.right")
+                                .font(.appFootnote)
+                                .foregroundStyle(AppColors.Adaptive.textMeta)
+                        }
+                    }
+
+                    Divider().padding(.leading, AppSpacing.m + 20 + AppSpacing.m)
+
                     settingsRowContent {
                         Image(systemName: "info.circle")
                             .foregroundStyle(AppColors.Adaptive.textSecondary)

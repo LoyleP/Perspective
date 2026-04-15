@@ -166,6 +166,13 @@ struct WebViewRepresentable: UIViewRepresentable {
     func makeUIView(context: Context) -> WKWebView {
         webView.navigationDelegate = context.coordinator
         webView.scrollView.delegate = context.coordinator
+
+        // Enforce HTTPS for security (App Store compliance)
+        guard url.scheme == "https" else {
+            print("⚠️ Blocked non-HTTPS URL: \(url)")
+            return webView
+        }
+
         webView.load(URLRequest(url: url))
         return webView
     }
