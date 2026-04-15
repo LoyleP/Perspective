@@ -216,7 +216,7 @@ struct SettingsView: View {
                     Toggle("", isOn: $devIsPremium)
                         .labelsHidden()
                         .onChange(of: devIsPremium) { _, newValue in
-                            session.isPremium = newValue
+                            UserDefaults.standard.set(newValue, forKey: "devIsPremium")
                             if newValue { session.storiesOpened = 0 }
                         }
                 }

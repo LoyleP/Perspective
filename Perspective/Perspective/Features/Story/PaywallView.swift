@@ -1,15 +1,20 @@
 import SwiftUI
+import StoreKit
 
-// Full-screen paywall sheet. UI only for MVP — no real purchase flow.
+// Full-screen paywall sheet with real StoreKit 2 integration
 struct PaywallView: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(SessionState.self) private var session
 
     @State private var isAnnual = true
+    @State private var isPurchasing = false
+    @State private var showError = false
+    @State private var errorMessage = ""
 
-    private let monthlyPrice = "3,99 €/mois"
-    private let annualPrice  = "29,99 €/an"
+    private var storeManager: StoreManager {
+        session.storeManager
+    }
 
     var body: some View {
         NavigationStack {
@@ -48,6 +53,11 @@ struct PaywallView: View {
             }
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbarBackground(AppColors.Adaptive.background, for: .navigationBar)
+            .alert("Erreur", isPresented: $showError) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(errorMessage)
+            }
         }
     }
 
@@ -115,67 +125,134 @@ struct PaywallView: View {
 
     private var pricingSection: some View {
         VStack(spacing: AppSpacing.s) {
-            pricingCard(annual: true,  price: annualPrice,  badge: "Économisez 37%")
-            pricingCard(annual: false, price: monthlyPrice, badge: nil)
+            if storeManager.isLoading {
+                ProgressView()
+                    .padding(.vertical, AppSpacing.m)
+            } else if let annual = storeManager.annualProduct, let monthly = storeManager.monthlyProduct {
+                // Real products loaded from StoreKit
+                pricingCard(
+                    annual: true,
+                    price: annual.displayPrice + "/an",
+                    badge: "Économisez 37%",
+                    product: annual
+                )
+                pricingCard(
+                    annual: false,
+                    price: monthly.displayPrice + "/mois",
+                    badge: nil,
+                    product: monthly
+                )
+            } else {
+                // Fallback: Show mock products if StoreKit fails (not configured yet)
+                mockPricingCard(annual: true, price: "0,00 €/an", badge: "Économisez 37%")
+                mockPricingCard(annual: false, price: "0,00 €/mois", badge: nil)
+            }
         }
     }
 
-    private func pricingCard(annual: Bool, price: String, badge: String?) -> some View {
+    private func pricingCard(annual: Bool, price: String, badge: String?, product: Product) -> some View {
         let selected = isAnnual == annual
         return Button { isAnnual = annual } label: {
-            HStack(spacing: AppSpacing.m) {
-                VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                    Text(annual ? "Annuel" : "Mensuel")
-                        .font(.appTitle3)
-                        .foregroundStyle(AppColors.Adaptive.textPrimary)
-                    Text(price)
-                        .font(.appFootnote)
-                        .foregroundStyle(AppColors.Adaptive.textMeta)
-                }
-
-                Spacer()
-
-                if let badge {
-                    Text(badge)
-                        .font(.appCaption1)
-                        .foregroundStyle(AppColors.Adaptive.textPrimary)
-                        .padding(.horizontal, AppSpacing.s)
-                        .padding(.vertical, AppSpacing.xs)
-                        .background(AppColors.Adaptive.placeholder.opacity(0.4))
-                        .clipShape(Capsule())
-                        .overlay(Capsule().stroke(AppColors.stroke, lineWidth: 1))
-                }
-
-                Image(systemName: selected ? "checkmark.circle.fill" : "circle")
-                    .font(.appTitle3)
-                    .foregroundStyle(selected ? AppColors.Adaptive.textPrimary : AppColors.Adaptive.textMeta)
-            }
-            .padding(AppSpacing.m)
-            .background(AppColors.Adaptive.detailSurface)
-            .clipShape(RoundedRectangle(cornerRadius: AppRadius.ml))
-            .overlay(
-                RoundedRectangle(cornerRadius: AppRadius.ml)
-                    .stroke(selected ? AppColors.Adaptive.textSecondary : AppColors.stroke, lineWidth: 1)
-            )
+            pricingCardContent(annual: annual, price: price, badge: badge, selected: selected)
         }
         .buttonStyle(.plain)
+    }
+
+    private func mockPricingCard(annual: Bool, price: String, badge: String?) -> some View {
+        let selected = isAnnual == annual
+        return Button { isAnnual = annual } label: {
+            pricingCardContent(annual: annual, price: price, badge: badge, selected: selected)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func pricingCardContent(annual: Bool, price: String, badge: String?, selected: Bool) -> some View {
+        HStack(spacing: AppSpacing.m) {
+            VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                Text(annual ? "Annuel" : "Mensuel")
+                    .font(.appTitle3)
+                    .foregroundStyle(AppColors.Adaptive.textPrimary)
+                Text(price)
+                    .font(.appFootnote)
+                    .foregroundStyle(AppColors.Adaptive.textMeta)
+            }
+
+            Spacer()
+
+            if let badge {
+                Text(badge)
+                    .font(.appCaption1)
+                    .foregroundStyle(AppColors.Adaptive.textPrimary)
+                    .padding(.horizontal, AppSpacing.s)
+                    .padding(.vertical, AppSpacing.xs)
+                    .background(AppColors.Adaptive.placeholder.opacity(0.4))
+                    .clipShape(Capsule())
+                    .overlay(Capsule().stroke(AppColors.stroke, lineWidth: 1))
+            }
+
+            Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                .font(.appTitle3)
+                .foregroundStyle(selected ? AppColors.Adaptive.textPrimary : AppColors.Adaptive.textMeta)
+        }
+        .padding(AppSpacing.m)
+        .background(AppColors.Adaptive.detailSurface)
+        .clipShape(RoundedRectangle(cornerRadius: AppRadius.ml))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppRadius.ml)
+                .stroke(selected ? AppColors.Adaptive.textSecondary : AppColors.stroke, lineWidth: 1)
+        )
     }
 
     // MARK: - CTA
 
     private var ctaButton: some View {
         Button {
-            session.isPremium = true
-            dismiss()
+            Task { await handlePurchase() }
         } label: {
-            Text("Commencer avec Perspective+")
-                .font(.appHeadline)
-                .foregroundStyle(AppColors.Adaptive.background)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, AppSpacing.m)
-                .background(AppColors.Adaptive.textPrimary)
-                .clipShape(RoundedRectangle(cornerRadius: AppRadius.ml))
+            HStack {
+                if isPurchasing {
+                    ProgressView()
+                        .tint(AppColors.Adaptive.background)
+                } else {
+                    Text("Commencer avec Perspective+")
+                        .font(.appHeadline)
+                }
+            }
+            .foregroundStyle(AppColors.Adaptive.background)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, AppSpacing.m)
+            .background(AppColors.Adaptive.textPrimary)
+            .clipShape(RoundedRectangle(cornerRadius: AppRadius.ml))
         }
+        .disabled(isPurchasing)
+    }
+
+    private func handlePurchase() async {
+        isPurchasing = true
+
+        // If real products loaded, use StoreKit
+        if let product = isAnnual ? storeManager.annualProduct : storeManager.monthlyProduct {
+            do {
+                try await storeManager.purchase(product)
+                dismiss()
+            } catch {
+                errorMessage = error.localizedDescription
+                showError = true
+            }
+        } else {
+            // Fallback: Mock purchase flow (for testing when products not configured)
+            // In production, this would show "Configure products in App Store Connect"
+            // For MVP testing with €0.00 pricing, just unlock premium
+            #if DEBUG
+            UserDefaults.standard.set(true, forKey: "devIsPremium")
+            dismiss()
+            #else
+            errorMessage = "Les abonnements ne sont pas encore configurés. Contactez le support."
+            showError = true
+            #endif
+        }
+
+        isPurchasing = false
     }
 
     // MARK: - Legal
@@ -188,9 +265,13 @@ struct PaywallView: View {
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)
 
-            Button("Restaurer les achats") {}
-                .font(.appCaption1)
-                .foregroundStyle(AppColors.Adaptive.textTertiary)
+            Button("Restaurer les achats") {
+                Task {
+                    await storeManager.restorePurchases()
+                }
+            }
+            .font(.appCaption1)
+            .foregroundStyle(AppColors.Adaptive.textTertiary)
         }
     }
 }

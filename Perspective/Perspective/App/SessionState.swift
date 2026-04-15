@@ -2,16 +2,17 @@ import Foundation
 
 // Tracks per-session story opens for the soft paywall gate.
 // Not persisted between launches (PRD: "compteur in-memory").
+@MainActor
 @Observable
 final class SessionState {
     var storiesOpened = 0
-    var isPremium: Bool
+    let storeManager = StoreManager()
 
-    init() {
+    var isPremium: Bool {
         #if DEBUG
-        isPremium = UserDefaults.standard.bool(forKey: "devIsPremium")
+        return UserDefaults.standard.bool(forKey: "devIsPremium") || storeManager.isPremium
         #else
-        isPremium = false
+        return storeManager.isPremium
         #endif
     }
 
