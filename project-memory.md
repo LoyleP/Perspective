@@ -1,6 +1,6 @@
 # Perspective — Project Memory
 
-**Last updated:** 2026-04-05 (motion animations + card UI refresh)
+**Last updated:** 2026-04-15 (App Store compliance preparation)
 
 ## What it is
 
@@ -14,6 +14,8 @@ SwiftUI iOS app for French news consumers. Stories (news topics) are automatical
 - **Scripts:** `/Users/arthur/Desktop/Coding/Ground News France/scripts` (Node.js utilities)
 - **Migrations:** `/Users/arthur/Desktop/Coding/Ground News France/supabase/migrations` and `groundnewsfrance/supabase/migrations` (SQL schema files)
 - **Claude outputs:** `/Users/arthur/Desktop/Coding/Ground News France/claude-outputs` (generated documentation)
+- **Legal docs:** `/Users/arthur/Desktop/Coding/Ground News France/legal` (privacy policy, terms of service, App Store metadata)
+- **GitHub Pages:** https://loylep.github.io/Perspective/legal/ (hosted legal documents)
 
 ## Claude Output Files
 
@@ -150,13 +152,18 @@ All tables are public read-only (anon key). No user authentication implemented.
 
 **SupabaseService** (`Core/Services/SupabaseService.swift`):
 - Singleton pattern (`SupabaseService.shared`)
-- URL and anon key from `AppConfig.supabaseURL` and `AppConfig.supabaseAnonKey`
+- URL and anon key from `AppConfig.supabaseURL` and `AppConfig.supabaseAnonKey` (hardcoded public-facing keys, protected by RLS)
 - Custom JSONDecoder with date decoding strategy handling:
   - ISO8601 with fractional seconds (`.withInternetDateTime + .withFractionalSeconds`)
   - ISO8601 without fractional seconds (`.withInternetDateTime`)
   - Date-only format (`yyyy-MM-dd` in UTC)
 - Auth option: `emitLocalSessionAsInitialSession: true`
 - Shared client exposed as `client` property
+
+**AppConfig** (`Config/AppConfig.swift`):
+- Hardcoded Supabase URL and anon key (public-facing, RLS protected)
+- Note: Attempted to use Xcode build settings (INFOPLIST_KEY_*) but reverted to hardcoded values (INFOPLIST_KEY_* only works for Apple predefined keys)
+- Anon keys are designed to be public per Supabase architecture
 
 ### Edge Functions
 
@@ -617,6 +624,58 @@ UPDATE articles SET clustered_at = NULL WHERE story_id IS NULL;
 - Empty `story_coverage_view` means no articles are assigned to the story
 
 ---
+
+## App Store Compliance (2026-04-15)
+
+### Legal Documents
+- **Privacy Policy:** Created at `/legal/privacy-policy.md`, hosted at https://loylep.github.io/Perspective/legal/privacy-policy
+  - No data collection (everything local)
+  - No tracking, no analytics, no advertising IDs
+  - Read-only Supabase access (anonymous)
+  - Contact: arthur.fondevillepro@gmail.com
+- **Terms of Service:** Created at `/legal/terms-of-service.md`, hosted at https://loylep.github.io/Perspective/legal/terms-of-service
+  - No active subscriptions (paywall removed)
+  - Content tiers disclaimers
+  - RGPD compliance
+  - Developer: Arthur F.
+- **Links in app:** Settings → "Politique de confidentialité" and "Conditions d'utilisation" open Safari with GitHub Pages URLs
+
+### Compliance Changes
+- **Paywall removed:** All paywall UI disabled (StoryDetailView, SessionState triggers) to comply with Guidelines 2.1 + 3.1.1 (no StoreKit implementation)
+- **Error handling:** Created `AppError` enum with user-friendly French messages
+  - Repositories throw `AppError.from(error)` instead of raw errors
+  - Error views display localized descriptions (no debug info shown to users)
+  - Example: "Impossible de se connecter. Vérifiez votre connexion internet." instead of DecodingError details
+- **HTTPS enforcement:** ArticleBrowserView blocks non-HTTPS URLs before loading in WKWebView
+- **Age rating:** 12+ recommended (political news content + unrestricted web access)
+
+### Pre-Submission Checklist
+- [x] Privacy policy created and accessible
+- [x] Terms of service created and accessible
+- [x] Paywall UI removed (no functional IAP)
+- [x] User-friendly error messages
+- [x] HTTPS enforcement in web views
+- [x] App builds and runs successfully
+- [x] Legal links work in Settings
+- [ ] Screenshots captured (4-5 for iPhone 6.7")
+- [ ] Testing checklist completed
+- [ ] Apple Developer enrollment ($99/year)
+- [ ] App Store Connect setup (metadata, age rating, screenshots)
+
+### App Store Metadata (ready)
+- Files: `legal/app-store-metadata.md` (full submission guide)
+- Description: 985 chars (French)
+- Keywords: 86/100 chars
+- Support URL: https://github.com/LoyleP/Perspective
+- Privacy policy URL: https://loylep.github.io/Perspective/legal/privacy-policy
+- Category: News
+- Price: Free
+- Age rating: 12+ (Unrestricted Web Access + political content)
+
+### Testing Documentation
+- `TESTING-CHECKLIST.md`: Pre-submission testing checklist
+- `screenshots/HOW-TO-CAPTURE.md`: Screenshot capture guide
+- `README.md`: Setup and configuration instructions
 
 ## Known Gotchas & Critical Issues
 
