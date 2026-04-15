@@ -1,0 +1,5 @@
+[functions.ingest-rss]
+verify_jwt = false
+
+[functions.cluster-stories]
+verify_jwt = false
