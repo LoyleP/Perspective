@@ -1,6 +1,6 @@
 # Perspective — Project Memory
 
-**Last updated:** 2026-04-15 (App Store compliance preparation)
+**Last updated:** 2026-04-15 (StoreKit 2 implementation with €0.00 free subscriptions)
 
 ## What it is
 
@@ -397,6 +397,7 @@ Perspective/
 │   │   ├── CoverageStats.swift  ← fiveBucketCoverage, coverageNarrative
 │   │   ├── StoryTopic.swift     ← enum for topic filtering (Tout | Politique | Économie | etc.)
 │   │   ├── PushNotification.swift ← notification model (id, title, body, storyCount, sentAt, createdAt)
+│   │   └── AppError.swift       ← user-friendly error types (networkUnavailable, serverError, dataCorrupted, unknown)
 │   │   ├── AppError.swift       ← user-friendly error enum (networkUnavailable, serverError, dataCorrupted)
 │   │   └── PreviewData.swift
 │   ├── Repositories/
@@ -404,7 +405,8 @@ Perspective/
 │   │   └── SourceRepository.swift
 │   └── Services/
 │       ├── SupabaseService.swift
-│       └── NotificationManager.swift  ← singleton managing UNUserNotificationCenter, checks Supabase notifications table, schedules local notifications
+│       ├── NotificationManager.swift  ← singleton managing UNUserNotificationCenter, checks Supabase notifications table, schedules local notifications
+│       └── StoreManager.swift         ← @MainActor @Observable StoreKit 2 manager (product loading, purchasing, transaction verification, restore)
 ├── Features/
 │   ├── Feed/
 │   │   ├── FeedView.swift       ← Cette semaine + Tendances sections, native large title
@@ -499,12 +501,29 @@ Perspective/
 
 ## Key Features
 
-### Session & Paywall
-- **SessionState** (`App/SessionState.swift`): in-memory tracking of stories opened per session
-- Soft paywall gate triggers after 5 story opens (not persistent across launches)
-- `isPremium` flag (DEBUG builds read from UserDefaults `devIsPremium`, RELEASE defaults false)
-- PaywallView shown when `shouldShowPaywall` is true
-- PaywallBannerView shown in StoryDetailView as inline prompt
+### Session & Paywall (StoreKit 2)
+- **SessionState** (`App/SessionState.swift`): `@MainActor @Observable` class tracking stories opened per session
+  - In-memory session counter (`storiesOpened`) — not persistent across launches
+  - Soft paywall gate at 5 story opens
+  - `isPremium` computed property:
+    - DEBUG: `UserDefaults.standard.bool(forKey: "devIsPremium") || storeManager.isPremium`
+    - RELEASE: `storeManager.isPremium` only
+  - Owns `StoreManager` instance
+- **StoreManager** (`Core/Services/StoreManager.swift`): StoreKit 2 integration
+  - Product IDs: `perspective.premium.monthly`, `perspective.premium.annual`
+  - Loads products via `Product.products(for:)` on init
+  - Purchase flow: `purchase(_:)` → Transaction verification → `finish()`
+  - Subscription status: `Transaction.currentEntitlements` → `isPremium` computed property
+  - Background listener: `Task.detached` monitoring `Transaction.updates`
+  - Restore purchases: `AppStore.sync()` + `updateSubscriptionStatus()`
+  - Pricing: €0.00 for MVP testing (free subscriptions), updatable remotely in App Store Connect
+- **PaywallView** (`Features/Story/PaywallView.swift`):
+  - Real StoreKit purchase flow with loading states and error handling
+  - Fallback to mock products (€0.00 pricing cards) when StoreKit products not loaded
+  - Debug builds: Mock purchase sets `devIsPremium` UserDefaults flag
+  - Restore purchases button functional via `storeManager.restorePurchases()`
+- **PaywallBannerView**: Inline prompt shown in StoryDetailView after 5 stories
+- **StoreKit Configuration**: `Perspective.storekit` — local config for Xcode sandbox testing (2 products at €0.00)
 
 ### Bookmarks
 - **BookmarkStore** (`App/BookmarkStore.swift`): persisted via UserDefaults with JSON encoding
@@ -635,26 +654,35 @@ UPDATE articles SET clustered_at = NULL WHERE story_id IS NULL;
   - Read-only Supabase access (anonymous)
   - Contact: arthur.fondevillepro@gmail.com
 - **Terms of Service:** Created at `/legal/terms-of-service.md`, hosted at https://loylep.github.io/Perspective/legal/terms-of-service
-  - No active subscriptions (paywall removed)
-  - Content tiers disclaimers
+  - Free subscriptions (€0.00 pricing for MVP testing)
+  - Content tier disclaimers
   - RGPD compliance
   - Developer: Arthur F.
 - **Links in app:** Settings → "Politique de confidentialité" and "Conditions d'utilisation" open Safari with GitHub Pages URLs
+- **StoreKit Setup Guide:** `STOREKIT_SETUP.md` — complete App Store Connect setup, sandbox testing, troubleshooting
 
-### Compliance Changes
-- **Paywall removed:** All paywall UI disabled (StoryDetailView, SessionState triggers) to comply with Guidelines 2.1 + 3.1.1 (no StoreKit implementation)
+### App Store Compliance (Guidelines 2.1, 3.1.1, 5.1.1, 1.6)
+- **StoreKit implementation:** Real StoreKit 2 integration with €0.00 free subscriptions
+  - Passes Guideline 3.1.1 (functional IAP required for subscription UI)
+  - Pricing updatable remotely in App Store Connect without code changes
+  - See `STOREKIT_SETUP.md` for complete setup guide
 - **Error handling:** Created `AppError` enum with user-friendly French messages
   - Repositories throw `AppError.from(error)` instead of raw errors
   - Error views display localized descriptions (no debug info shown to users)
   - Example: "Impossible de se connecter. Vérifiez votre connexion internet." instead of DecodingError details
 - **HTTPS enforcement:** ArticleBrowserView blocks non-HTTPS URLs before loading in WKWebView
+- **Privacy & Legal:**
+  - Privacy policy: `/legal/privacy-policy.md` (hosted at https://loylep.github.io/Perspective/legal/privacy-policy)
+  - Terms of service: `/legal/terms-of-service.md` (hosted at https://loylep.github.io/Perspective/legal/terms-of-service)
+  - Links in Settings → "À propos" section
+  - Age rating: 12+ (political news content)
 - **Age rating:** 12+ recommended (political news content + unrestricted web access)
 
 ### Pre-Submission Checklist
 - [x] Privacy policy created and accessible
 - [x] Terms of service created and accessible
-- [x] Paywall UI removed (no functional IAP)
-- [x] User-friendly error messages
+- [x] StoreKit 2 implementation with €0.00 free subscriptions
+- [x] User-friendly error messages (AppError enum)
 - [x] HTTPS enforcement in web views
 - [x] App builds and runs successfully
 - [x] Legal links work in Settings
@@ -663,6 +691,8 @@ UPDATE articles SET clustered_at = NULL WHERE story_id IS NULL;
   - Story detail with TL;DR spectrum summary
   - Coverage charts (ownership + political breakdown)
   - Sources list with political lean tags
+- [ ] App Store Connect subscription products created (monthly + annual at €0.00)
+- [ ] StoreKit configuration tested in Xcode sandbox
 - [ ] Testing checklist completed (`TESTING-CHECKLIST.md`)
 - [ ] Apple Developer enrollment ($99/year)
 - [ ] App Store Connect setup (metadata, age rating, screenshots upload)
@@ -714,7 +744,7 @@ UPDATE articles SET clustered_at = NULL WHERE story_id IS NULL;
 - **Custom fonts:** Geist registered but unused, system fonts active throughout
 - **iOS version targeting:** Modern Tab API (iOS 18+) vs legacy TabView (iOS 17)
   - Navigation transitions: iOS 18+ uses zoom effect with matched geometry, iOS 17 falls back to standard push
-- **Paywall trigger:** SessionState in-memory only, resets on app restart
+- **Paywall trigger:** SessionState in-memory counter (5 stories), resets on app restart. Premium status persists via StoreKit subscriptions.
 - **Clustering idempotency:** `story_id IS NULL` is the gate. Articles with `clustered_at` set but `story_id` null are singletons — processed but unmatched. To force re-clustering: `UPDATE articles SET clustered_at = NULL WHERE story_id IS NULL;`
 - **Maine shooting anomaly:** One story has 30 articles from 1 primary source — may indicate over-clustering from a single prolific outlet. Verify with: `SELECT a.title, src.name FROM articles a JOIN sources src ON src.id = a.source_id WHERE a.story_id = '[uuid]' ORDER BY a.published_at;`
 - **StoryCardView UI (updated 2026-04-05):**
