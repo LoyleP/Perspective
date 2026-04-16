@@ -2,6 +2,94 @@
 
 Perspective est une application iOS qui agrège et affiche des articles de presse française avec une analyse du spectre politique.
 
+---
+
+## 🚀 Quick Start - Télécharger et Tester l'App
+
+### Prérequis
+
+- **macOS** avec Xcode 15.0+ installé
+- **iOS 17.0+** (simulateur ou appareil physique)
+- Connexion internet (pour les dépendances Swift Package Manager)
+
+### Installation en 4 Étapes
+
+#### 1. Cloner le projet
+
+```bash
+git clone https://github.com/[votre-username]/perspective.git
+cd perspective
+```
+
+#### 2. Ouvrir le projet dans Xcode
+
+```bash
+open Perspective/Perspective.xcodeproj
+```
+
+**Note**: Ouvrir `Perspective.xcodeproj`, PAS `.xcworkspace` (le projet utilise Swift Package Manager, pas CocoaPods).
+
+#### 3. Configuration Supabase (optionnel)
+
+Le projet inclut des **credentials Supabase par défaut** pour démarrer immédiatement. Pour utiliser votre propre instance:
+
+1. Ouvrir `Perspective/Perspective/Config/AppConfig.swift`
+2. Remplacer les valeurs:
+
+```swift
+static let supabaseURL = "VOTRE_SUPABASE_URL"
+static let supabaseAnonKey = "VOTRE_SUPABASE_ANON_KEY"
+```
+
+**Credentials actuels (partagés)**:
+- **URL**: `https://lsznkuiaowesucmxwwfi.supabase.co`
+- **Anon Key**: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxzem5rdWlhb3dlc3VjbXh3d2ZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwODQ0NjYsImV4cCI6MjA4OTY2MDQ2Nn0.llsAgcjoJHI9VVZjl8PL0k_HDJhUEzrLjxH5r9TgNgQ`
+
+**Note**: Ces clés sont protégées par RLS (Row Level Security) côté serveur. Pas de risque de sécurité pour les données.
+
+#### 4. Lancer l'app
+
+1. Attendre que Xcode télécharge les dépendances automatiquement (barre de progression en haut)
+2. Sélectionner un simulateur (iPhone 15 Pro recommandé) ou appareil physique dans la barre d'outils
+3. Appuyer sur **▶️ Run** ou `Cmd + R`
+
+**Premier lancement**: L'app se connecte à la base de données Supabase partagée. Aucune configuration supplémentaire requise si vous utilisez les credentials par défaut.
+
+### Fonctionnalités de Test
+
+**Mode Debug** (automatique en développement):
+- **Activer Premium gratuitement**: Aller dans Paramètres → Section Debug → Toggle "Mode Premium"
+- **Tester les notifications**: Paramètres → Debug → "Envoyer notification de test"
+- **Rejouer l'onboarding**: Paramètres → Debug → "Rejouer l'onboarding"
+
+**Tester le paywall** (abonnement gratuit à €0,00):
+1. Ouvrir 5 histoires différentes (limite gratuite)
+2. Le paywall s'affiche automatiquement
+3. Sélectionner Mensuel (€0,00/mois) ou Annuel (€0,00/an)
+4. Confirmer l'achat → StoreKit sandbox s'ouvre
+5. Approuver → Premium débloqué
+
+**Note**: Les abonnements sont configurés à €0,00 pour les tests. Voir `STOREKIT_SETUP.md` pour les détails.
+
+### Résolution de Problèmes
+
+**"Failed to resolve package dependencies"**
+- Aller dans **File** → **Packages** → **Reset Package Caches**
+- Puis **File** → **Packages** → **Update to Latest Package Versions**
+
+**"Build Failed" sans détails**
+- **Product** → **Clean Build Folder** (`Cmd + Shift + K`)
+- Redémarrer Xcode
+
+**L'app affiche "Pas d'articles"**
+- Vérifier la connexion internet (requis pour Supabase)
+- Consulter les logs Xcode pour erreurs réseau
+
+**Les produits StoreKit ne chargent pas**
+- Vérifier que le schéma utilise `Perspective.storekit`: **Product** → **Scheme** → **Edit Scheme** → **Run** → **Options** → **StoreKit Configuration** = `Perspective.storekit`
+
+---
+
 ## Fonctionnalités
 
 - Agrégation d'actualités de sources médiatiques françaises
