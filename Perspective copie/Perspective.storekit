@@ -1,0 +1,79 @@
+{
+  "identifier" : "9F8E7D6C",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+
+  ],
+  "settings" : {
+    "_applicationInternalID" : "6741403041",
+    "_developerTeamID" : "",
+    "_lastSynchronizedDate" : 766762800.91998398
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "21543836",
+      "localizations" : [
+
+      ],
+      "name" : "Premium",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "0.00",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "6741403042",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Accès mensuel illimité à Perspective+",
+              "displayName" : "Premium Mensuel",
+              "locale" : "fr_FR"
+            }
+          ],
+          "productID" : "perspective.premium.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Premium Monthly",
+          "subscriptionGroupID" : "21543836",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "0.00",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "6741403043",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Accès annuel illimité à Perspective+ avec 37% de réduction",
+              "displayName" : "Premium Annuel",
+              "locale" : "fr_FR"
+            }
+          ],
+          "productID" : "perspective.premium.annual",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Premium Annual",
+          "subscriptionGroupID" : "21543836",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

@@ -1,0 +1,82 @@
+/* ============================================================
+   Localizable.strings — fr (French)
+   Perspective
+   Development language: French
+   ============================================================ */
+
+/* ── Navigation / Tab bar ── */
+"Cette semaine"                          = "Cette semaine";
+"Archives"                               = "Archives";
+"Paramètres"                             = "Paramètres";
+
+/* ── Generic actions ── */
+"Réessayer"                              = "Réessayer";
+"Fermer"                                 = "Fermer";
+
+/* ── Generic states ── */
+"Chargement…"                            = "Chargement…";
+"Impossible de charger"                  = "Impossible de charger";
+
+/* ── Cette semaine ── */
+"Aucune histoire cette semaine"          = "Aucune histoire cette semaine";
+"Reviens plus tard pour découvrir l'histoire de la semaine." = "Reviens plus tard pour découvrir l'histoire de la semaine.";
+
+/* ── Archives ── */
+"Aucune archive"                         = "Aucune archive";
+"Les histoires des semaines passées apparaîtront ici." = "Les histoires des semaines passées apparaîtront ici.";
+"Histoire indisponible"                  = "Histoire indisponible";
+
+/* ── Coverage spectrum ── */
+"Extr. gauche"                           = "Extr. gauche";
+"Extr. droite"                           = "Extr. droite";
+"Aucune donnée de couverture disponible." = "Aucune donnée de couverture disponible.";
+
+/* ── Coverage narrative ── */
+"Couverture équilibrée"                  = "Couverture équilibrée";
+
+/* ── Coverage timeline ── */
+"Couverture dans le temps"               = "Couverture dans le temps";
+
+/* ── Angle mort ── */
+"Angle mort"                             = "Angle mort";
+"Angle mort détecté"                     = "Angle mort détecté";
+
+/* ── Ownership ── */
+"Qui possède ces médias ?"               = "Qui possède ces médias ?";
+"Propriétaire"                           = "Propriétaire";
+"Propriété des médias"                   = "Propriété des médias";
+
+/* ── Sources ── */
+"Nos sources"                            = "Nos sources";
+"Gauche"                                 = "Gauche";
+"Centre"                                 = "Centre";
+"Droite"                                 = "Droite";
+"Aucune source"                          = "Aucune source";
+"Aucune source pour ce filtre."          = "Aucune source pour ce filtre.";
+"Flux RSS"                               = "Flux RSS";
+
+/* ── Source detail ── */
+"Articles récents"                       = "Articles récents";
+"Aucun article disponible."              = "Aucun article disponible.";
+
+/* ── Settings ── */
+"Mon profil de lecture"                  = "Mon profil de lecture";
+"Mon spectre de lecture"                 = "Mon spectre de lecture";
+"Notifications"                          = "Notifications";
+"Activer les notifications"              = "Activer les notifications";
+"Angles morts uniquement"                = "Angles morts uniquement";
+"Apparence"                              = "Apparence";
+"Thème"                                  = "Thème";
+"Système"                                = "Système";
+"Clair"                                  = "Clair";
+"Sombre"                                 = "Sombre";
+"À propos"                               = "À propos";
+"Méthodologie"                           = "Méthodologie";
+"Version"                                = "Version";
+
+/* ── My spectrum ── */
+"Aucun historique"                       = "Aucun historique";
+"Votre spectre"                          = "Votre spectre";
+"Articles analysés"                      = "Articles analysés";
+"Répartition"                            = "Répartition";
+"Réinitialiser l'historique"             = "Réinitialiser l'historique";
