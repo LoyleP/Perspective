@@ -1,4 +1,4 @@
-# Perspective - Ground News France
+# Perspective
 
 Perspective est une application iOS qui agrège et affiche des articles de presse française avec une analyse du spectre politique.
 
