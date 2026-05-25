@@ -29,10 +29,16 @@ struct AnalyzedArticleCard: View {
 
             HStack(spacing: AppSpacing.s) {
                 if let lean = article.source.flatMap({ PoliticalLean.from($0.politicalLean) }) {
-                    leanTag(lean)
+                    LeanTagView(lean: lean, style: .rounded)
                 }
                 if let source = article.source {
-                    sourceRow(source)
+                    HStack(spacing: AppSpacing.xs) {
+                        SourceAvatarView(source: source)
+                        Text(source.name)
+                            .font(.appFootnote)
+                            .foregroundStyle(AppColors.Adaptive.textMeta)
+                            .lineLimit(1)
+                    }
                 }
                 Spacer()
                 Image(systemName: "arrow.up.forward")
@@ -42,59 +48,7 @@ struct AnalyzedArticleCard: View {
         }
         .padding(AppSpacing.m)
         .frame(maxWidth: .infinity, minHeight: 140, alignment: .topLeading)
-        .background(AppColors.Adaptive.detailSurface)
-        .clipShape(RoundedRectangle(cornerRadius: AppRadius.ml))
-        .overlay(RoundedRectangle(cornerRadius: AppRadius.ml).stroke(AppColors.stroke, lineWidth: 1))
-    }
-
-    private func leanTag(_ lean: PoliticalLean) -> some View {
-        Text(lean.shortLabel)
-            .font(.appFootnote)
-            .foregroundStyle(lean.tagTextColor)
-            .padding(.horizontal, AppSpacing.s)
-            .padding(.vertical, AppSpacing.xs)
-            .background(lean.spectrumColor)
-            .clipShape(RoundedRectangle(cornerRadius: AppRadius.s))
-            .overlay(RoundedRectangle(cornerRadius: AppRadius.s).stroke(AppColors.stroke, lineWidth: 1))
-    }
-
-    private func sourceRow(_ source: Source) -> some View {
-        HStack(spacing: AppSpacing.xs) {
-            avatarCircle(source)
-            Text(source.name)
-                .font(.appFootnote)
-                .foregroundStyle(AppColors.Adaptive.textMeta)
-                .lineLimit(1)
-        }
-    }
-
-    private func avatarCircle(_ source: Source) -> some View {
-        Group {
-            if let s = source.logoURL, let url = URL(string: s) {
-                AsyncImage(url: url) { phase in
-                    if let img = phase.image {
-                        Color.clear.overlay(img.resizable().scaledToFill()).clipped()
-                    } else {
-                        sourceInitial(source)
-                    }
-                }
-            } else {
-                sourceInitial(source)
-            }
-        }
-        .frame(width: 18, height: 18)
-        .clipShape(Circle())
-        .overlay(Circle().stroke(AppColors.stroke, lineWidth: 1))
-    }
-
-    private func sourceInitial(_ source: Source) -> some View {
-        let lean = source.lean
-        return ZStack {
-            Circle().fill(lean?.spectrumColor ?? AppColors.Adaptive.placeholder)
-            Text(String(source.name.prefix(1)).uppercased())
-                .font(.system(size: 8, weight: .semibold))
-                .foregroundStyle(lean?.tagTextColor ?? AppColors.Adaptive.textSecondary)
-        }
+        .cardSurface(fill: AppColors.Adaptive.detailSurface)
     }
 }
 

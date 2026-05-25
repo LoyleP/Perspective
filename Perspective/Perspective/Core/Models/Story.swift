@@ -44,7 +44,13 @@ struct SpectrumPerspective: Codable, Hashable, Identifiable {
             )
         }
         lean        = resolved
-        summary     = try container.decode(String.self, forKey: .summary)
+        // Gemini sometimes returns summary as an array of bullet strings
+        if let str = try? container.decode(String.self, forKey: .summary) {
+            summary = str
+        } else {
+            let parts = try container.decode([String].self, forKey: .summary)
+            summary = parts.joined(separator: " ")
+        }
         sourceCount = try container.decode(Int.self,    forKey: .sourceCount)
     }
 

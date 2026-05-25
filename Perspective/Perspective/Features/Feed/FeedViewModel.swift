@@ -1,15 +1,21 @@
 import Foundation
+import OSLog
 
+@MainActor
 @Observable
 final class FeedViewModel {
 
-    var isLoading = false
-    var error: Error?
+    private(set) var isLoading = false
+    private(set) var error: AppError?
+    private(set) var allStories: [Story] = []
 
-    let cacheDuration: TimeInterval = 6 * 60 * 60
-    var lastFetchedAt: Date?
+    private let cacheDuration: TimeInterval = 48 * 60 * 60
+    private var lastFetchedAt: Date?
+    private let repository: any StoryRepositoryProtocol
 
-    var allStories: [Story] = []
+    init(repository: any StoryRepositoryProtocol = StoryRepository.shared) {
+        self.repository = repository
+    }
 
     // MARK: - Computed Properties
 
@@ -33,6 +39,10 @@ final class FeedViewModel {
         return stories.filter { !usedIDs.contains($0.id) }
     }
 
+    var aggregateCoverage: CoverageStats? {
+        CoverageStats.aggregate(stories.compactMap(\.coverage))
+    }
+
     // MARK: - Load
 
     func load() async {
@@ -43,7 +53,7 @@ final class FeedViewModel {
         isLoading = true
         error = nil
         do {
-            let page = try await StoryRepository.shared.fetchFeed(
+            let page = try await repository.fetchFeed(
                 topic: nil,
                 limit: 30,
                 offset: 0
@@ -51,38 +61,14 @@ final class FeedViewModel {
             allStories = page
             lastFetchedAt = Date()
         } catch {
-            print("❌ FeedViewModel.load() ERROR:")
-            print("   Type: \(type(of: error))")
-            print("   Description: \(error)")
-            print("   LocalizedDescription: \(error.localizedDescription)")
-            if let decodingError = error as? DecodingError {
-                switch decodingError {
-                case .keyNotFound(let key, let context):
-                    print("   ❌ Key '\(key.stringValue)' not found")
-                    print("   CodingPath: \(context.codingPath.map { $0.stringValue }.joined(separator: " -> "))")
-                    print("   Debug: \(context.debugDescription)")
-                case .typeMismatch(let type, let context):
-                    print("   ❌ Type mismatch for type: \(type)")
-                    print("   CodingPath: \(context.codingPath.map { $0.stringValue }.joined(separator: " -> "))")
-                    print("   Debug: \(context.debugDescription)")
-                case .valueNotFound(let type, let context):
-                    print("   ❌ Value not found for type: \(type)")
-                    print("   CodingPath: \(context.codingPath.map { $0.stringValue }.joined(separator: " -> "))")
-                    print("   Debug: \(context.debugDescription)")
-                case .dataCorrupted(let context):
-                    print("   ❌ Data corrupted")
-                    print("   CodingPath: \(context.codingPath.map { $0.stringValue }.joined(separator: " -> "))")
-                    print("   Debug: \(context.debugDescription)")
-                @unknown default:
-                    print("   ❌ Unknown decoding error")
-                }
-            }
-            self.error = error
+            Log.feed.error("Load failed: \(error)")
+            self.error = AppError.from(error)
         }
         isLoading = false
     }
 
     func refresh() async {
+        lastFetchedAt = nil
         isLoading = false
         await load()
     }

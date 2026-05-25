@@ -1,5 +1,4 @@
 import SwiftUI
-import UserNotifications
 
 struct SettingsView: View {
 
@@ -65,12 +64,10 @@ struct SettingsView: View {
                         .onChange(of: notificationsEnabled) { oldValue, newValue in
                             guard newValue, !oldValue else { return }
                             Task {
-                                let center = UNUserNotificationCenter.current()
                                 do {
-                                    let granted = try await center.requestAuthorization(
-                                        options: [.alert, .badge, .sound]
-                                    )
-                                    if !granted { notificationsEnabled = false }
+                                    try await NotificationManager.shared.requestAuthorization()
+                                    let status = NotificationManager.shared.authorizationStatus
+                                    if status != .authorized { notificationsEnabled = false }
                                 } catch {
                                     notificationsEnabled = false
                                 }

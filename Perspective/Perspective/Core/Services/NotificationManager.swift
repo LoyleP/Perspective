@@ -1,14 +1,15 @@
 import Foundation
+import OSLog
 import UserNotifications
 import BackgroundTasks
 import Supabase
 
+@MainActor
 @Observable
 final class NotificationManager: NSObject {
     static let shared = NotificationManager()
 
     var authorizationStatus: UNAuthorizationStatus = .notDetermined
-    /// Set when the user taps a system notification; observed by RootView and AlertesView.
     var pendingStoryID: UUID?
     private var lastCheckedStoryCount = 0
 
@@ -27,31 +28,27 @@ final class NotificationManager: NSObject {
 
     func requestAuthorization() async throws {
         let granted = try await center.requestAuthorization(options: [.alert, .badge, .sound])
-        print("🔔 Notification authorization \(granted ? "granted" : "denied")")
+        Log.notification.info("Authorization \(granted ? "granted" : "denied")")
         await checkAuthorizationStatus()
     }
 
     func checkAuthorizationStatus() async {
         let settings = await center.notificationSettings()
-        await MainActor.run {
-            authorizationStatus = settings.authorizationStatus
-        }
+        authorizationStatus = settings.authorizationStatus
     }
 
     // MARK: - Local Notification Scheduling
 
     func checkForNewStories() async {
-        print("🔔 Checking for new stories, current auth status: \(authorizationStatus.rawValue)")
+        Log.notification.debug("Checking for new stories, auth status: \(self.authorizationStatus.rawValue)")
 
         guard authorizationStatus == .authorized else {
-            print("⚠️ Notifications not authorized, current status: \(authorizationStatus.rawValue)")
+            Log.notification.info("Notifications not authorized, status: \(self.authorizationStatus.rawValue)")
             return
         }
 
         do {
-            // Check for new notifications in the database
             let lastNotificationId = UserDefaults.standard.string(forKey: "lastNotificationId") ?? ""
-            print("🔔 Last notification ID: \(lastNotificationId)")
 
             let response = try await SupabaseService.shared.client
                 .from("notifications")
@@ -64,29 +61,22 @@ final class NotificationManager: NSObject {
             decoder.dateDecodingStrategy = .iso8601
             let notifications = try decoder.decode([PushNotification].self, from: response.data)
 
-            print("🔔 Found \(notifications.count) notifications in database")
-
-            // If we have a new notification
             if let latestNotification = notifications.first,
                latestNotification.id.uuidString != lastNotificationId {
 
-                print("🔔 New notification found: \(latestNotification.title)")
+                Log.notification.info("New notification: \(latestNotification.title)")
 
-                // Schedule local notification
                 await scheduleLocalNotification(
                     title: latestNotification.title,
                     body: latestNotification.body,
                     storyID: latestNotification.storyId
                 )
 
-                // Save this notification ID as seen
                 UserDefaults.standard.set(latestNotification.id.uuidString, forKey: "lastNotificationId")
-            } else {
-                print("🔔 No new notifications (either empty or already seen)")
             }
 
         } catch {
-            print("❌ Failed to check for new notifications: \(error)")
+            Log.notification.error("Failed to check for new notifications: \(error)")
         }
     }
 
@@ -106,14 +96,14 @@ final class NotificationManager: NSObject {
         let request = UNNotificationRequest(
             identifier: UUID().uuidString,
             content: content,
-            trigger: nil // Deliver immediately
+            trigger: nil
         )
 
         do {
             try await center.add(request)
-            print("✅ Local notification scheduled: \(title)")
+            Log.notification.info("Local notification scheduled: \(title)")
         } catch {
-            print("❌ Failed to schedule notification: \(error)")
+            Log.notification.error("Failed to schedule notification: \(error)")
         }
     }
 
@@ -136,9 +126,9 @@ final class NotificationManager: NSObject {
 
 // MARK: - UNUserNotificationCenterDelegate
 
-extension NotificationManager: UNUserNotificationCenterDelegate {
+extension NotificationManager: @preconcurrency UNUserNotificationCenterDelegate {
 
-    func userNotificationCenter(
+    nonisolated func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
@@ -146,7 +136,7 @@ extension NotificationManager: UNUserNotificationCenterDelegate {
         completionHandler([.banner, .sound, .badge])
     }
 
-    func userNotificationCenter(
+    nonisolated func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
@@ -157,7 +147,7 @@ extension NotificationManager: UNUserNotificationCenterDelegate {
                 pendingStoryID = storyID
             }
         }
-        print("📬 Notification tapped")
+        Log.notification.debug("Notification tapped")
         completionHandler()
     }
 }

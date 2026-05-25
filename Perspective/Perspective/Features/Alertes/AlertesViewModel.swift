@@ -1,14 +1,18 @@
 import Foundation
 import UserNotifications
 
+@MainActor
 @Observable
 final class AlertesViewModel {
-    var notifications: [PushNotification] = []
-    var isLoading = false
-    var error: Error?
+    private(set) var notifications: [PushNotification] = []
+    private(set) var isLoading = false
+    private(set) var error: AppError?
     var authorizationStatus: UNAuthorizationStatus = .notDetermined
 
-    init() {
+    private let repository: any StoryRepositoryProtocol
+
+    init(repository: any StoryRepositoryProtocol = StoryRepository.shared) {
+        self.repository = repository
         authorizationStatus = NotificationManager.shared.authorizationStatus
     }
 
@@ -19,7 +23,7 @@ final class AlertesViewModel {
         do {
             notifications = try await NotificationManager.shared.fetchNotifications()
         } catch {
-            self.error = error
+            self.error = AppError.from(error)
         }
 
         isLoading = false
@@ -31,8 +35,12 @@ final class AlertesViewModel {
             await NotificationManager.shared.checkAuthorizationStatus()
             authorizationStatus = NotificationManager.shared.authorizationStatus
         } catch {
-            self.error = error
+            self.error = AppError.from(error)
         }
+    }
+
+    func fetchStory(id: UUID) async -> Story? {
+        try? await repository.fetchStory(id: id)
     }
 
     func refresh() async {

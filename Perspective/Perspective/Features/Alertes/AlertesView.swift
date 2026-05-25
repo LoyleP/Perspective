@@ -149,7 +149,7 @@ struct AlertesView: View {
         guard !isFetchingStory else { return }
         isFetchingStory = true
         Task {
-            if let story = try? await StoryRepository.shared.fetchStory(id: storyID) {
+            if let story = await viewModel.fetchStory(id: storyID) {
                 path.append(story)
             }
             isFetchingStory = false

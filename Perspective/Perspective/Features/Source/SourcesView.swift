@@ -20,12 +20,13 @@ private enum SourceFilter: CaseIterable, Hashable {
 
 // MARK: - ViewModel
 
+@MainActor
 @Observable
 private final class SourcesViewModel {
 
-    var sources: [Source] = []
-    var isLoading = false
-    var error: Error?
+    private(set) var sources: [Source] = []
+    private(set) var isLoading = false
+    private(set) var error: AppError?
 
     func loadSources() async {
         guard !isLoading else { return }
@@ -34,7 +35,7 @@ private final class SourcesViewModel {
         do {
             sources = try await SourceRepository.shared.fetchAllSources()
         } catch {
-            self.error = error
+            self.error = AppError.from(error)
         }
         isLoading = false
     }
@@ -56,9 +57,7 @@ struct SourcesView: View {
                 SourceDetailView(source: source)
             }
             .task { await viewModel.loadSources() }
-            .onAppear {
-                configureNavigationBarAppearance()
-            }
+            .perspectiveNavigationBar()
     }
 
     // MARK: - State routing
@@ -192,22 +191,4 @@ struct SourcesView: View {
         }
     }
 
-    private func configureNavigationBarAppearance() {
-        let appearance = UINavigationBarAppearance()
-        appearance.configureWithTransparentBackground()
-
-        appearance.largeTitleTextAttributes = [
-            .font: UIFont.systemFont(ofSize: 34, weight: .bold),
-            .foregroundColor: UIColor(AppColors.Adaptive.textPrimary)
-        ]
-
-        appearance.titleTextAttributes = [
-            .font: UIFont.systemFont(ofSize: 17, weight: .semibold),
-            .foregroundColor: UIColor(AppColors.Adaptive.textPrimary)
-        ]
-
-        UINavigationBar.appearance().standardAppearance = appearance
-        UINavigationBar.appearance().scrollEdgeAppearance = appearance
-        UINavigationBar.appearance().compactAppearance = appearance
-    }
 }

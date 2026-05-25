@@ -30,6 +30,24 @@ struct CoverageStats: Codable, Hashable {
     let lean6Pct: Double
     let lean7Pct: Double
 
+    init(
+        storyID: UUID,
+        lean1Count: Int, lean2Count: Int, lean3Count: Int, lean4Count: Int,
+        lean5Count: Int, lean6Count: Int, lean7Count: Int, totalCount: Int,
+        lean1Pct: Double, lean2Pct: Double, lean3Pct: Double, lean4Pct: Double,
+        lean5Pct: Double, lean6Pct: Double, lean7Pct: Double
+    ) {
+        self.storyID = storyID
+        self.lean1Count = lean1Count; self.lean2Count = lean2Count
+        self.lean3Count = lean3Count; self.lean4Count = lean4Count
+        self.lean5Count = lean5Count; self.lean6Count = lean6Count
+        self.lean7Count = lean7Count; self.totalCount = totalCount
+        self.lean1Pct = lean1Pct; self.lean2Pct = lean2Pct
+        self.lean3Pct = lean3Pct; self.lean4Pct = lean4Pct
+        self.lean5Pct = lean5Pct; self.lean6Pct = lean6Pct
+        self.lean7Pct = lean7Pct
+    }
+
     enum CodingKeys: String, CodingKey {
         case storyID    = "story_id"
         case lean1Count = "lean_1_count"
@@ -47,6 +65,36 @@ struct CoverageStats: Codable, Hashable {
         case lean5Pct   = "lean_5_pct"
         case lean6Pct   = "lean_6_pct"
         case lean7Pct   = "lean_7_pct"
+    }
+
+    // PostgreSQL returns 0 and 1 as integers in JSON; Swift's Decoder
+    // refuses to coerce Int → Double, so we try Double first, then Int.
+    private static func decodeDouble(
+        _ container: KeyedDecodingContainer<CodingKeys>,
+        _ key: CodingKeys
+    ) throws -> Double {
+        if let v = try? container.decode(Double.self, forKey: key) { return v }
+        return Double(try container.decode(Int.self, forKey: key))
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        storyID    = try c.decode(UUID.self, forKey: .storyID)
+        lean1Count = try c.decode(Int.self, forKey: .lean1Count)
+        lean2Count = try c.decode(Int.self, forKey: .lean2Count)
+        lean3Count = try c.decode(Int.self, forKey: .lean3Count)
+        lean4Count = try c.decode(Int.self, forKey: .lean4Count)
+        lean5Count = try c.decode(Int.self, forKey: .lean5Count)
+        lean6Count = try c.decode(Int.self, forKey: .lean6Count)
+        lean7Count = try c.decode(Int.self, forKey: .lean7Count)
+        totalCount = try c.decode(Int.self, forKey: .totalCount)
+        lean1Pct = try Self.decodeDouble(c, .lean1Pct)
+        lean2Pct = try Self.decodeDouble(c, .lean2Pct)
+        lean3Pct = try Self.decodeDouble(c, .lean3Pct)
+        lean4Pct = try Self.decodeDouble(c, .lean4Pct)
+        lean5Pct = try Self.decodeDouble(c, .lean5Pct)
+        lean6Pct = try Self.decodeDouble(c, .lean6Pct)
+        lean7Pct = try Self.decodeDouble(c, .lean7Pct)
     }
 
     // The 7 percentage values in lean order (1→7), summing to ≈1.0
@@ -96,6 +144,29 @@ struct CoverageStats: Codable, Hashable {
 
     // Dynamically generated one-line narrative for the coverage distribution.
     // Priority: dominance → balance → blind spot → empty string.
+    static func aggregate(_ stats: [CoverageStats]) -> CoverageStats? {
+        guard !stats.isEmpty else { return nil }
+        let l1 = stats.reduce(0) { $0 + $1.lean1Count }
+        let l2 = stats.reduce(0) { $0 + $1.lean2Count }
+        let l3 = stats.reduce(0) { $0 + $1.lean3Count }
+        let l4 = stats.reduce(0) { $0 + $1.lean4Count }
+        let l5 = stats.reduce(0) { $0 + $1.lean5Count }
+        let l6 = stats.reduce(0) { $0 + $1.lean6Count }
+        let l7 = stats.reduce(0) { $0 + $1.lean7Count }
+        let total = l1 + l2 + l3 + l4 + l5 + l6 + l7
+        guard total > 0 else { return nil }
+        let t = Double(total)
+        return CoverageStats(
+            storyID: UUID(),
+            lean1Count: l1, lean2Count: l2, lean3Count: l3, lean4Count: l4,
+            lean5Count: l5, lean6Count: l6, lean7Count: l7, totalCount: total,
+            lean1Pct: Double(l1) / t, lean2Pct: Double(l2) / t,
+            lean3Pct: Double(l3) / t, lean4Pct: Double(l4) / t,
+            lean5Pct: Double(l5) / t, lean6Pct: Double(l6) / t,
+            lean7Pct: Double(l7) / t
+        )
+    }
+
     var coverageNarrative: String {
         let fb = fiveBucketCoverage
         let total = fb.extGauche + fb.gauche + fb.centre + fb.droite + fb.extDroite

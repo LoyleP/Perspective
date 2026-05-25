@@ -1,10 +1,10 @@
 import Foundation
 
-enum AppError: LocalizedError {
+enum AppError: LocalizedError, Sendable, Equatable {
     case networkUnavailable
     case serverError
     case dataCorrupted
-    case unknown(Error)
+    case unknown(String)
 
     var errorDescription: String? {
         switch self {
@@ -14,18 +14,16 @@ enum AppError: LocalizedError {
             return "Le serveur ne répond pas. Réessayez plus tard."
         case .dataCorrupted:
             return "Les données reçues sont invalides."
-        case .unknown(let error):
-            return "Une erreur s'est produite : \(error.localizedDescription)"
+        case .unknown(let message):
+            return "Une erreur s'est produite : \(message)"
         }
     }
 
-    /// Map system errors to user-friendly AppError
     static func from(_ error: Error) -> AppError {
         if let appError = error as? AppError {
             return appError
         }
 
-        // Check for network errors
         let nsError = error as NSError
         if nsError.domain == NSURLErrorDomain {
             switch nsError.code {
@@ -37,15 +35,14 @@ enum AppError: LocalizedError {
                  NSURLErrorCannotFindHost:
                 return .serverError
             default:
-                return .unknown(error)
+                return .unknown(error.localizedDescription)
             }
         }
 
-        // Check for decoding errors
         if error is DecodingError {
             return .dataCorrupted
         }
 
-        return .unknown(error)
+        return .unknown(error.localizedDescription)
     }
 }

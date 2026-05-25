@@ -12,9 +12,7 @@ struct SavedView: View {
             .navigationDestination(for: Story.self) { story in
                 StoryDetailView(story: story)
             }
-            .onAppear {
-                configureNavigationBarAppearance()
-            }
+            .perspectiveNavigationBar()
     }
 
     @ViewBuilder
@@ -60,24 +58,6 @@ struct SavedView: View {
         .background { AppColors.Adaptive.feedBackground.ignoresSafeArea() }
     }
 
-    private func configureNavigationBarAppearance() {
-        let appearance = UINavigationBarAppearance()
-        appearance.configureWithTransparentBackground()
-
-        appearance.largeTitleTextAttributes = [
-            .font: UIFont.systemFont(ofSize: 34, weight: .bold),
-            .foregroundColor: UIColor(AppColors.Adaptive.textPrimary)
-        ]
-
-        appearance.titleTextAttributes = [
-            .font: UIFont.systemFont(ofSize: 17, weight: .semibold),
-            .foregroundColor: UIColor(AppColors.Adaptive.textPrimary)
-        ]
-
-        UINavigationBar.appearance().standardAppearance = appearance
-        UINavigationBar.appearance().scrollEdgeAppearance = appearance
-        UINavigationBar.appearance().compactAppearance = appearance
-    }
 }
 
 #if DEBUG

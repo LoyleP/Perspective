@@ -14,9 +14,7 @@ struct FeedView: View {
             .navigationTitle("À la une")
             .navigationBarTitleDisplayMode(.large)
             .toolbarBackground(.hidden, for: .navigationBar)
-            .onAppear {
-                configureNavigationBarAppearance()
-            }
+            .perspectiveNavigationBar()
             .navigationDestination(for: Story.self) { story in
                 if #available(iOS 18.0, *) {
                     StoryDetailView(story: story)
@@ -70,6 +68,14 @@ struct FeedView: View {
                     .listRowInsets(EdgeInsets(top: 0, leading: AppSpacing.m, bottom: 0, trailing: AppSpacing.m))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
+                }
+
+                // Aggregate coverage bar
+                if let coverage = viewModel.aggregateCoverage {
+                    FeedCoverageBarView(coverage: coverage)
+                        .listRowInsets(EdgeInsets(top: AppSpacing.st, leading: AppSpacing.m, bottom: 0, trailing: AppSpacing.m))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                 }
 
                 // Daily brief
@@ -143,25 +149,6 @@ struct FeedView: View {
     }
 
     // MARK: - Helpers
-
-    private func configureNavigationBarAppearance() {
-        let appearance = UINavigationBarAppearance()
-        appearance.configureWithTransparentBackground()
-
-        appearance.largeTitleTextAttributes = [
-            .font: UIFont.systemFont(ofSize: 34, weight: .bold),
-            .foregroundColor: UIColor(AppColors.Adaptive.textPrimary)
-        ]
-
-        appearance.titleTextAttributes = [
-            .font: UIFont.systemFont(ofSize: 17, weight: .semibold),
-            .foregroundColor: UIColor(AppColors.Adaptive.textPrimary)
-        ]
-
-        UINavigationBar.appearance().standardAppearance = appearance
-        UINavigationBar.appearance().scrollEdgeAppearance = appearance
-        UINavigationBar.appearance().compactAppearance = appearance
-    }
 
     private func errorView(_ error: Error) -> some View {
         ContentUnavailableView {

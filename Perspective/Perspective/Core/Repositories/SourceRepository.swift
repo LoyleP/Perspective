@@ -1,7 +1,8 @@
 import Foundation
+import OSLog
 import Supabase
 
-final class SourceRepository {
+final class SourceRepository: SourceRepositoryProtocol {
 
     static let shared = SourceRepository()
 
@@ -22,7 +23,7 @@ final class SourceRepository {
                 .value
             return sources
         } catch {
-            log(error, context: "fetchAllSources")
+            Log.repository.error("fetchAllSources failed: \(error)")
             throw AppError.from(error)
         }
     }
@@ -38,7 +39,7 @@ final class SourceRepository {
                 .value
             return sources.first
         } catch {
-            log(error, context: "fetchSource(id: \(id))")
+            Log.repository.error("fetchSource(\(id)) failed: \(error)")
             throw AppError.from(error)
         }
     }
@@ -55,14 +56,8 @@ final class SourceRepository {
                 .value
             return articles
         } catch {
-            log(error, context: "fetchRecentArticles(sourceId: \(sourceId), limit: \(limit))")
+            Log.repository.error("fetchRecentArticles(\(sourceId)) failed: \(error)")
             throw AppError.from(error)
         }
-    }
-
-    // MARK: - Private
-
-    private func log(_ error: Error, context: String) {
-        print("[SourceRepository] \(context) failed: \(error)")
     }
 }

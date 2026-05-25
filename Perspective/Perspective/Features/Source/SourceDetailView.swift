@@ -1,4 +1,5 @@
 import SwiftUI
+import OSLog
 
 struct SourceDetailView: View {
 
@@ -56,39 +57,11 @@ struct SourceDetailView: View {
     }
 
     private var logoView: some View {
-        AsyncImage(url: source.logoURL.flatMap(URL.init)) { phase in
-            if let img = phase.image {
-                Color.clear
-                    .overlay(img.resizable().scaledToFill())
-                    .clipped()
-            } else {
-                fallbackLogo
-            }
-        }
-        .frame(width: 80, height: 80)
-        .clipShape(Circle())
-        .overlay(Circle().stroke(AppColors.stroke, lineWidth: 1))
-    }
-
-    private var fallbackLogo: some View {
-        let lean = source.lean
-        return ZStack {
-            Circle().fill(lean?.spectrumColor ?? AppColors.Adaptive.placeholder)
-            Text(String(source.name.prefix(1)).uppercased())
-                .font(.system(size: 30, weight: .bold))
-                .foregroundStyle(lean?.tagTextColor ?? AppColors.Adaptive.textSecondary)
-        }
+        SourceAvatarView(source: source, size: 80)
     }
 
     private func leanTag(_ lean: PoliticalLean) -> some View {
-        Text(lean.label)
-            .font(.appFootnote)
-            .foregroundStyle(lean.tagTextColor)
-            .padding(.horizontal, AppSpacing.st)
-            .padding(.vertical, AppSpacing.s)
-            .background(lean.spectrumColor)
-            .clipShape(Capsule())
-            .overlay(Capsule().stroke(AppColors.stroke, lineWidth: 1))
+        LeanTagView(lean: lean, style: .capsule)
     }
 
     // MARK: - Section header
@@ -121,9 +94,7 @@ struct SourceDetailView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(AppSpacing.m)
-        .background(AppColors.Adaptive.detailSurface)
-        .clipShape(RoundedRectangle(cornerRadius: AppRadius.ml))
-        .overlay(RoundedRectangle(cornerRadius: AppRadius.ml).stroke(AppColors.stroke, lineWidth: 1))
+        .cardSurface(fill: AppColors.Adaptive.detailSurface)
         .padding(.horizontal, AppSpacing.m)
     }
 
@@ -147,9 +118,7 @@ struct SourceDetailView: View {
                 )
             }
         }
-        .background(AppColors.Adaptive.detailSurface)
-        .clipShape(RoundedRectangle(cornerRadius: AppRadius.ml))
-        .overlay(RoundedRectangle(cornerRadius: AppRadius.ml).stroke(AppColors.stroke, lineWidth: 1))
+        .cardSurface(fill: AppColors.Adaptive.detailSurface)
         .padding(.horizontal, AppSpacing.m)
     }
 
@@ -226,9 +195,7 @@ struct SourceDetailView: View {
                 .padding(.top, 2)
         }
         .padding(AppSpacing.m)
-        .background(AppColors.Adaptive.detailSurface)
-        .clipShape(RoundedRectangle(cornerRadius: AppRadius.ml))
-        .overlay(RoundedRectangle(cornerRadius: AppRadius.ml).stroke(AppColors.stroke, lineWidth: 1))
+        .cardSurface(fill: AppColors.Adaptive.detailSurface)
     }
 
     // MARK: - Data
@@ -240,7 +207,7 @@ struct SourceDetailView: View {
                 sourceId: source.id, limit: 10
             )
         } catch {
-            print("[SourceDetailView] loadArticles failed: \(error)")
+            Log.repository.error("loadArticles failed: \(error)")
         }
         isLoadingArticles = false
     }

@@ -2,22 +2,16 @@ import SwiftUI
 
 struct MySpectrumView: View {
 
-    @State private var history: [Int] =
-        UserDefaults.standard.array(forKey: "readingHistory") as? [Int] ?? []
+    @Environment(ReadingHistoryStore.self) private var store
 
     var body: some View {
         ScrollView {
-            if history.isEmpty {
+            if store.leans.isEmpty {
                 emptyState
             } else {
                 VStack(alignment: .leading, spacing: AppSpacing.xl) {
-                    Text("Mon spectre")
-                        .font(.appLargeTitle)
-                        .foregroundStyle(AppColors.Adaptive.textPrimary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, AppSpacing.m)
-                    sectionHeader
-                    breakdownCards
+                    spectrumBar
+                    breakdownSection
                     resetButton
                 }
                 .padding(.top, AppSpacing.xl)
@@ -25,6 +19,8 @@ struct MySpectrumView: View {
             }
         }
         .background(AppColors.Adaptive.feedBackground.ignoresSafeArea())
+        .navigationTitle("Mon spectre")
+        .navigationBarTitleDisplayMode(.large)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarBackground(AppColors.Adaptive.feedBackground, for: .navigationBar)
     }
@@ -49,38 +45,51 @@ struct MySpectrumView: View {
         .padding(.top, AppSpacing.xxxl)
     }
 
-    // MARK: - Section header
+    // MARK: - Spectrum bar
 
-    private var sectionHeader: some View {
-        Text("Répartition · \(history.count) articles")
-            .font(.appCaption1)
-            .foregroundStyle(AppColors.Adaptive.textTertiary)
-            .textCase(.uppercase)
-            .frame(maxWidth: .infinity, alignment: .leading)
+    private var spectrumBar: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.m) {
+            Text("RÉPARTITION · \(store.leans.count) ARTICLE\(store.leans.count > 1 ? "S" : "")")
+                .font(.appCaption1)
+                .foregroundStyle(AppColors.Adaptive.textTertiary)
+                .padding(.horizontal, AppSpacing.m)
+
+            GeometryReader { geo in
+                HStack(spacing: 2) {
+                    ForEach(barSegments, id: \.lean) { seg in
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(seg.lean.spectrumColor)
+                            .frame(width: geo.size.width * seg.fraction - 2)
+                    }
+                }
+            }
+            .frame(height: 20)
+            .clipShape(RoundedRectangle(cornerRadius: 5))
             .padding(.horizontal, AppSpacing.m)
-            .padding(.bottom, -AppSpacing.s)
+        }
     }
 
-    // MARK: - Breakdown cards
+    // MARK: - Breakdown list
 
-    private var breakdownCards: some View {
+    private var breakdownSection: some View {
         VStack(spacing: AppSpacing.s) {
-            ForEach(breakdown, id: \.lean) { item in
+            ForEach(store.breakdown, id: \.lean) { item in
                 HStack(spacing: AppSpacing.m) {
-                    Text(item.lean.label)
-                        .font(.appBody)
-                        .foregroundStyle(AppColors.Adaptive.textPrimary)
-                    Spacer()
-                    Text("\(item.count) article\(item.count > 1 ? "s" : "")")
+                    LeanTagView(lean: item.lean, style: .rounded)
+                        .frame(width: 90, alignment: .leading)
+
+                    ProgressView(value: Double(item.count), total: Double(store.leans.count))
+                        .tint(item.lean.spectrumColor)
+
+                    Text("\(item.count)")
                         .font(.appBody)
                         .fontWeight(.medium)
-                        .foregroundStyle(item.lean.color)
+                        .foregroundStyle(AppColors.Adaptive.textPrimary)
+                        .frame(width: 28, alignment: .trailing)
                 }
                 .padding(.horizontal, AppSpacing.m)
                 .padding(.vertical, 14)
-                .background(AppColors.Adaptive.cardSurface)
-                .clipShape(RoundedRectangle(cornerRadius: AppRadius.ml))
-                .overlay(RoundedRectangle(cornerRadius: AppRadius.ml).stroke(AppColors.stroke, lineWidth: 1))
+                .cardSurface()
                 .padding(.horizontal, AppSpacing.m)
             }
         }
@@ -90,29 +99,32 @@ struct MySpectrumView: View {
 
     private var resetButton: some View {
         Button(role: .destructive) {
-            UserDefaults.standard.removeObject(forKey: "readingHistory")
-            history = []
+            store.reset()
         } label: {
             Text("Réinitialiser l'historique")
                 .font(.appBody)
                 .foregroundStyle(.red)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
-                .background(AppColors.Adaptive.cardSurface)
-                .clipShape(RoundedRectangle(cornerRadius: AppRadius.ml))
-                .overlay(RoundedRectangle(cornerRadius: AppRadius.ml).stroke(AppColors.stroke, lineWidth: 1))
+                .cardSurface()
         }
         .padding(.horizontal, AppSpacing.m)
     }
 
-    // MARK: - Computed
+    // MARK: - Bar segment data
 
-    private var breakdown: [(lean: PoliticalLean, count: Int)] {
-        (1...7).compactMap { leanInt in
-            let count = history.filter { $0 == leanInt }.count
+    private struct BarSegment {
+        let lean: PoliticalLean
+        let fraction: Double
+    }
+
+    private var barSegments: [BarSegment] {
+        let total = Double(store.leans.count)
+        guard total > 0 else { return [] }
+        return (1...7).compactMap { leanInt -> BarSegment? in
+            let count = store.leans.filter { $0 == leanInt }.count
             guard count > 0, let lean = PoliticalLean.from(leanInt) else { return nil }
-            return (lean: lean, count: count)
+            return BarSegment(lean: lean, fraction: Double(count) / total)
         }
-        .sorted { $0.count > $1.count }
     }
 }

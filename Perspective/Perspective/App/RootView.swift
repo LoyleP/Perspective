@@ -4,6 +4,7 @@ struct RootView: View {
 
     @State private var session = SessionState()
     @State private var bookmarks = BookmarkStore()
+    @State private var readingHistory = ReadingHistoryStore()
     @State private var selectedTab = 0
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     private let notificationManager = NotificationManager.shared
@@ -45,6 +46,7 @@ struct RootView: View {
         .tint(AppColors.Neutral.n100)
         .environment(session)
         .environment(bookmarks)
+        .environment(readingHistory)
         .fullScreenCover(isPresented: .constant(!hasCompletedOnboarding)) {
             OnboardingView()
         }
@@ -89,6 +91,7 @@ struct RootView: View {
         .tint(AppColors.Neutral.n100)
         .environment(session)
         .environment(bookmarks)
+        .environment(readingHistory)
         .fullScreenCover(isPresented: .constant(!hasCompletedOnboarding)) {
             OnboardingView()
         }

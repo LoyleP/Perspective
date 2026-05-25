@@ -1,21 +1,26 @@
 import Foundation
 
+@MainActor
 @Observable
 final class DiscoverViewModel {
-    var stories: [Story] = []
+    private(set) var stories: [Story] = []
     var selectedTopics: Set<StoryTopic> = [.tout]
     var searchText: String = ""
-    var isLoading = false
-    var isLoadingMore = false
-    var hasMore = true
-    var error: Error?
+    private(set) var isLoading = false
+    private(set) var isLoadingMore = false
+    private(set) var hasMore = true
+    private(set) var error: AppError?
 
     private let pageSize = 20
     private var lastFetchedAt: Date?
     private let cacheDuration: TimeInterval = 6 * 60 * 60
+    private let repository: any StoryRepositoryProtocol
+
+    init(repository: any StoryRepositoryProtocol = StoryRepository.shared) {
+        self.repository = repository
+    }
 
     var filteredStories: [Story] {
-        // Step 1: Filter by topic
         var result: [Story]
 
         if selectedTopics.contains(.tout) || selectedTopics.isEmpty {
@@ -31,7 +36,6 @@ final class DiscoverViewModel {
             }
         }
 
-        // Step 2: Filter by search text
         let trimmedSearch = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmedSearch.isEmpty {
             result = result.filter { story in
@@ -39,22 +43,17 @@ final class DiscoverViewModel {
             }
         }
 
-        // Step 3: Sort by article count (descending)
         return result.sorted { $0.articles.count > $1.articles.count }
     }
 
     func toggleTopic(_ topic: StoryTopic) {
         if topic == .tout {
-            // If selecting "Tout", clear all others
             selectedTopics = [.tout]
         } else {
-            // Remove "Tout" if it was selected
             selectedTopics.remove(.tout)
 
-            // Toggle the selected topic
             if selectedTopics.contains(topic) {
                 selectedTopics.remove(topic)
-                // If nothing left selected, default to "Tout"
                 if selectedTopics.isEmpty {
                     selectedTopics = [.tout]
                 }
@@ -72,7 +71,7 @@ final class DiscoverViewModel {
         isLoading = true
         error = nil
         do {
-            let page = try await StoryRepository.shared.fetchFeed(
+            let page = try await repository.fetchFeed(
                 topic: nil,
                 limit: pageSize,
                 offset: 0
@@ -81,12 +80,13 @@ final class DiscoverViewModel {
             hasMore = page.count == pageSize
             lastFetchedAt = Date()
         } catch {
-            self.error = error
+            self.error = AppError.from(error)
         }
         isLoading = false
     }
 
     func refresh() async {
+        lastFetchedAt = nil
         isLoading = false
         await load()
     }
@@ -95,7 +95,7 @@ final class DiscoverViewModel {
         guard !isLoadingMore, hasMore else { return }
         isLoadingMore = true
         do {
-            let page = try await StoryRepository.shared.fetchFeed(
+            let page = try await repository.fetchFeed(
                 topic: nil,
                 limit: pageSize,
                 offset: stories.count

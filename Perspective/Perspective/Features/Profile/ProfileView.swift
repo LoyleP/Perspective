@@ -32,9 +32,7 @@ struct ProfileView: View {
                     SettingsView()
                 }
             }
-            .onAppear {
-                configureNavigationBarAppearance()
-            }
+            .perspectiveNavigationBar()
     }
 
     private var content: some View {
@@ -86,24 +84,6 @@ struct ProfileView: View {
         .clipShape(RoundedRectangle(cornerRadius: AppRadius.m))
     }
 
-    private func configureNavigationBarAppearance() {
-        let appearance = UINavigationBarAppearance()
-        appearance.configureWithTransparentBackground()
-
-        appearance.largeTitleTextAttributes = [
-            .font: UIFont.systemFont(ofSize: 34, weight: .bold),
-            .foregroundColor: UIColor(AppColors.Adaptive.textPrimary)
-        ]
-
-        appearance.titleTextAttributes = [
-            .font: UIFont.systemFont(ofSize: 17, weight: .semibold),
-            .foregroundColor: UIColor(AppColors.Adaptive.textPrimary)
-        ]
-
-        UINavigationBar.appearance().standardAppearance = appearance
-        UINavigationBar.appearance().scrollEdgeAppearance = appearance
-        UINavigationBar.appearance().compactAppearance = appearance
-    }
 }
 
 enum ProfileDestination: Hashable {

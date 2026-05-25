@@ -1,5 +1,6 @@
 import StoreKit
 import Foundation
+import OSLog
 
 @MainActor
 @Observable
@@ -47,9 +48,9 @@ final class StoreManager {
             ]
 
             products = try await Product.products(for: productIDs)
-            print("✅ Loaded \(products.count) products")
+            Log.store.info("Loaded \(self.products.count) products")
         } catch {
-            print("❌ Failed to load products: \(error)")
+            Log.store.error("Failed to load products: \(error)")
             self.error = .from(error)
         }
 
@@ -69,21 +70,21 @@ final class StoreManager {
                 let transaction = try Self.checkVerified(verification)
                 await transaction.finish()
                 await updateSubscriptionStatus()
-                print("✅ Purchase successful: \(product.id)")
+                Log.store.info("Purchase successful: \(product.id)")
 
             case .userCancelled:
-                print("ℹ️ User cancelled purchase")
+                Log.store.info("User cancelled purchase")
 
             case .pending:
-                print("⏳ Purchase pending approval")
+                Log.store.info("Purchase pending approval")
 
             @unknown default:
-                print("⚠️ Unknown purchase result")
+                Log.store.warning("Unknown purchase result")
             }
         } catch {
-            print("❌ Purchase failed: \(error)")
+            Log.store.error("Purchase failed: \(error)")
             self.error = .from(error)
-            throw self.error ?? AppError.unknown(error)
+            throw self.error ?? AppError.from(error)
         }
 
         isLoading = false
@@ -97,9 +98,9 @@ final class StoreManager {
         do {
             try await AppStore.sync()
             await updateSubscriptionStatus()
-            print("✅ Restore successful")
+            Log.store.info("Restore successful")
         } catch {
-            print("❌ Restore failed: \(error)")
+            Log.store.error("Restore failed: \(error)")
             self.error = .from(error)
         }
 
@@ -118,12 +119,12 @@ final class StoreManager {
                     activeSubscriptions.insert(transaction.productID)
                 }
             } catch {
-                print("❌ Failed to verify transaction: \(error)")
+                Log.store.error("Failed to verify transaction: \(error)")
             }
         }
 
         purchasedSubscriptions = activeSubscriptions
-        print("ℹ️ Active subscriptions: \(activeSubscriptions)")
+        Log.store.debug("Active subscriptions: \(activeSubscriptions)")
     }
 
     // MARK: - Transaction Listener
@@ -135,7 +136,7 @@ final class StoreManager {
                     await transaction.finish()
                     await self?.updateSubscriptionStatus()
                 } catch {
-                    print("❌ Transaction update failed: \(error)")
+                    Log.store.error("Transaction update failed: \(error)")
                 }
             }
         }

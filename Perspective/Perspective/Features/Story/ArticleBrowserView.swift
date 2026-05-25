@@ -1,4 +1,5 @@
 import SwiftUI
+import OSLog
 import WebKit
 
 struct ArticleBrowserView: View {
@@ -6,6 +7,7 @@ struct ArticleBrowserView: View {
     let articles: [Article]
     let initialArticle: Article
     @Environment(\.dismiss) private var dismiss
+    @Environment(ReadingHistoryStore.self) private var readingHistory
 
     @State private var currentIndex: Int
     @State private var webView = WKWebView()
@@ -50,6 +52,12 @@ struct ArticleBrowserView: View {
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
+            .task(id: currentIndex) {
+                guard let lean = currentArticle.source?.politicalLean else { return }
+                try? await Task.sleep(for: .seconds(2))
+                guard !Task.isCancelled else { return }
+                readingHistory.record(lean: lean)
+            }
             .toolbar(barsVisible ? .visible : .hidden, for: .navigationBar, .bottomBar)
             .toolbar {
                 ToolbarItem(placement: .principal) {
@@ -169,7 +177,7 @@ struct WebViewRepresentable: UIViewRepresentable {
 
         // Enforce HTTPS for security (App Store compliance)
         guard url.scheme == "https" else {
-            print("⚠️ Blocked non-HTTPS URL: \(url)")
+            Log.general.warning("Blocked non-HTTPS URL: \(url)")
             return webView
         }
 

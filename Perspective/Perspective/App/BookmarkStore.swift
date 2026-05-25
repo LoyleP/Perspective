@@ -1,24 +1,27 @@
 import Foundation
 
+@MainActor
 @Observable
 final class BookmarkStore {
 
     private let storageKey = "bookmark_store_stories"
+    private let defaults: UserDefaults
     private(set) var stories: [Story] = []
 
-    private static var decoder: JSONDecoder {
+    private static let decoder: JSONDecoder = {
         let d = JSONDecoder()
         d.dateDecodingStrategy = .iso8601
         return d
-    }
+    }()
 
-    private static var encoder: JSONEncoder {
+    private static let encoder: JSONEncoder = {
         let e = JSONEncoder()
         e.dateEncodingStrategy = .iso8601
         return e
-    }
+    }()
 
-    init() {
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
         load()
     }
 
@@ -37,12 +40,12 @@ final class BookmarkStore {
 
     private func save() {
         guard let data = try? Self.encoder.encode(stories) else { return }
-        UserDefaults.standard.set(data, forKey: storageKey)
+        defaults.set(data, forKey: storageKey)
     }
 
     private func load() {
         guard
-            let data = UserDefaults.standard.data(forKey: storageKey),
+            let data = defaults.data(forKey: storageKey),
             let decoded = try? Self.decoder.decode([Story].self, from: data)
         else { return }
         stories = decoded

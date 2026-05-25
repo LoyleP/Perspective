@@ -1,10 +1,14 @@
 import Foundation
 
 extension Date {
-    func relativeToNowFrench() -> String {
+    private static let relativeFrenchFormatter: RelativeDateTimeFormatter = {
         let formatter = RelativeDateTimeFormatter()
         formatter.locale = Locale(identifier: "fr_FR")
         formatter.unitsStyle = .abbreviated
-        return formatter.localizedString(for: self, relativeTo: Date())
+        return formatter
+    }()
+
+    func relativeToNowFrench() -> String {
+        Self.relativeFrenchFormatter.localizedString(for: self, relativeTo: Date())
     }
 }

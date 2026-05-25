@@ -1,13 +1,17 @@
 import Foundation
 import Supabase
 
+@MainActor
 @Observable
 final class StoryDetailViewModel {
 
     var story: Story
 
-    init(story: Story) {
+    private let repository: any StoryRepositoryProtocol
+
+    init(story: Story, repository: any StoryRepositoryProtocol = StoryRepository.shared) {
         self.story = story
+        self.repository = repository
     }
 
     func triggerSummaryGeneration() async {
@@ -21,14 +25,12 @@ final class StoryDetailViewModel {
                 )
             )
         } catch {
-            // Generation failed — section will stay hidden silently.
             return
         }
 
-        // Wait for Gemini to finish before refetching (~1-2s generation time).
         try? await Task.sleep(for: .seconds(3))
 
-        guard let updated = try? await StoryRepository.shared.fetchStory(id: story.id) else {
+        guard let updated = try? await repository.fetchStory(id: story.id) else {
             return
         }
         story = updated

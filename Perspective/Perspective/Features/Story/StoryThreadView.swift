@@ -3,6 +3,28 @@ import SwiftUI
 struct StoryThreadView: View {
 
     let story: Story
+    @State private var selectedArticle: Article?
+
+    private static let dateSpanFormatter: DateFormatter = {
+        let fmt = DateFormatter()
+        fmt.locale = Locale(identifier: "fr_FR")
+        fmt.dateFormat = "d MMM"
+        return fmt
+    }()
+
+    private static let dayFormatter: DateFormatter = {
+        let fmt = DateFormatter()
+        fmt.locale = Locale(identifier: "fr_FR")
+        fmt.dateFormat = "EEEE d MMMM"
+        return fmt
+    }()
+
+    private static let timeFormatter: DateFormatter = {
+        let fmt = DateFormatter()
+        fmt.locale = Locale(identifier: "fr_FR")
+        fmt.dateFormat = "HH:mm"
+        return fmt
+    }()
 
     var body: some View {
         ScrollView {
@@ -13,6 +35,12 @@ struct StoryThreadView: View {
             .padding(.bottom, AppSpacing.xxl)
         }
         .background(AppColors.Adaptive.feedBackground.ignoresSafeArea())
+        .sheet(item: $selectedArticle) { article in
+            ArticleBrowserView(
+                articles: story.articles,
+                initialArticle: article
+            )
+        }
         .navigationTitle("")
         .navigationBarBackButtonHidden(false)
         .toolbarBackground(.visible, for: .navigationBar)
@@ -48,7 +76,7 @@ struct StoryThreadView: View {
         return VStack(alignment: .leading, spacing: 0) {
             ForEach(Array(groups.enumerated()), id: \.element.day) { gi, group in
                 VStack(alignment: .leading, spacing: 0) {
-                    Text(dayLabel(group.day).uppercased())
+                    Text(Self.dayFormatter.string(from: group.day).uppercased())
                         .font(.appCaption1)
                         .foregroundStyle(AppColors.Adaptive.textTertiary)
                         .padding(.horizontal, AppSpacing.m)
@@ -72,7 +100,6 @@ struct StoryThreadView: View {
         let dotColor = lean?.spectrumColor ?? AppColors.Adaptive.placeholder
 
         return HStack(alignment: .top, spacing: AppSpacing.s) {
-            // Timeline indicator
             VStack(spacing: 0) {
                 Circle()
                     .fill(dotColor)
@@ -92,17 +119,12 @@ struct StoryThreadView: View {
         }
     }
 
-    // MARK: - Entry card (matches AnalyzedArticleCard style)
+    // MARK: - Entry card
 
     private func entryCard(article: Article, lean: PoliticalLean?) -> some View {
-        let content = entryCardContent(article: article, lean: lean)
-        return Group {
-            if let url = URL(string: article.url) {
-                Link(destination: url) { content }.buttonStyle(.plain)
-            } else {
-                content
-            }
-        }
+        entryCardContent(article: article, lean: lean)
+            .contentShape(Rectangle())
+            .onTapGesture { selectedArticle = article }
     }
 
     private func entryCardContent(article: Article, lean: PoliticalLean?) -> some View {
@@ -117,13 +139,19 @@ struct StoryThreadView: View {
 
             HStack(spacing: AppSpacing.s) {
                 if let lean {
-                    leanTag(lean)
+                    LeanTagView(lean: lean, style: .rounded)
                 }
                 if let source = article.source {
-                    sourceRow(source)
+                    HStack(spacing: AppSpacing.xs) {
+                        SourceAvatarView(source: source)
+                        Text(source.name)
+                            .font(.appFootnote)
+                            .foregroundStyle(AppColors.Adaptive.textMeta)
+                            .lineLimit(1)
+                    }
                 }
                 Spacer()
-                Text(timeLabel(article.publishedAt))
+                Text(Self.timeFormatter.string(from: article.publishedAt))
                     .font(.appCaption1)
                     .foregroundStyle(AppColors.Adaptive.textMeta)
                 Image(systemName: "arrow.up.forward")
@@ -133,59 +161,7 @@ struct StoryThreadView: View {
         }
         .padding(AppSpacing.m)
         .frame(maxWidth: .infinity, minHeight: 120, alignment: .topLeading)
-        .background(AppColors.Adaptive.detailSurface)
-        .clipShape(RoundedRectangle(cornerRadius: AppRadius.ml))
-        .overlay(RoundedRectangle(cornerRadius: AppRadius.ml).stroke(AppColors.stroke, lineWidth: 1))
-    }
-
-    private func leanTag(_ lean: PoliticalLean) -> some View {
-        Text(lean.shortLabel)
-            .font(.appFootnote)
-            .foregroundStyle(lean.tagTextColor)
-            .padding(.horizontal, AppSpacing.s)
-            .padding(.vertical, AppSpacing.xs)
-            .background(lean.spectrumColor)
-            .clipShape(RoundedRectangle(cornerRadius: AppRadius.s))
-            .overlay(RoundedRectangle(cornerRadius: AppRadius.s).stroke(AppColors.stroke, lineWidth: 1))
-    }
-
-    private func sourceRow(_ source: Source) -> some View {
-        HStack(spacing: AppSpacing.xs) {
-            avatarCircle(source)
-            Text(source.name)
-                .font(.appFootnote)
-                .foregroundStyle(AppColors.Adaptive.textMeta)
-                .lineLimit(1)
-        }
-    }
-
-    private func avatarCircle(_ source: Source) -> some View {
-        Group {
-            if let s = source.logoURL, let url = URL(string: s) {
-                AsyncImage(url: url) { phase in
-                    if let img = phase.image {
-                        Color.clear.overlay(img.resizable().scaledToFill()).clipped()
-                    } else {
-                        sourceInitial(source)
-                    }
-                }
-            } else {
-                sourceInitial(source)
-            }
-        }
-        .frame(width: 18, height: 18)
-        .clipShape(Circle())
-        .overlay(Circle().stroke(AppColors.stroke, lineWidth: 1))
-    }
-
-    private func sourceInitial(_ source: Source) -> some View {
-        let lean = source.lean
-        return ZStack {
-            Circle().fill(lean?.spectrumColor ?? AppColors.Adaptive.placeholder)
-            Text(String(source.name.prefix(1)).uppercased())
-                .font(.system(size: 8, weight: .semibold))
-                .foregroundStyle(lean?.tagTextColor ?? AppColors.Adaptive.textSecondary)
-        }
+        .cardSurface(fill: AppColors.Adaptive.detailSurface)
     }
 
     // MARK: - Data grouping
@@ -210,26 +186,9 @@ struct StoryThreadView: View {
     private var dateSpanLabel: String {
         let sorted = story.articles.map(\.publishedAt).sorted()
         guard let first = sorted.first, let last = sorted.last, first != last else {
-            return dayLabel(story.firstPublishedAt)
+            return Self.dayFormatter.string(from: story.firstPublishedAt)
         }
-        let fmt = DateFormatter()
-        fmt.locale = Locale(identifier: "fr_FR")
-        fmt.dateFormat = "d MMM"
-        return "\(fmt.string(from: first)) – \(fmt.string(from: last))"
-    }
-
-    private func dayLabel(_ date: Date) -> String {
-        let fmt = DateFormatter()
-        fmt.locale = Locale(identifier: "fr_FR")
-        fmt.dateFormat = "EEEE d MMMM"
-        return fmt.string(from: date)
-    }
-
-    private func timeLabel(_ date: Date) -> String {
-        let fmt = DateFormatter()
-        fmt.locale = Locale(identifier: "fr_FR")
-        fmt.dateFormat = "HH:mm"
-        return fmt.string(from: date)
+        return "\(Self.dateSpanFormatter.string(from: first)) – \(Self.dateSpanFormatter.string(from: last))"
     }
 }
 

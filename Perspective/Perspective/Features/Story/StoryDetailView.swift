@@ -220,32 +220,7 @@ struct StoryDetailView: View {
     }
 
     private func avatarCircle(_ source: Source) -> some View {
-        Group {
-            if let s = source.logoURL, let url = URL(string: s) {
-                AsyncImage(url: url) { phase in
-                    if let img = phase.image {
-                        Color.clear.overlay(img.resizable().scaledToFill()).clipped()
-                    } else {
-                        sourceInitial(source)
-                    }
-                }
-            } else {
-                sourceInitial(source)
-            }
-        }
-        .frame(width: 18, height: 18)
-        .clipShape(Circle())
-        .overlay(Circle().stroke(AppColors.stroke, lineWidth: 1))
-    }
-
-    private func sourceInitial(_ source: Source) -> some View {
-        let lean = source.lean
-        return ZStack {
-            Circle().fill(lean?.spectrumColor ?? AppColors.Adaptive.placeholder)
-            Text(String(source.name.prefix(1)).uppercased())
-                .font(.system(size: 8, weight: .semibold))
-                .foregroundStyle(lean?.tagTextColor ?? AppColors.Adaptive.textSecondary)
-        }
+        SourceAvatarView(source: source)
     }
 
     // MARK: - Helpers
