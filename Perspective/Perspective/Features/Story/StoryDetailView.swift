@@ -93,7 +93,7 @@ struct StoryDetailView: View {
                     .buttonStyle(.plain)
                 }
 
-                if let coverage = viewModel.story.coverage, coverage.totalCount > 0 {
+                if let coverage = viewModel.story.computedCoverage, coverage.totalCount > 0 {
                     VStack(alignment: .leading, spacing: AppSpacing.m) {
                         Text("Couverture politique")
                             .font(.appTitle2)
@@ -153,7 +153,7 @@ struct StoryDetailView: View {
 
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: AppSpacing.l) {
-            if let coverage = viewModel.story.coverage, coverage.totalCount > 0 {
+            if let coverage = viewModel.story.computedCoverage, coverage.totalCount > 0 {
                 CoverageTagsView(coverage: coverage)
             }
             HStack(alignment: .top, spacing: AppSpacing.m) {

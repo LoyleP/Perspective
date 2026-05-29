@@ -40,7 +40,7 @@ final class FeedViewModel {
     }
 
     var aggregateCoverage: CoverageStats? {
-        CoverageStats.aggregate(stories.compactMap(\.coverage))
+        CoverageStats.aggregate(stories.compactMap(\.computedCoverage))
     }
 
     // MARK: - Load

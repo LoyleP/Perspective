@@ -157,7 +157,7 @@ struct StoryCardView: View {
 
     @ViewBuilder
     private var coverageTags: some View {
-        if let coverage = story.coverage {
+        if let coverage = story.computedCoverage {
             CoverageTagsView(coverage: coverage)
         }
     }

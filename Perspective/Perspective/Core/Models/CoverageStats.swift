@@ -142,6 +142,32 @@ struct CoverageStats: Codable, Hashable {
         && totalCount >= 5
     }
 
+    // Builds coverage directly from a story's analyzed articles using each
+    // article's source.politicalLean. Source of truth for the UI — the
+    // server-side story_coverage_view can lag behind article ingestion.
+    // Returns nil when no article carries a joined source lean.
+    static func from(storyID: UUID, articles: [Article]) -> CoverageStats? {
+        var counts = [Int](repeating: 0, count: 7)  // index 0 = lean 1
+        for article in articles {
+            guard let lean = article.source?.politicalLean,
+                  (1...7).contains(lean) else { continue }
+            counts[lean - 1] += 1
+        }
+        let total = counts.reduce(0, +)
+        guard total > 0 else { return nil }
+        let t = Double(total)
+        return CoverageStats(
+            storyID: storyID,
+            lean1Count: counts[0], lean2Count: counts[1], lean3Count: counts[2],
+            lean4Count: counts[3], lean5Count: counts[4], lean6Count: counts[5],
+            lean7Count: counts[6], totalCount: total,
+            lean1Pct: Double(counts[0]) / t, lean2Pct: Double(counts[1]) / t,
+            lean3Pct: Double(counts[2]) / t, lean4Pct: Double(counts[3]) / t,
+            lean5Pct: Double(counts[4]) / t, lean6Pct: Double(counts[5]) / t,
+            lean7Pct: Double(counts[6]) / t
+        )
+    }
+
     // Dynamically generated one-line narrative for the coverage distribution.
     // Priority: dominance → balance → blind spot → empty string.
     static func aggregate(_ stats: [CoverageStats]) -> CoverageStats? {

@@ -162,4 +162,11 @@ struct Story: Codable, Identifiable, Hashable {
     }
 
     var sourceCount: Int { articles.count }
+
+    // Coverage derived from the analyzed articles' source leans. Preferred over
+    // the joined `coverage` (story_coverage_view), which can be stale and skew
+    // the spectrum. Falls back to the view only when no article carries a lean.
+    var computedCoverage: CoverageStats? {
+        CoverageStats.from(storyID: id, articles: articles) ?? coverage
+    }
 }
