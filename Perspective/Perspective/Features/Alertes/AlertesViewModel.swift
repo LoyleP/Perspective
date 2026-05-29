@@ -17,6 +17,9 @@ final class AlertesViewModel {
     }
 
     func load() async {
+        await NotificationManager.shared.checkAuthorizationStatus()
+        authorizationStatus = NotificationManager.shared.authorizationStatus
+
         isLoading = true
         error = nil
 

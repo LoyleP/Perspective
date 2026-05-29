@@ -50,16 +50,13 @@ final class NotificationManager: NSObject {
         do {
             let lastNotificationId = UserDefaults.standard.string(forKey: "lastNotificationId") ?? ""
 
-            let response = try await SupabaseService.shared.client
+            let notifications: [PushNotification] = try await SupabaseService.shared.client
                 .from("notifications")
                 .select()
                 .order("sent_at", ascending: false)
                 .limit(1)
                 .execute()
-
-            let decoder = JSONDecoder()
-            decoder.dateDecodingStrategy = .iso8601
-            let notifications = try decoder.decode([PushNotification].self, from: response.data)
+                .value
 
             if let latestNotification = notifications.first,
                latestNotification.id.uuidString != lastNotificationId {
@@ -110,16 +107,13 @@ final class NotificationManager: NSObject {
     // MARK: - Fetch Notifications
 
     func fetchNotifications() async throws -> [PushNotification] {
-        let response = try await SupabaseService.shared.client
+        let notifications: [PushNotification] = try await SupabaseService.shared.client
             .from("notifications")
             .select()
             .order("sent_at", ascending: false)
             .limit(50)
             .execute()
-
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        let notifications = try decoder.decode([PushNotification].self, from: response.data)
+            .value
         return notifications
     }
 }
