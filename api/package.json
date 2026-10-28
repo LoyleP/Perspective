@@ -1,0 +1,13 @@
+{
+  "name": "optique-api",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@types/pg": "^8.23.1",
+    "pg": "^8.23.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  }
+}

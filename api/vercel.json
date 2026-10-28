@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/refresh-stories.ts": { "maxDuration": 300 },
+    "api/generate-spectrum-summary.ts": { "maxDuration": 60 }
+  },
+  "crons": [{ "path": "/api/refresh-stories", "schedule": "0 0 */2 * *" }]
+}
