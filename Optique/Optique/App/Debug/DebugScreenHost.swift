@@ -13,8 +13,17 @@ enum DebugRoute {
 
     static var screen: String? { value(after: "--screen") }
 
+    static let textSizeKey = "debug.textSize"
+
+    /// Launch argument first, then the value chosen in the debug menu.
     static var textSize: DynamicTypeSize? {
-        switch value(after: "--text-size") {
+        textSize(named: value(after: "--text-size") ?? UserDefaults.standard.string(forKey: textSizeKey))
+    }
+
+    static let textSizeNames = ["xs", "s", "m", "l", "xl", "xxl", "xxxl", "ax1", "ax2", "ax3", "ax4", "ax5"]
+
+    static func textSize(named name: String?) -> DynamicTypeSize? {
+        switch name {
         case "xs": return .xSmall
         case "s": return .small
         case "m": return .medium
@@ -33,10 +42,22 @@ enum DebugRoute {
 
     static var storyIndex: Int { Int(value(after: "--story") ?? "") ?? 0 }
 
-    private static func value(after flag: String) -> String? {
+    static func value(after flag: String) -> String? {
         let args = ProcessInfo.processInfo.arguments
         guard let index = args.firstIndex(of: flag), index + 1 < args.count else { return nil }
         return args[index + 1]
+    }
+}
+
+extension View {
+    /// Applies the Dynamic Type size forced by `--text-size` or the debug menu, if any.
+    @ViewBuilder
+    func debugTextSizeOverride() -> some View {
+        if let size = DebugRoute.textSize {
+            dynamicTypeSize(size)
+        } else {
+            self
+        }
     }
 }
 
@@ -58,7 +79,7 @@ struct DebugScreenHost: View {
             .environment(bookmarks)
             .environment(history)
             .preferredColorScheme(.dark)
-            .dynamicTypeSize(DebugRoute.textSize ?? .large)
+            .debugTextSizeOverride()
     }
 
     @ViewBuilder

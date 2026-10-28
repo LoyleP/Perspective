@@ -12,16 +12,23 @@ enum Fixtures {
         case normal, loading, empty, error
     }
 
+    /// Persisted switches driven by the in-app debug menu.
+    static let fixturesKey = "debug.fixtures"
+    static let stateKey = "debug.state"
+
     static var isActive: Bool {
         ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
             || ProcessInfo.processInfo.arguments.contains("--fixtures")
             || ProcessInfo.processInfo.arguments.contains("--screen")
+            || UserDefaults.standard.bool(forKey: fixturesKey)
     }
 
     static var state: State {
         let args = ProcessInfo.processInfo.arguments
-        guard let index = args.firstIndex(of: "--state"), index + 1 < args.count else { return .normal }
-        return State(rawValue: args[index + 1]) ?? .normal
+        if let index = args.firstIndex(of: "--state"), index + 1 < args.count {
+            return State(rawValue: args[index + 1]) ?? .normal
+        }
+        return State(rawValue: UserDefaults.standard.string(forKey: stateKey) ?? "") ?? .normal
     }
 
     /// Returns `items` honouring the forced state: never returns for `.loading`,

@@ -100,6 +100,23 @@ final class NotificationManager: NSObject {
         }
     }
 
+    #if DEBUG
+    /// Schedules a local notification that opens `storyID` when tapped (debug menu).
+    func debugSchedule(title: String, body: String, storyID: UUID?, after seconds: TimeInterval) async throws {
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = .default
+        if let storyID { content.userInfo = ["story_id": storyID.uuidString] }
+        let request = UNNotificationRequest(
+            identifier: UUID().uuidString,
+            content: content,
+            trigger: UNTimeIntervalNotificationTrigger(timeInterval: max(seconds, 1), repeats: false)
+        )
+        try await center.add(request)
+    }
+    #endif
+
     // MARK: - Fetch Notifications
 
     /// Send date of the most recent notification, for the unread badge.

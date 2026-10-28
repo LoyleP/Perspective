@@ -22,6 +22,9 @@ struct RootView: View {
             .onReceive(NotificationCenter.default.publisher(for: Notification.Name("INJECTION_BUNDLE_NOTIFICATION"))) { _ in
                 injectionCount += 1
             }
+            .onReceive(NotificationCenter.default.publisher(for: DebugMenu.reloadNotification)) { _ in
+                injectionCount += 1
+            }
             #endif
     }
 
@@ -60,6 +63,7 @@ struct RootView: View {
         .environment(session)
         .environment(bookmarks)
         .environment(readingHistory)
+        .debugMenu()
         .fullScreenCover(isPresented: .constant(!hasCompletedOnboarding)) {
             OnboardingView()
         }
@@ -99,6 +103,7 @@ struct RootView: View {
         .environment(session)
         .environment(bookmarks)
         .environment(readingHistory)
+        .debugMenu()
         .fullScreenCover(isPresented: .constant(!hasCompletedOnboarding)) {
             OnboardingView()
         }
@@ -119,3 +124,9 @@ private extension View {
         }
     }
 }
+
+#if !DEBUG
+extension View {
+    func debugMenu() -> some View { self }
+}
+#endif

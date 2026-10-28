@@ -43,6 +43,7 @@ struct OptiqueApp: App {
             DebugScreenHost(screen: screen)
         } else {
             RootView()
+                .debugTextSizeOverride()
         }
         #else
         RootView()
