@@ -186,3 +186,36 @@ private struct ProportionalHStack: Layout {
         }
     }
 }
+
+#if DEBUG
+#Preview("Compact") {
+    VStack(spacing: 16) {
+        ForEach(Fixtures.stories.prefix(5)) { story in
+            if let coverage = story.computedCoverage { SpectrumBar(coverage: coverage) }
+        }
+    }
+    .padding()
+    .background(AppColors.Adaptive.background)
+}
+
+#Preview("Detailed") {
+    let story = Fixtures.stories[0]
+    return SpectrumBar(coverage: story.computedCoverage!, style: .detailed, sources: story.sources)
+        .padding()
+        .cardSurface()
+        .padding()
+        .background(AppColors.Adaptive.background)
+}
+
+#Preview("Detailed – accessibility text") {
+    let story = Fixtures.stories[0]
+    return ScrollView {
+        SpectrumBar(coverage: story.computedCoverage!, style: .detailed, sources: story.sources)
+            .padding()
+            .cardSurface()
+            .padding()
+    }
+    .background(AppColors.Adaptive.background)
+    .dynamicTypeSize(.accessibility3)
+}
+#endif

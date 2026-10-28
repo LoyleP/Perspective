@@ -65,3 +65,19 @@ struct StoryHeroCard: View {
         story.computedCoverage.flatMap { PoliticalLean(rawValue: $0.dominantLean)?.spectrumColor }
     }
 }
+
+#if DEBUG
+#Preview("Large") {
+    StoryHeroCard(story: Fixtures.stories[0]).padding().background(AppColors.Adaptive.background)
+}
+
+#Preview("Medium") {
+    StoryHeroCard(story: Fixtures.stories[3], size: .medium).padding().background(AppColors.Adaptive.background)
+}
+
+#Preview("Accessibility text") {
+    ScrollView { StoryHeroCard(story: Fixtures.stories[1]).padding() }
+        .background(AppColors.Adaptive.background)
+        .dynamicTypeSize(.accessibility2)
+}
+#endif

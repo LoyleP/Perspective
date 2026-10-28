@@ -34,3 +34,14 @@ struct LeanTagView: View {
         RoundedRectangle(cornerRadius: style == .capsule ? .infinity : AppRadius.s)
     }
 }
+
+#if DEBUG
+#Preview("Tags") {
+    VStack(alignment: .leading, spacing: 8) {
+        ForEach(PoliticalLean.allCases) { LeanTagView(lean: $0) }
+        LeanTagView(lean: .centre, style: .rounded, value: 0.38)
+    }
+    .padding()
+    .background(AppColors.Adaptive.background)
+}
+#endif

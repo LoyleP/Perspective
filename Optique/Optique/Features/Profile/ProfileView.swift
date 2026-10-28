@@ -185,3 +185,11 @@ private struct ReadingSpectrumCard: View {
         .fixedSize()
     }
 }
+
+#if DEBUG
+#Preview("Mon Optique") {
+    NavigationStack { ProfileView() }
+        .environment(BookmarkStore())
+        .environment(ReadingHistoryStore())
+}
+#endif

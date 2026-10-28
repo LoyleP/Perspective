@@ -30,3 +30,14 @@ extension ButtonStyle where Self == OptiqueButtonStyle {
     static var optiquePrimary: OptiqueButtonStyle { OptiqueButtonStyle(kind: .primary) }
     static var optiqueSecondary: OptiqueButtonStyle { OptiqueButtonStyle(kind: .secondary) }
 }
+
+#if DEBUG
+#Preview("Buttons") {
+    VStack(spacing: 12) {
+        Button("Continuer") {}.buttonStyle(.optiquePrimary)
+        Button("Plus tard") {}.buttonStyle(.optiqueSecondary)
+    }
+    .padding()
+    .background(AppColors.Adaptive.background)
+}
+#endif

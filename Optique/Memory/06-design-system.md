@@ -45,3 +45,11 @@ Unchanged: `AppSpacing` 4-pt grid (xs 4 … xxxl 64), `AppRadius` (xs 4 … xl 2
 - Largest accessibility text size on iPhone 18 Pro Max: feed and story detail checked, layouts adapt (hero stacks, rows drop thumbnails, spectrum shares and verdict wrap, axis codes capped at xxxLarge).
 - Touch targets ≥ 44 pt on custom close buttons; icon-only toolbar buttons have labels.
 - Not checked: a small-screen device (only one simulator installed), VoiceOver end-to-end, Reduce Transparency.
+
+## Working on a screen without rebuilding (debug builds only)
+
+1. **Xcode previews** — every shared component and main screen has `#Preview`s (normal, large text, edge cases). In previews the repositories return offline fixtures (`Core/Models/Fixtures.swift`, active when `XCODE_RUNNING_FOR_PREVIEWS=1`, `--fixtures` or `--screen`).
+2. **Screen launcher** — open one screen directly with fixture data:
+   `xcrun simctl launch <udid> com.flow.optique --screen <name> [--state normal|loading|empty|error] [--text-size xs…xxxl|ax1…ax5] [--story <n>]`
+   Screens: feed, story, thread, explorer, topic, sources, source, profile, alerts, settings, onboarding, paywall, gallery. Code: `App/DebugScreenHost.swift`.
+3. **Live reload (simulator)** — install InjectionIII (Mac App Store / github.com/johnno1962/InjectionIII), run it, open the project. Debug simulator builds link with `-interposable` and load its bundle at launch; `RootView` re-renders on each injection. Not set up on device.

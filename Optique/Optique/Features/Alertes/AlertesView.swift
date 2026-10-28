@@ -168,3 +168,9 @@ private struct AlertRow: View {
         .accessibilityElement(children: .combine)
     }
 }
+
+#if DEBUG
+#Preview("Alertes") {
+    NavigationStack { AlertesView() }
+}
+#endif

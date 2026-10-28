@@ -269,3 +269,11 @@ struct SettingsView: View {
     }
     #endif
 }
+
+#if DEBUG
+#Preview("Réglages") {
+    NavigationStack { SettingsView() }
+        .environment(SessionState())
+        .environment(ReadingHistoryStore())
+}
+#endif

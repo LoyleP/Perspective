@@ -72,3 +72,11 @@ struct TopicPreferencesView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 }
+
+#if DEBUG
+#Preview("Topic picker") {
+    @Previewable @State var selection: Set<StoryTopic> = [.politique, .sport]
+    return ScrollView { TopicPickerGrid(selection: $selection).padding() }
+        .background(AppColors.Adaptive.background)
+}
+#endif

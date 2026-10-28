@@ -57,3 +57,12 @@ struct PaywallBannerView: View {
         .padding(.bottom, AppSpacing.s)
     }
 }
+
+#if DEBUG
+#Preview("Banner") {
+    PaywallBannerView(isPresented: .constant(true))
+        .environment(SessionState())
+        .frame(maxHeight: .infinity, alignment: .bottom)
+        .background(AppColors.Adaptive.background)
+}
+#endif

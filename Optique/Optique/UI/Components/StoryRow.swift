@@ -42,3 +42,24 @@ struct StoryRow: View {
         .accessibilityElement(children: .combine)
     }
 }
+
+#if DEBUG
+#Preview("Rows") {
+    ScrollView {
+        VStack(spacing: 0) {
+            ForEach(Fixtures.stories) { story in
+                StoryRow(story: story)
+                Divider()
+            }
+        }
+        .padding(.horizontal)
+    }
+    .background(AppColors.Adaptive.background)
+}
+
+#Preview("Accessibility text") {
+    ScrollView { StoryRow(story: Fixtures.stories[3]).padding() }
+        .background(AppColors.Adaptive.background)
+        .dynamicTypeSize(.accessibility3)
+}
+#endif

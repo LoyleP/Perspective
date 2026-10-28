@@ -200,7 +200,7 @@ struct SourceDetailView: View {
 #if DEBUG
 #Preview("SourceDetailView") {
     NavigationStack {
-        SourceDetailView(source: PreviewData.leFigaro)
+        SourceDetailView(source: Fixtures.sources[4])
     }
 }
 #endif

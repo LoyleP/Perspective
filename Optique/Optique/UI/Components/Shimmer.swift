@@ -50,3 +50,14 @@ struct SkeletonLines: View {
         .accessibilityLabel("Chargement")
     }
 }
+
+#if DEBUG
+#Preview("Skeleton") {
+    VStack(alignment: .leading, spacing: 24) {
+        SkeletonLines(count: 4)
+        RoundedRectangle(cornerRadius: 20).fill(AppColors.Adaptive.placeholder).frame(height: 180).shimmering()
+    }
+    .padding()
+    .background(AppColors.Adaptive.background)
+}
+#endif

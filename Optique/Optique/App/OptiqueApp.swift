@@ -13,6 +13,11 @@ struct OptiqueApp: App {
             CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
         }
 
+        #if DEBUG && targetEnvironment(simulator)
+        // Live reload: loads InjectionIII's bundle when the InjectionIII app is installed.
+        Bundle(path: "/Applications/InjectionIII.app/Contents/Resources/iOSInjection.bundle")?.load()
+        #endif
+
         // Permission is asked at the end of onboarding (or from Réglages / Alertes), not at launch.
         Task {
             await NotificationManager.shared.checkAuthorizationStatus()
@@ -23,13 +28,34 @@ struct OptiqueApp: App {
 
     @State private var showSplash = true
 
+    private var skipsSplash: Bool {
+        #if DEBUG
+        return DebugRoute.screen != nil
+        #else
+        return false
+        #endif
+    }
+
+    @ViewBuilder
+    private var rootContent: some View {
+        #if DEBUG
+        if let screen = DebugRoute.screen {
+            DebugScreenHost(screen: screen)
+        } else {
+            RootView()
+        }
+        #else
+        RootView()
+        #endif
+    }
+
     var body: some Scene {
         WindowGroup {
             ZStack {
-                RootView()
+                rootContent
                     .preferredColorScheme(.dark)
 
-                if showSplash {
+                if showSplash && !skipsSplash {
                     SplashView {
                         showSplash = false
                     }

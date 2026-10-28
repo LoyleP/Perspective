@@ -22,6 +22,12 @@ final class StoryDetailViewModel {
     func triggerSummaryGeneration() async {
         guard story.spectrumSummary == nil else { return }
         summaryUnavailable = false
+        #if DEBUG
+        if Fixtures.isActive {
+            summaryUnavailable = true
+            return
+        }
+        #endif
 
         do {
             try await APIClient.shared.post("generate-spectrum-summary", body: ["story_id": story.id.uuidString])

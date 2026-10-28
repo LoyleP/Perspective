@@ -10,7 +10,23 @@ struct RootView: View {
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     private let notificationManager = NotificationManager.shared
 
+    #if DEBUG
+    /// Bumped on every InjectionIII reload so the whole tree re-renders with the injected code.
+    @State private var injectionCount = 0
+    #endif
+
     var body: some View {
+        tabs
+            #if DEBUG
+            .id(injectionCount)
+            .onReceive(NotificationCenter.default.publisher(for: Notification.Name("INJECTION_BUNDLE_NOTIFICATION"))) { _ in
+                injectionCount += 1
+            }
+            #endif
+    }
+
+    @ViewBuilder
+    private var tabs: some View {
         if #available(iOS 18.0, *) {
             modernTabView
         } else {

@@ -28,3 +28,15 @@ struct SourceStack: View {
             + (sources.count > limit ? " et \(sources.count - limit) autres" : ""))
     }
 }
+
+#if DEBUG
+#Preview("Stacks") {
+    VStack(alignment: .leading, spacing: 16) {
+        SourceStack(sources: Fixtures.sources)
+        SourceStack(sources: Array(Fixtures.sources.prefix(2)), size: 28)
+        SourceStack(sources: Array(Fixtures.sources.prefix(1)), size: 36)
+    }
+    .padding()
+    .background(AppColors.Adaptive.background)
+}
+#endif

@@ -39,6 +39,9 @@ final class NotificationManager: NSObject {
     // MARK: - Local Notification Scheduling
 
     func checkForNewStories() async {
+        #if DEBUG
+        if Fixtures.isActive { return }
+        #endif
         Log.notification.debug("Checking for new stories, auth status: \(self.authorizationStatus.rawValue)")
 
         guard authorizationStatus == .authorized else {
@@ -101,11 +104,17 @@ final class NotificationManager: NSObject {
 
     /// Send date of the most recent notification, for the unread badge.
     func latestNotificationDate() async -> Date? {
+        #if DEBUG
+        if Fixtures.isActive { return Fixtures.notifications.first?.sentAt }
+        #endif
         let latest: [PushNotification]? = try? await APIClient.shared.get("notifications", query: ["limit": "1"])
         return latest?.first?.sentAt
     }
 
     func fetchNotifications() async throws -> [PushNotification] {
+        #if DEBUG
+        if Fixtures.isActive { return try await Fixtures.apply(Fixtures.notifications) }
+        #endif
         let notifications: [PushNotification] = try await APIClient.shared.get("notifications", query: ["limit": "50"])
         return notifications
     }

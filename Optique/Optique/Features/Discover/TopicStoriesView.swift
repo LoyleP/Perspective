@@ -84,3 +84,9 @@ struct TopicStoriesView: View {
         }
     }
 }
+
+#if DEBUG
+#Preview("Topic") {
+    NavigationStack { TopicStoriesView(topic: .politique) }
+}
+#endif

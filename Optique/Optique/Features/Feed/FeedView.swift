@@ -264,3 +264,12 @@ extension View {
     .environment(BookmarkStore())
 }
 #endif
+
+#if DEBUG
+#Preview("FeedView – accessibility text") {
+    NavigationStack { FeedView() }
+        .environment(SessionState())
+        .environment(BookmarkStore())
+        .dynamicTypeSize(.accessibility2)
+}
+#endif

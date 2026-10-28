@@ -274,3 +274,12 @@ private struct ArticleSourceRow: View {
     .environment(ReadingHistoryStore())
 }
 #endif
+
+#if DEBUG
+#Preview("StoryDetailView – no image, single source") {
+    NavigationStack { StoryDetailView(story: Fixtures.stories[9]) }
+        .environment(SessionState())
+        .environment(BookmarkStore())
+        .environment(ReadingHistoryStore())
+}
+#endif
