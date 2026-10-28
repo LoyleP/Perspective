@@ -1,6 +1,6 @@
-# Perspective
+# Optique
 
-Perspective est une application iOS qui agrège et affiche des articles de presse française avec une analyse du spectre politique.
+Optique est une application iOS qui agrège et affiche des articles de presse française avec une analyse du spectre politique.
 
 ---
 
@@ -17,23 +17,23 @@ Perspective est une application iOS qui agrège et affiche des articles de press
 #### 1. Cloner le projet
 
 ```bash
-git clone https://github.com/[votre-username]/perspective.git
-cd perspective
+git clone https://github.com/[votre-username]/optique.git
+cd optique
 ```
 
 #### 2. Ouvrir le projet dans Xcode
 
 ```bash
-open Perspective/Perspective.xcodeproj
+open Optique/Optique.xcodeproj
 ```
 
-**Note**: Ouvrir `Perspective.xcodeproj`, PAS `.xcworkspace` (le projet utilise Swift Package Manager, pas CocoaPods).
+**Note**: Ouvrir `Optique.xcodeproj`, PAS `.xcworkspace` (le projet utilise Swift Package Manager, pas CocoaPods).
 
 #### 3. Configuration Supabase (optionnel)
 
 Le projet inclut des **credentials Supabase par défaut** pour démarrer immédiatement. Pour utiliser votre propre instance:
 
-1. Ouvrir `Perspective/Perspective/Config/AppConfig.swift`
+1. Ouvrir `Optique/Optique/Config/AppConfig.swift`
 2. Remplacer les valeurs:
 
 ```swift
@@ -86,7 +86,7 @@ static let supabaseAnonKey = "VOTRE_SUPABASE_ANON_KEY"
 - Consulter les logs Xcode pour erreurs réseau
 
 **Les produits StoreKit ne chargent pas**
-- Vérifier que le schéma utilise `Perspective.storekit`: **Product** → **Scheme** → **Edit Scheme** → **Run** → **Options** → **StoreKit Configuration** = `Perspective.storekit`
+- Vérifier que le schéma utilise `Optique.storekit`: **Product** → **Scheme** → **Edit Scheme** → **Run** → **Options** → **StoreKit Configuration** = `Optique.storekit`
 
 ---
 
@@ -124,7 +124,7 @@ Le projet utilise Supabase pour accéder à la base de données d'articles. Les 
 Si vous souhaitez utiliser votre propre instance Supabase :
 
 1. Ouvrez `groundnewsfrance.xcodeproj` dans Xcode
-2. Sélectionnez le projet → Target "Perspective" → Build Settings
+2. Sélectionnez le projet → Target "Optique" → Build Settings
 3. Cherchez "SupabaseURL" et "SupabaseAnonKey"
 4. Modifiez les valeurs pour pointer vers votre instance Supabase
 
@@ -144,7 +144,7 @@ open groundnewsfrance.xcodeproj
 ## Structure du projet
 
 ```
-Perspective/
+Optique/
 ├── App/                # Point d'entrée et configuration
 ├── Features/           # Écrans et fonctionnalités
 │   ├── Feed/          # Liste des actualités

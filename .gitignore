@@ -61,3 +61,7 @@ AppConfig.swift.secret
 *.swp
 *.swo
 *~
+
+.vercel
+.env*
+supabase/.temp/
