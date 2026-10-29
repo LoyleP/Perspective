@@ -15,12 +15,15 @@ const NER_LINK_MIN_SIMILARITY = 0.12;
 const STRONG_TFIDF_THRESHOLD = 0.45;
 const CROSS_CYCLE_NER_THRESHOLD = 3;
 const MIN_CLUSTER_SIZE = 2;
-const WINDOW_HOURS = 48;
+const WINDOW_HOURS = 72;
 // Keep cross-cycle merge aligned with the refresh cadence (every 48h). A wider
 // window scans many prior runs' stories, inflating spurious entity overlaps.
 const CROSS_CYCLE_HOURS = 48;
 const BATCH_SIZE = 50;
-const MAX_ARTICLES_PER_RUN = 200;
+const MAX_ARTICLES_PER_RUN = 4000;
+// A lone article joins an existing recent story when its text is this similar to the story's
+// headlines (and they share at least one entity).
+const SINGLETON_ATTACH_SIMILARITY = 0.33;
 
 const FRENCH_STOPWORDS = new Set([
   "le", "la", "les", "un", "une", "des", "de", "du", "et", "ou", "mais",
@@ -314,6 +317,24 @@ function cosineSimilarity(v1: TFIDFVector, v2: TFIDFVector): number {
   return dotProduct / (Math.sqrt(norm1) * Math.sqrt(norm2));
 }
 
+function vectorNorm(v: TFIDFVector): number {
+  let sum = 0;
+  for (const w of Object.values(v)) sum += w * w;
+  return Math.sqrt(sum);
+}
+
+/** Cosine similarity with precomputed norms; iterates the smaller vector. */
+function cosineWithNorms(v1: TFIDFVector, n1: number, v2: TFIDFVector, n2: number): number {
+  if (n1 === 0 || n2 === 0) return 0;
+  // Iterate v1; the callers keep the shorter vector first when it matters.
+  let dot = 0;
+  for (const token in v1) {
+    const w = v2[token];
+    if (w) dot += v1[token] * w;
+  }
+  return dot / (n1 * n2);
+}
+
 function countSharedEntities(
   entities1: string[],
   entities2: string[]
@@ -442,6 +463,7 @@ async function clusterStories(): Promise<{
   valid_clusters: number;
   articles_assigned: number;
   singletons: number;
+  attached_to_existing?: number;
 }> {
   const cycleId = new Date().toISOString();
 
@@ -467,6 +489,9 @@ async function clusterStories(): Promise<{
     entitiesMap.set(article.id, extractEntities(article.title));
   }
 
+  const norms = new Map<string, number>();
+  for (const a of articles) norms.set(a.id, vectorNorm(tfidfVectors.get(a.id)!));
+
   const uf = new UnionFind(articles.map((a) => a.id));
 
   for (let i = 0; i < articles.length; i++) {
@@ -474,9 +499,9 @@ async function clusterStories(): Promise<{
       const a1 = articles[i];
       const a2 = articles[j];
 
-      const similarity = cosineSimilarity(
-        tfidfVectors.get(a1.id)!,
-        tfidfVectors.get(a2.id)!
+      const similarity = cosineWithNorms(
+        tfidfVectors.get(a1.id)!, norms.get(a1.id)!,
+        tfidfVectors.get(a2.id)!, norms.get(a2.id)!
       );
       const sharedEntities = countSharedEntities(
         entitiesMap.get(a1.id)!,
@@ -524,6 +549,18 @@ async function clusterStories(): Promise<{
     "SELECT id, title FROM stories WHERE last_updated_at >= $1",
     [new Date(Date.now() - CROSS_CYCLE_HOURS * 60 * 60 * 1000).toISOString()]
   );
+  // Sources that already have a primary article in each recent story (one primary per source).
+  const { rows: primaryRows } = await pool.query(
+    `SELECT a.story_id, a.source_id FROM articles a
+       JOIN stories s ON s.id = a.story_id
+      WHERE s.last_updated_at >= $1 AND a.is_primary`,
+    [new Date(Date.now() - CROSS_CYCLE_HOURS * 60 * 60 * 1000).toISOString()]
+  );
+  const primarySources = new Map<string, Set<string>>();
+  for (const row of primaryRows) {
+    if (!primarySources.has(row.story_id)) primarySources.set(row.story_id, new Set());
+    primarySources.get(row.story_id)!.add(row.source_id);
+  }
 
   const recentStoriesEntities = new Map<string, Set<string>>();
   if (recentStories) {
@@ -575,7 +612,8 @@ async function clusterStories(): Promise<{
       await pool.query("UPDATE stories SET last_updated_at = now() WHERE id = $1", [mergedStoryId]);
     }
 
-    const sourcesSeen = new Set<string>();
+    const sourcesSeen = new Set<string>(primarySources.get(mergedStoryId) ?? []);
+    if (!primarySources.has(mergedStoryId)) primarySources.set(mergedStoryId, sourcesSeen);
     for (const article of cluster.articles) {
       const isPrimary = !sourcesSeen.has(article.source_id);
       if (isPrimary) {
@@ -586,6 +624,54 @@ async function clusterStories(): Promise<{
         storyId: mergedStoryId,
         isPrimary,
       });
+    }
+  }
+
+  // Lone articles: attach each to the best-matching recent story instead of leaving it orphaned.
+  const attached = new Set<string>();
+  if (singletonIds.length > 0) {
+    const { rows: storyDocs } = await pool.query(
+      `SELECT s.id, s.title, array_agg(a.title) AS titles
+         FROM stories s JOIN articles a ON a.story_id = s.id
+        WHERE s.last_updated_at >= $1
+        GROUP BY s.id, s.title`,
+      [new Date(Date.now() - CROSS_CYCLE_HOURS * 60 * 60 * 1000).toISOString()]
+    );
+    if (storyDocs.length > 0) {
+      const singles = articles.filter((a) => singletonIds.includes(a.id));
+      const docs: ClusterArticle[] = storyDocs.map((d) => ({
+        id: `story:${d.id}`,
+        title: [d.title, ...d.titles].join(" "),
+        summary: null,
+        published_at: "",
+        source_id: "",
+      }));
+      const vectors = computeTFIDF([...singles, ...docs]);
+      const docNorms = docs.map((d) => vectorNorm(vectors.get(d.id)!));
+      const docEntities = docs.map((d) => new Set(extractEntities(d.title)));
+
+      for (const single of singles) {
+        const v = vectors.get(single.id)!;
+        const n = vectorNorm(v);
+        const ents = entitiesMap.get(single.id) ?? [];
+        let best = -1;
+        let bestSim = SINGLETON_ATTACH_SIMILARITY;
+        for (let i = 0; i < docs.length; i++) {
+          const sim = cosineWithNorms(v, n, vectors.get(docs[i].id)!, docNorms[i]);
+          if (sim > bestSim && ents.some((e) => docEntities[i].has(e))) {
+            bestSim = sim;
+            best = i;
+          }
+        }
+        if (best < 0) continue;
+        const storyId = storyDocs[best].id;
+        const seen = primarySources.get(storyId) ?? new Set<string>();
+        primarySources.set(storyId, seen);
+        const isPrimary = !seen.has(single.source_id);
+        if (isPrimary) seen.add(single.source_id);
+        assignments.push({ articleId: single.id, storyId, isPrimary });
+        attached.add(single.id);
+      }
     }
   }
 
@@ -601,15 +687,10 @@ async function clusterStories(): Promise<{
     );
   }
 
-  for (const singletonBatch of batchArray(singletonIds, BATCH_SIZE)) {
-    await Promise.all(
-      singletonBatch.map((id) =>
-        pool.query(
-          "UPDATE articles SET clustered_at = now(), entities = $2::text[] WHERE id = $1",
-          [id, entitiesMap.get(id) ?? []]
-        )
-      )
-    );
+  // Mark lone articles as seen (they stay unclustered and are retried while inside the window).
+  const unseen = singletonIds.filter((id) => !attached.has(id));
+  if (unseen.length > 0) {
+    await pool.query("UPDATE articles SET clustered_at = now() WHERE id = ANY($1::uuid[]) AND clustered_at IS NULL", [unseen]);
   }
 
   await pool.query("UPDATE stories SET is_featured = false WHERE is_featured");
@@ -647,7 +728,8 @@ async function clusterStories(): Promise<{
     articles_processed: articles.length,
     valid_clusters: validClusters.length,
     articles_assigned: assignments.length,
-    singletons: singletonIds.length,
+    singletons: singletonIds.length - attached.size,
+    attached_to_existing: attached.size,
   };
 }
 
