@@ -28,42 +28,30 @@ struct RootView: View {
             #endif
     }
 
-    @ViewBuilder
     private var tabs: some View {
-        if #available(iOS 18.0, *) {
-            modernTabView
-        } else {
-            legacyTabView
+        ZStack {
+            tab(0) { NavigationStack { FeedView() } }
+            tab(1) { NavigationStack { ProfileView() } }
+            tab(2) { NavigationStack { DiscoverView(searchText: $discoverSearchText) } }
         }
-    }
-
-    @available(iOS 18.0, *)
-    private var modernTabView: some View {
-        TabView(selection: $selectedTab) {
-            Tab("À la une", image: "AppLogoTab", value: 0) {
-                NavigationStack {
-                    FeedView()
-                }
-            }
-
-            Tab("Mon Optique", systemImage: "person.crop.circle", value: 1) {
-                NavigationStack {
-                    ProfileView()
-                }
-            }
-
-            Tab("Explorer", systemImage: "magnifyingglass", value: 2, role: .search) {
-                NavigationStack {
-                    DiscoverView(searchText: $discoverSearchText)
-                }
-            }
+        .overlay(alignment: .bottom) {
+            FloatingTabBar(
+                items: [
+                    .init(id: 0, accessibilityLabel: "À la une", icon: "AppLogoTab", isAsset: true),
+                    .init(id: 1, accessibilityLabel: "Mon Optique", icon: "person.crop.circle", selectedIcon: "person.crop.circle.fill"),
+                    .init(id: 2, accessibilityLabel: "Explorer", icon: "magnifyingglass")
+                ],
+                selection: $selectedTab
+            )
+            .ignoresSafeArea(.keyboard)
         }
         .tint(AppColors.Brand.accent)
-        .minimizesTabBarOnScroll()
+        // Must come before the .environment calls: the debug menu sheet reads those objects,
+        // and a sheet only inherits the environment of the view it is attached to.
+        .debugMenu()
         .environment(session)
         .environment(bookmarks)
         .environment(readingHistory)
-        .debugMenu()
         .fullScreenCover(isPresented: .constant(!hasCompletedOnboarding)) {
             OnboardingView()
         }
@@ -73,55 +61,15 @@ struct RootView: View {
         }
     }
 
-    private var legacyTabView: some View {
-        TabView(selection: $selectedTab) {
-            NavigationStack {
-                FeedView()
+    /// All tabs stay alive (scroll position and navigation are kept); only the selected one shows.
+    private func tab<Content: View>(_ index: Int, @ViewBuilder content: () -> Content) -> some View {
+        content()
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                Color.clear.frame(height: FloatingTabBar.height)
             }
-            .tag(0)
-            .tabItem {
-                Label { Text("À la une") } icon: { Image("AppLogoTab") }
-            }
-
-            NavigationStack {
-                ProfileView()
-            }
-            .tag(1)
-            .tabItem {
-                Label { Text("Mon Optique") } icon: { Image(systemName: "person.crop.circle") }
-            }
-
-            NavigationStack {
-                DiscoverView(searchText: $discoverSearchText)
-            }
-            .tag(2)
-            .tabItem {
-                Label { Text("Explorer") } icon: { Image(systemName: "magnifyingglass") }
-            }
-        }
-        .tint(AppColors.Brand.accent)
-        .environment(session)
-        .environment(bookmarks)
-        .environment(readingHistory)
-        .debugMenu()
-        .fullScreenCover(isPresented: .constant(!hasCompletedOnboarding)) {
-            OnboardingView()
-        }
-        .onChange(of: notificationManager.pendingStoryID) { _, storyID in
-            if storyID != nil { selectedTab = 0 }
-        }
-    }
-}
-
-private extension View {
-    /// iOS 26: the floating tab bar shrinks while scrolling down.
-    @ViewBuilder
-    func minimizesTabBarOnScroll() -> some View {
-        if #available(iOS 26.0, *) {
-            tabBarMinimizeBehavior(.onScrollDown)
-        } else {
-            self
-        }
+            .opacity(selectedTab == index ? 1 : 0)
+            .allowsHitTesting(selectedTab == index)
+            .accessibilityHidden(selectedTab != index)
     }
 }
 

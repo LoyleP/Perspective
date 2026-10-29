@@ -40,6 +40,13 @@
 - **Stale clusters never re-evaluated** — Phase 2 only processes `story_id IS NULL`, so a bad merge persists until the story is deleted. Clustering fixes only affect future runs.
 - **Residual over-merge via dominant entities** — a "Choose France"/Macron story still mixes unrelated subjects bridged by a single high-frequency entity (e.g. "Macron"). Not addressed: would need entity IDF weighting or a dominant-entity requirement. Existing bad clusters won't self-heal (see above).
 
+## Story size (2026-10-29)
+
+- Coverage per story was low because only the 200 newest unclustered articles were clustered per run (87 % of the last 48 h stayed unclustered). Now up to 4,000 per run, a 72 h window, daily cron, lone articles attach to existing stories, and 13 French sources were added (53 active): Ouest-France, La Dépêche, Midi Libre, Le Dauphiné libéré, France Inter, Courrier International, HuffPost France, Challenges, Europe 1, Sud Radio, Atlantico, CNews, Le JDD. **Their political leans are my editorial estimates: review them.** Le Monde now uses the `en_continu` feed.
+- Result on the last 7 days: stories with ≥ 3 sources went from ~131 to ~330; the largest reach 25–30 sources. ~54 % of articles stay unclustered because only one outlet covers them.
+- Large clusters can include loosely related articles bridged by a shared entity (e.g. a Harry Kane article inside the Mbappé story).
+- Dead or blocked feeds (403/404): Capital, Le Point, Washington Post, Révolution Permanente currently fail to fetch.
+
 ## Backend migration (2026-10-28)
 
 - Backend moved off Supabase to Vercel (`optique-api`) + Neon Postgres. Supabase project `groundnewsfrance` (ref `lsznkuiaowesucmxwwfi`) is no longer used; its `pg_cron` jobs were unscheduled via migration `20261028140000_unschedule_cron_jobs.sql`. Pause/delete the project from the dashboard.

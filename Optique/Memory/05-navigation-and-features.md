@@ -3,7 +3,7 @@
 ## Tab Structure
 
 ```
-TabView (iOS 18 Tab API / legacy fallback, follows system light/dark)
+Custom FloatingTabBar (icons only, 30 pt) over three always-alive NavigationStacks (follows system light/dark)
 ├── 0 "À la une" (custom AppLogoTab, template image)
 │   └── FeedView → StoryDetailView (zoom transition)
 │       ├── bell → AlertesView → StoryDetailView

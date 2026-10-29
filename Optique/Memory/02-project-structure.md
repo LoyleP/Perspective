@@ -4,7 +4,7 @@
 Optique/
 ├── App/
 │   ├── OptiqueApp.swift              # @main. Registers fonts (Geist, BarlowCondensed). Checks notification status (never prompts). Splash overlay. Scene phase → notification check.
-│   ├── RootView.swift                # TabView: À la une · Mon Optique · Explorer (search role). iOS 18 Tab API + legacy fallback. Injects SessionState, BookmarkStore, ReadingHistoryStore. Onboarding cover. Push deep-link → selects the feed tab. Tab bar minimizes on scroll (iOS 26).
+│   ├── RootView.swift                # À la une · Mon Optique · Explorer as three always-alive NavigationStacks under the custom FloatingTabBar (no system TabView). Injects SessionState, BookmarkStore, ReadingHistoryStore. Onboarding cover. Push deep-link → selects the feed tab. 
 │   ├── SessionState.swift            # @Observable @MainActor. In-memory story counter, owns StoreManager, isPremium (+ DEBUG override), shouldShowPaywall at 5 opens.
 │   ├── BookmarkStore.swift           # @Observable @MainActor. UserDefaults JSON of saved [Story].
 │   └── SplashView.swift              # Launch splash animation
@@ -50,7 +50,7 @@ Optique/
 │   └── Utilities/                    # Log, DateFormatting (French relative time, "il y a 2 h")
 │
 └── UI/
-    ├── Components/                   # SpectrumBar, LeanTagView, SourceAvatarView, SourceStack, StoryHeroCard, StoryRow, SectionHeader, RemoteImage, Shimmer (+ SkeletonLines), OptiqueButtonStyle, CardPressStyle, TopicPickerGrid (+ TopicPreferencesView), PaywallBannerView, OwnershipBreakdownView
+    ├── Components/                   # FloatingTabBar, SpectrumBar, LeanTagView, SourceAvatarView, SourceStack, StoryHeroCard, StoryRow, SectionHeader, RemoteImage, Shimmer (+ SkeletonLines), OptiqueButtonStyle, CardPressStyle, TopicPickerGrid (+ TopicPreferencesView), PaywallBannerView, OwnershipBreakdownView
     ├── Modifiers/                    # CardSurface (.cardSurface()), NavigationBarStyle (.optiqueNavigationBar())
     └── Theme/                        # DesignTokens (colors, spacing, radii), AdaptiveTokens (semantic dark tokens), Typography (Dynamic Type scale)
 ```

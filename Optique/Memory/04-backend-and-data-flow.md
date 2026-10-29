@@ -39,12 +39,12 @@ Data was copied from Supabase once (48 sources, 11,824 stories, 97,867 articles,
 
 ## Cron
 
-- `vercel.json` cron: `/api/refresh-stories` at `0 0 */2 * *` (every 2 days, 00:00 UTC). Vercel sends `Authorization: Bearer $CRON_SECRET` automatically.
+- `vercel.json` cron: `/api/refresh-stories` daily at 04:00 UTC (Hobby plan allows one run per day). Vercel sends `Authorization: Bearer $CRON_SECRET` automatically.
 - Featured story: most articles in the last 6h. Notification: created when the run creates new stories and the last one is >1h old (top new story by article count, `story_id` set).
 
 ### `refresh-stories` Clustering Algorithm (Phase 2)
 
-TF-IDF + named-entity (NER) clustering over the last `WINDOW_HOURS=48` of unclustered articles (max 200/run), via Union-Find.
+TF-IDF + named-entity (NER) clustering over the last `WINDOW_HOURS=72` of unclustered articles (max `MAX_ARTICLES_PER_RUN=4000`; a 3,700-article run takes ~75 s), via Union-Find. Lone articles are retried on every run while inside the window and are also attached to the best-matching recent story (`SINGLETON_ATTACH_SIMILARITY=0.33` against the story's headlines, plus ≥ 1 shared entity). When a cluster merges into an existing story, sources that already have a primary article there are respected (one primary per source).
 
 - **Tokenization** filters a combined `STOPWORDS` set (French + English) so TF-IDF reflects topic, not grammar. Added English stopwords (2026-06-01) to support English sources.
 - **Entity extraction** pulls acronyms (≥3 chars, ALL-CAPS) and non-sentence-initial capitalized words; filtered through `ENTITY_STOPWORDS` (generic geo/time/title-initial words, FR + EN) to reduce noise.

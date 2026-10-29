@@ -118,9 +118,12 @@ struct StoryDetailView: View {
     /// Lead photo (stretches when pulled down), fading into the page; the headline sits below it.
     private var header: some View {
         VStack(alignment: .leading, spacing: AppSpacing.st) {
-            RemoteImage(url: story.leadImageURL, tint: leadTint)
+            // Color.clear sizes to the proposed width; the filled photo is an overlay, so its
+            // overflow can't widen the layout.
+            Color.clear
                 .frame(maxWidth: .infinity)
                 .frame(height: story.leadImageURL == nil ? 120 : 320)
+                .overlay { RemoteImage(url: story.leadImageURL, tint: leadTint) }
                 .overlay {
                     LinearGradient(
                         stops: [
