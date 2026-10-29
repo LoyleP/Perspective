@@ -38,7 +38,6 @@ struct ProfileView: View {
         .background(AppColors.Adaptive.background.ignoresSafeArea())
         .navigationTitle("Mon Optique")
         .navigationBarTitleDisplayMode(.large)
-        .optiqueNavigationBar()
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {

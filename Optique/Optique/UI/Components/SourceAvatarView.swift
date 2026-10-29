@@ -27,7 +27,7 @@ struct SourceAvatarView: View {
         return ZStack {
             Circle().fill(lean?.spectrumColor ?? AppColors.Adaptive.surfaceElevated)
             Text(String(source.name.prefix(1)).uppercased())
-                .font(.system(size: size * 0.44, weight: .bold))
+                .font(.geist(size * 0.44, .medium, relativeTo: .caption))
                 .foregroundStyle(lean?.tagTextColor ?? AppColors.Adaptive.textSecondary)
         }
     }

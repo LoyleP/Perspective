@@ -115,30 +115,19 @@ struct StoryDetailView: View {
 
     // MARK: - Header
 
-    /// Lead photo behind the headline; stretches when pulled down.
+    /// Lead photo (stretches when pulled down), fading into the page; the headline sits below it.
     private var header: some View {
         VStack(alignment: .leading, spacing: AppSpacing.st) {
-            Spacer(minLength: story.leadImageURL == nil ? 120 : 260)
-            Text(story.metaLine)
-                .overlineStyle(AppColors.Brand.accent)
-            Text(story.title)
-                .font(.appLargeTitle)
-                .foregroundStyle(.white)
-                .fixedSize(horizontal: false, vertical: true)
-                .accessibilityAddTraits(.isHeader)
-        }
-        .padding(.horizontal, AppSpacing.m)
-        .padding(.bottom, AppSpacing.s)
-        .frame(maxWidth: .infinity, alignment: .bottomLeading)
-        .background {
             RemoteImage(url: story.leadImageURL, tint: leadTint)
+                .frame(maxWidth: .infinity)
+                .frame(height: story.leadImageURL == nil ? 120 : 320)
                 .overlay {
                     LinearGradient(
                         stops: [
-                            .init(color: .black.opacity(0.35), location: 0),
-                            .init(color: .clear, location: 0.25),
-                            .init(color: AppColors.Adaptive.background.opacity(0.7), location: 0.6),
-                            .init(color: AppColors.Adaptive.background, location: 0.92)
+                            .init(color: .black.opacity(0.45), location: 0),
+                            .init(color: .clear, location: 0.3),
+                            .init(color: AppColors.Adaptive.background.opacity(0.6), location: 0.8),
+                            .init(color: AppColors.Adaptive.background, location: 1)
                         ],
                         startPoint: .top,
                         endPoint: .bottom
@@ -150,6 +139,17 @@ struct StoryDetailView: View {
                     return effect.scaleEffect(1 + pull / max(proxy.size.height, 1), anchor: .bottom)
                 }
                 .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: AppSpacing.st) {
+                Text(story.metaLine)
+                    .overlineStyle()
+                Text(story.title)
+                    .font(.appLargeTitle)
+                    .foregroundStyle(AppColors.Adaptive.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityAddTraits(.isHeader)
+            }
+            .padding(.horizontal, AppSpacing.m)
         }
     }
 
@@ -238,7 +238,7 @@ private struct ArticleSourceRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
                     Text(article.source?.name ?? "Source")
-                        .font(.appFootnote.weight(.semibold))
+                        .font(.appFootnote)
                         .foregroundStyle(AppColors.Adaptive.textPrimary)
                     if let lean = article.source?.lean {
                         Circle().fill(lean.spectrumColor).frame(width: 6, height: 6)

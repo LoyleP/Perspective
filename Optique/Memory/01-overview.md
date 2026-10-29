@@ -2,7 +2,7 @@
 
 ## What It Is
 
-French news aggregation app. Shows how stories get covered across a **7-point political spectrum** (extrême-gauche → extrême-droite). Think "Ground News" but for French media. Primarily French sources, with some English-language outlets added as extra coverage signal (2026-06-01). AI-generated summaries (via Gemini) break down narratives per political position and always respond in French. Freemium model with StoreKit 2 subscriptions. Dark-only, image-led UI (redesigned 2026-10-28, see 06-design-system.md).
+French news aggregation app. Shows how stories get covered across a **7-point political spectrum** (extrême-gauche → extrême-droite). Think "Ground News" but for French media. Primarily French sources, with some English-language outlets added as extra coverage signal (2026-06-01). AI-generated summaries (via Gemini) break down narratives per political position and always respond in French. Freemium model with StoreKit 2 subscriptions. Black-or-white (light + dark), Geist-only UI, image-led (redesigned 2026-10-28/29, see 06-design-system.md).
 
 ## Tech Stack
 

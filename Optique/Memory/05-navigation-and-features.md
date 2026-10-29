@@ -3,8 +3,8 @@
 ## Tab Structure
 
 ```
-TabView (iOS 18 Tab API / legacy fallback, dark-only)
-├── 0 "À la une" (custom AppLogoTab)
+TabView (iOS 18 Tab API / legacy fallback, follows system light/dark)
+├── 0 "À la une" (custom AppLogoTab, template image)
 │   └── FeedView → StoryDetailView (zoom transition)
 │       ├── bell → AlertesView → StoryDetailView
 │       ├── StoryThreadView, ArticleBrowserView (sheet), PaywallView (sheet)

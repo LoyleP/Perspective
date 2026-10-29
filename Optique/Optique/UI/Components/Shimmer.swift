@@ -10,7 +10,7 @@ struct Shimmer: ViewModifier {
             .overlay {
                 if !reduceMotion {
                     LinearGradient(
-                        colors: [.clear, .white.opacity(0.10), .clear],
+                        colors: [.clear, AppColors.Adaptive.textPrimary.opacity(0.08), .clear],
                         startPoint: .leading,
                         endPoint: .trailing
                     )

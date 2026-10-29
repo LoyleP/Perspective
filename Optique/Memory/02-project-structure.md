@@ -3,7 +3,7 @@
 ```
 Optique/
 ├── App/
-│   ├── OptiqueApp.swift              # @main. Registers fonts (Geist, BarlowCondensed). Checks notification status (never prompts). Splash overlay. Forces dark mode. Scene phase → notification check.
+│   ├── OptiqueApp.swift              # @main. Registers fonts (Geist, BarlowCondensed). Checks notification status (never prompts). Splash overlay. Scene phase → notification check.
 │   ├── RootView.swift                # TabView: À la une · Mon Optique · Explorer (search role). iOS 18 Tab API + legacy fallback. Injects SessionState, BookmarkStore, ReadingHistoryStore. Onboarding cover. Push deep-link → selects the feed tab. Tab bar minimizes on scroll (iOS 26).
 │   ├── SessionState.swift            # @Observable @MainActor. In-memory story counter, owns StoreManager, isPremium (+ DEBUG override), shouldShowPaywall at 5 opens.
 │   ├── BookmarkStore.swift           # @Observable @MainActor. UserDefaults JSON of saved [Story].

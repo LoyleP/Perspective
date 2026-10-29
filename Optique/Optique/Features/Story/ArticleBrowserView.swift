@@ -142,7 +142,7 @@ struct ArticleBrowserView: View {
         return ZStack {
             Circle().fill(lean?.spectrumColor ?? AppColors.Adaptive.placeholder)
             Text(String(source.name.prefix(1)).uppercased())
-                .font(.system(size: 12, weight: .semibold))
+                .font(.geist(12, .medium, relativeTo: .caption))
                 .foregroundStyle(lean?.tagTextColor ?? AppColors.Adaptive.textSecondary)
         }
     }
@@ -153,7 +153,7 @@ struct ArticleBrowserView: View {
             Circle()
                 .fill(lean?.spectrumColor ?? AppColors.Adaptive.placeholder)
             Text(String(source.name.prefix(1)).uppercased())
-                .font(.system(size: 20, weight: .semibold))
+                .font(.geist(20, .medium, relativeTo: .title3))
                 .foregroundStyle(lean?.tagTextColor ?? AppColors.Adaptive.textSecondary)
         }
         .frame(width: 48, height: 48)

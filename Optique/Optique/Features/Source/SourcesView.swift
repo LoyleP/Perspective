@@ -36,7 +36,6 @@ struct SourcesView: View {
             .background(AppColors.Adaptive.background.ignoresSafeArea())
             .navigationTitle("Sources")
             .navigationBarTitleDisplayMode(.large)
-            .optiqueNavigationBar()
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "Rechercher un média")
             .task { await viewModel.loadSources() }
     }

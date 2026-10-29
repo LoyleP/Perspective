@@ -1,47 +1,49 @@
 import SwiftUI
+import UIKit
 
 // MARK: - Colors
 // Source: Figma / Perspective / Variables (node 141:805)
 
 enum AppColors {
 
-    // Dark-first ink scale. The app is permanently dark (image-led direction).
+    /// Fixed greys, used only to build the adaptive tokens below.
     enum Neutral {
-        static let n50  = Color(hex: "F5F5F4")
-        static let n100 = Color(hex: "E7E7E5")
-        static let n200 = Color(hex: "D4D4D2")
-        static let n300 = Color(hex: "B4B4B1")
-        static let n400 = Color(hex: "8E8E8B")
-        static let n500 = Color(hex: "6B6B69")
-        static let n600 = Color(hex: "4A4A49")
-        static let n700 = Color(hex: "2E2E2F")
-        static let n800 = Color(hex: "202022")
-        static let n900 = Color(hex: "151517")
-        static let n950 = Color(hex: "0A0A0B")
+        static let n50  = Color(hex: "F5F5F5")
+        static let n100 = Color(hex: "EAEAEA")
+        static let n200 = Color(hex: "D0D0D0")
+        static let n300 = Color(hex: "A0A0A0")
+        static let n400 = Color(hex: "8E8E8E")
+        static let n500 = Color(hex: "757575")
+        static let n600 = Color(hex: "6B6B6B")
+        static let n700 = Color(hex: "404040")
+        static let n800 = Color(hex: "262626")
+        static let n900 = Color(hex: "111111")
+        static let n950 = Color(hex: "000000")
     }
 
-    // 7-step diverging scale: red (left) → neutral → blue (right).
-    // Lightness is symmetric (outer ≈ dark, middle ≈ mid, inner ≈ light) so the
-    // distance from the centre also reads without hue. Every step is ≥ 3:1 on n950.
+    /// 7-step diverging scale: red (left) → grey → blue (right). The only color in the app.
+    /// Each step has a dark-theme and a light-theme value so it stays ≥ 3:1 on its background.
     enum Spectrum {
-        static let eGauche      = Color(hex: "C2272D")
-        static let gauche       = Color(hex: "EF5A5F")
-        static let centreGauche = Color(hex: "F5A3A6")
-        static let centre       = Color(hex: "B5B5BA")
-        static let centreDroite = Color(hex: "A3BEFA")
-        static let droite       = Color(hex: "4F86F7")
-        static let eDroite      = Color(hex: "2D55D8")
+        static let eGauche      = Color(light: "A81F26", dark: "C2272D")
+        static let gauche       = Color(light: "D9383F", dark: "EF5A5F")
+        static let centreGauche = Color(light: "DE6A70", dark: "F5A3A6")
+        static let centre       = Color(light: "86868C", dark: "B5B5BA")
+        static let centreDroite = Color(light: "6B93E8", dark: "A3BEFA")
+        static let droite       = Color(light: "3A6FE0", dark: "4F86F7")
+        static let eDroite      = Color(light: "2442B8", dark: "2D55D8")
     }
 
-    // Brand accent: warm amber, deliberately neither red nor blue so it never
-    // reads as a political position.
+    /// There is no brand color: emphasis is ink (black on white, white on black).
+    /// `accent` is that ink, `onInk` the inverse for text on ink fills, `onImage` for text over photos.
     enum Brand {
-        static let accent     = Color(hex: "FFB547")
-        static let accentSoft = Color(hex: "FFB547").opacity(0.16)
+        static let accent     = Color(light: "000000", dark: "FFFFFF")
+        static let accentSoft = Color(light: "1A000000", dark: "24FFFFFF")
+        static let onInk      = Color(light: "FFFFFF", dark: "000000")
+        static let onImage    = Color.white
     }
 
-    // Global stroke — white @ 8%
-    static let stroke = Color.white.opacity(0.08)
+    // Global stroke
+    static let stroke = Color(light: "14000000", dark: "1AFFFFFF")
 }
 
 // MARK: - Spacing
@@ -77,6 +79,13 @@ enum AppRadius {
 // MARK: - Color(hex:) helper
 
 extension Color {
+    /// Color that switches between two hex values with the interface style.
+    init(light: String, dark: String) {
+        self.init(uiColor: UIColor { traits in
+            UIColor(Color(hex: traits.userInterfaceStyle == .dark ? dark : light))
+        })
+    }
+
     init(hex: String) {
         let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
         var int: UInt64 = 0

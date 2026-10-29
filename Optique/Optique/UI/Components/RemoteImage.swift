@@ -19,7 +19,7 @@ struct RemoteImage: View {
 
     private var placeholder: some View {
         LinearGradient(
-            colors: [(tint ?? AppColors.Neutral.n700).opacity(0.45), AppColors.Adaptive.cardSurface],
+            colors: [(tint ?? AppColors.Adaptive.surfaceElevated).opacity(0.45), AppColors.Adaptive.cardSurface],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )

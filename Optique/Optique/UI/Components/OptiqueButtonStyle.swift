@@ -13,11 +13,11 @@ struct OptiqueButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.appHeadline)
-            .foregroundStyle(kind == .primary ? AppColors.Neutral.n950 : AppColors.Adaptive.textPrimary)
+            .foregroundStyle(kind == .primary ? AppColors.Brand.onInk : AppColors.Adaptive.textPrimary)
             .padding(.horizontal, AppSpacing.l)
             .frame(minHeight: 50)
             .background(
-                kind == .primary ? AppColors.Neutral.n50 : AppColors.Adaptive.surfaceElevated,
+                kind == .primary ? AppColors.Brand.accent : AppColors.Adaptive.surfaceElevated,
                 in: Capsule()
             )
             .opacity(configuration.isPressed ? 0.85 : 1)

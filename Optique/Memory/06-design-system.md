@@ -1,41 +1,40 @@
 # Design System
 
-Direction: **dark, image-led** (2026-10-28). The app is permanently dark (`.preferredColorScheme(.dark)` in `OptiqueApp`); there is no theme setting. A debug gallery of everything below lives in Réglages → Développeur → Design system.
+Direction (2026-10-29): **black or white, Geist, Regular/Medium only.** The UI is monochrome (black, white, greys) and follows the system light/dark theme; the only color is the 7-position political spectrum. A debug gallery lives in Réglages → Développeur → Design system.
 
 ## Colors (`UI/Theme/DesignTokens.swift`, `AdaptiveTokens.swift`)
 
-### Ink scale (`AppColors.Neutral`)
-n50 #F5F5F4 · n100 #E7E7E5 · n200 #D4D4D2 · n300 #B4B4B1 · n400 #8E8E8B · n500 #6B6B69 · n600 #4A4A49 · n700 #2E2E2F · n800 #202022 · n900 #151517 · n950 #0A0A0B
+### Semantic (`AppColors.Adaptive`, light / dark)
+| Token | Light | Dark | Use |
+|---|---|---|---|
+| background | #FFFFFF | #000000 | Page |
+| cardSurface | #F4F4F4 | #111111 | Cards, grouped rows |
+| surfaceElevated | #E9E9E9 | #1E1E1E | Chips, sheets, banners |
+| textPrimary / Secondary / Body / Tertiary / Meta | #000 / 1F1F1F / 3A3A3A / 5F5F5F / 707070 | #FFF / EDEDED / D2D2D2 / A3A3A3 / 8E8E8E | Text hierarchy |
+| placeholder | #E4E4E4 | #1C1C1C | Skeletons |
+| divider / stroke | black 10 % / 8 % | white 12 % / 10 % | Lines, borders |
+| imageScrim | black 0 → 92 % gradient | same | Text over photos (always white text) |
 
-### Semantic (`AppColors.Adaptive`, static)
-| Token | Value | Use |
-|---|---|---|
-| background / feedBackground | n950 | Page |
-| cardSurface / detailSurface | n900 | Cards, grouped rows |
-| surfaceElevated | n800 | Chips, sheets, banners |
-| textPrimary / Secondary / Body / Tertiary / Meta | n50 / n100 / n200 / n300 / n400 | Text hierarchy |
-| placeholder | n800 | Skeletons |
-| divider, stroke | white 8 % | Lines, borders |
-| imageScrim | black 0 → 92 % gradient | Text over photos |
-
-### Spectrum (`AppColors.Spectrum`, `PoliticalLean.spectrumColor`)
-Diverging red → grey → blue with symmetric lightness (outer dark, middle mid, inner light), every step ≥ 3:1 on n950:
-EG #C2272D · G #EF5A5F · CG #F5A3A6 · C #B5B5BA · CD #A3BEFA · D #4F86F7 · ED #2D55D8.
-`tagTextColor` gives ≥ 4.5:1 text on a solid fill (white on EG/ED, ink elsewhere). `PoliticalLean.color` is an alias. `code` = EG/G/CG/C/CD/D/ED.
+`AppColors.Neutral` is a fixed grey scale kept only for building tokens.
 
 ### Brand (`AppColors.Brand`)
-accent #FFB547 (amber — never red or blue, so it never reads as a position), accentSoft = accent 16 %.
+No brand color. `accent` = ink (black on white / white on black), `accentSoft` = ink 10–14 %, `onInk` = inverse (text on ink fills such as primary buttons), `onImage` = white.
+
+### Spectrum (`AppColors.Spectrum`, `PoliticalLean.spectrumColor`)
+Red → grey → blue, each with a light-theme and dark-theme value (≥ 3:1 on its background):
+EG #A81F26 / #C2272D · G #D9383F / #EF5A5F · CG #DE6A70 / #F5A3A6 · C #86868C / #B5B5BA · CD #6B93E8 / #A3BEFA · D #3A6FE0 / #4F86F7 · ED #2442B8 / #2D55D8.
+`tagTextColor` is adaptive (≥ 4.5:1 on a solid fill). `code` = EG/G/CG/C/CD/D/ED.
 
 ## Typography (`UI/Theme/Typography.swift`)
-All SF Pro on Dynamic Type text styles:
-appDisplay (largeTitle bold) · appLargeTitle (title heavy, headlines on photos) · appTitle1 (title2 bold) · appTitle2 (title3 bold, section titles) · appTitle3 (title3 semibold) · appHeadline · appBody · appSubheadline · appFootnote (medium) · appCaption1 (caption semibold) · appCaption2 · appOverline (caption2 semibold) + `.overlineStyle()` (uppercase, tracked). Barlow Condensed Bold is used only for the "L'essentiel" rank numbers (`relativeTo: .title`). Geist is registered but unused.
+**Geist** (variable font, named instances `Geist-Regular`, `Geist-Medium`) everywhere. Weights are capped at Medium: hierarchy comes from size and Regular vs Medium. All tokens use `Font.custom(_, size:, relativeTo:)` so they follow Dynamic Type.
+appDisplay 34 M · appLargeTitle 28 M · appTitle1 22 M · appTitle2 20 M · appTitle3 18 M · appHeadline 17 M · appBody 17 R · appSubheadline 15 R · appFootnote 13 M · appCaption1 12 M · appCaption2 11 R · appOverline 11 M (+ `.overlineStyle()`: uppercase, tracked). Use `.geist(size, .regular|.medium, relativeTo:)` for one-offs and `UIFont.geist` for UIKit. `UI/Theme/AppAppearance.swift` applies Geist to the navigation bar, tab bar items, segmented controls and search field; system alerts, context menus and the share sheet stay in the system font. Barlow Condensed was removed.
 
 ## Spacing & radii
 Unchanged: `AppSpacing` 4-pt grid (xs 4 … xxxl 64), `AppRadius` (xs 4 … xl 20, pill).
 
 ## Components (`UI/Components`)
 - **SpectrumBar** — `.compact` (proportional line, `barHeight`) and `.detailed` (verdict, logos stacked per position, 7-step axis, left/centre/right shares; wraps at large text sizes). Single VoiceOver label with the shares and verdict.
-- **StoryHeroCard** — photo card, `.large` 4:5 / `.medium` 3:2; text under the photo at accessibility text sizes.
+- **StoryHeroCard** — photo card (text over photos is always white on the scrim, in both themes), `.large` 4:5 / `.medium` 3:2; text under the photo at accessibility text sizes.
 - **StoryRow** — overline meta, headline, spectrum line + verdict, scaled thumbnail (hidden at accessibility sizes).
 - **SourceAvatarView / SourceStack** — logo (from `/api/logo`) or initial on lean color; overlapping stack with "+N".
 - **LeanTagView** — chip with color dot, optional share.

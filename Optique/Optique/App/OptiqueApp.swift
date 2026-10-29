@@ -8,10 +8,11 @@ struct OptiqueApp: App {
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
-        for name in ["Geist-VariableFont_wght", "BarlowCondensed-Bold", "BarlowCondensed-SemiBold"] {
+        for name in ["Geist-VariableFont_wght"] {
             guard let url = Bundle.main.url(forResource: name, withExtension: "ttf") else { continue }
             CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
         }
+        AppAppearance.configure()
 
         #if DEBUG && targetEnvironment(simulator)
         // Live reload: loads InjectionIII's bundle when the InjectionIII app is installed.
@@ -43,10 +44,12 @@ struct OptiqueApp: App {
             DebugScreenHost(screen: screen)
         } else {
             RootView()
+                .font(.appBody)
                 .debugTextSizeOverride()
         }
         #else
         RootView()
+            .font(.appBody)
         #endif
     }
 
@@ -54,7 +57,6 @@ struct OptiqueApp: App {
         WindowGroup {
             ZStack {
                 rootContent
-                    .preferredColorScheme(.dark)
 
                 if showSplash && !skipsSplash {
                     SplashView {

@@ -28,11 +28,11 @@ struct PaywallBannerView: View {
             Spacer(minLength: 0)
 
             Button("Voir", action: onUpgradeTapped)
-                .font(.appFootnote.weight(.semibold))
-                .foregroundStyle(AppColors.Neutral.n950)
+                .font(.appFootnote)
+                .foregroundStyle(AppColors.Brand.onInk)
                 .padding(.horizontal, AppSpacing.m)
                 .padding(.vertical, AppSpacing.s)
-                .background(AppColors.Neutral.n50, in: Capsule())
+                .background(AppColors.Brand.accent, in: Capsule())
 
             Button {
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
@@ -40,7 +40,7 @@ struct PaywallBannerView: View {
                 }
             } label: {
                 Image(systemName: "xmark")
-                    .font(.appCaption1.weight(.semibold))
+                    .font(.appCaption1)
                     .foregroundStyle(AppColors.Adaptive.textTertiary)
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())

@@ -42,7 +42,7 @@ struct StoryHeroCard: View {
     private var content: some View {
         VStack(alignment: .leading, spacing: AppSpacing.st) {
             Text(story.metaLine)
-                .overlineStyle(AppColors.Brand.accent)
+                .overlineStyle(.white.opacity(0.75))
             Text(story.title)
                 .font(size == .large ? .appLargeTitle : .appTitle1)
                 .foregroundStyle(.white)

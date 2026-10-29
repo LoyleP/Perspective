@@ -28,7 +28,6 @@ struct FeedView: View {
         .refreshable { await viewModel.refresh() }
         .navigationTitle("À la une")
         .navigationBarTitleDisplayMode(.large)
-        .optiqueNavigationBar()
         .navigationDestination(for: Story.self) { story in
             if #available(iOS 18.0, *) {
                 StoryDetailView(story: story)
@@ -44,7 +43,7 @@ struct FeedView: View {
                 } label: {
                     Image(systemName: hasUnreadAlerts ? "bell.badge" : "bell")
                         .symbolRenderingMode(.palette)
-                        .foregroundStyle(AppColors.Brand.accent, AppColors.Adaptive.textPrimary)
+                        .foregroundStyle(AppColors.Adaptive.textPrimary, AppColors.Adaptive.textPrimary)
                 }
                 .accessibilityLabel(hasUnreadAlerts ? "Alertes, nouvelles alertes" : "Alertes")
             }
@@ -92,7 +91,7 @@ struct FeedView: View {
     @ViewBuilder
     private var stories: some View {
         Text(Date.now, format: .dateTime.weekday(.wide).day().month(.wide).locale(Locale(identifier: "fr_FR")))
-            .overlineStyle(AppColors.Brand.accent)
+            .overlineStyle()
             .padding(.bottom, AppSpacing.st)
 
         if let hero = viewModel.cetteSemanineHero {
@@ -213,7 +212,7 @@ private struct EssentialRow: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: AppSpacing.m) {
             Text("\(rank)")
-                .font(.custom("BarlowCondensed-Bold", size: 34, relativeTo: .title))
+                .font(.geist(30, .medium, relativeTo: .title))
                 .foregroundStyle(AppColors.Brand.accent)
                 .frame(minWidth: 22, alignment: .leading)
                 .accessibilityHidden(true)

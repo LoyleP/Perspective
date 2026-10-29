@@ -20,7 +20,8 @@
 - **"Effacer l'historique" in Réglages** renders white instead of red (Form `.tint` overrides the destructive role).
 - **Paywall copy** promises only what is true: Optique+ removes the 5-stories-per-session banner (which does not block reading). "Financé par ses lecteurs" / "Sans publicité ni pistage" need product confirmation.
 - **StoreKit prices** only load when run from Xcode with `Optique.storekit`; launched otherwise, plan cards show "—".
-- **Unused:** Geist font (registered, never used), FeedKit SPM package.
+- **Unused:** FeedKit SPM package.
+- **Light theme not visually reviewed screen by screen** (2026-10-29): only the feed was looked at; story detail header was restructured (photo above, headline below) for light-mode legibility.
 
 ## Testing
 

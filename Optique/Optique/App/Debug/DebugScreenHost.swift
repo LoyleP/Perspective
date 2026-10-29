@@ -78,7 +78,6 @@ struct DebugScreenHost: View {
             .environment(session)
             .environment(bookmarks)
             .environment(history)
-            .preferredColorScheme(.dark)
             .debugTextSizeOverride()
     }
 

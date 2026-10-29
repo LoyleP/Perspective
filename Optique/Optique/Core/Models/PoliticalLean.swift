@@ -49,12 +49,15 @@ enum PoliticalLean: Int, Codable, CaseIterable, Identifiable {
         }
     }
 
-    // Readable text on a solid `spectrumColor` fill (≥ 4.5:1): white on the
-    // dark outer steps, ink on the lighter ones.
+    // Readable text on a solid `spectrumColor` fill (≥ 4.5:1 in both themes).
     var tagTextColor: Color {
         switch self {
-        case .extremeGauche, .extremeDroite: return .white
-        default:                             return AppColors.Neutral.n950
+        case .extremeGauche, .extremeDroite:
+            return .white
+        case .gauche, .droite:
+            return Color(light: "FFFFFF", dark: "000000")
+        case .centreGauche, .centre, .centreDroite:
+            return .black
         }
     }
 

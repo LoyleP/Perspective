@@ -60,7 +60,7 @@ struct OnboardingView: View {
             .accessibilityLabel("Étape \(step + 1) sur \(stepCount)")
 
             Button("Passer") { finish() }
-                .font(.appFootnote.weight(.semibold))
+                .font(.appFootnote)
                 .foregroundStyle(AppColors.Adaptive.textTertiary)
         }
         .padding(.horizontal, AppSpacing.m)
@@ -83,7 +83,7 @@ struct OnboardingView: View {
                 } label: {
                     Group {
                         if isRequestingAlerts {
-                            ProgressView().tint(AppColors.Neutral.n950)
+                            ProgressView().tint(AppColors.Brand.onInk)
                         } else {
                             Text("Activer les alertes")
                         }
@@ -175,7 +175,7 @@ struct OnboardingView: View {
                         .foregroundStyle(AppColors.Adaptive.textMeta)
                 }
                 Text(example?.title ?? "Réforme des retraites : le gouvernement présente son projet")
-                    .font(.appSubheadline.weight(.semibold))
+                    .font(.appSubheadline)
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
                     .lineLimit(2)
                 HStack(spacing: AppSpacing.s) {

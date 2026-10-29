@@ -30,7 +30,7 @@ struct MySpectrumView: View {
     private var emptyState: some View {
         VStack(spacing: AppSpacing.m) {
             Image(systemName: "chart.bar")
-                .font(.system(size: 44))
+                .font(.geist(44, .regular, relativeTo: .largeTitle))
                 .foregroundStyle(AppColors.Adaptive.textTertiary)
             Text("Aucun historique")
                 .font(.appHeadline)

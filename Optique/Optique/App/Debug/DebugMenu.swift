@@ -148,7 +148,6 @@ private struct DebugMenuView: View {
                 Text("Préférences, historique, enregistrés, onboarding… L'app se recharge.")
             }
         }
-        .preferredColorScheme(.dark)
     }
 
     // MARK: Données

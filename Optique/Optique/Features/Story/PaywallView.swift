@@ -162,7 +162,7 @@ struct PaywallView: View {
                 if let badge {
                     Text(badge)
                         .font(.appCaption1)
-                        .foregroundStyle(AppColors.Neutral.n950)
+                        .foregroundStyle(AppColors.Brand.onInk)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
                         .background(AppColors.Brand.accent, in: Capsule())
@@ -209,7 +209,7 @@ struct PaywallView: View {
             } label: {
                 Group {
                     if isPurchasing {
-                        ProgressView().tint(AppColors.Neutral.n950)
+                        ProgressView().tint(AppColors.Brand.onInk)
                     } else {
                         Text(plan == .annual ? "S'abonner à l'année" : "S'abonner au mois")
                     }

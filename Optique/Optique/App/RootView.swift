@@ -58,7 +58,7 @@ struct RootView: View {
                 }
             }
         }
-        .tint(AppColors.Neutral.n100)
+        .tint(AppColors.Brand.accent)
         .minimizesTabBarOnScroll()
         .environment(session)
         .environment(bookmarks)
@@ -99,7 +99,7 @@ struct RootView: View {
                 Label { Text("Explorer") } icon: { Image(systemName: "magnifyingglass") }
             }
         }
-        .tint(AppColors.Neutral.n100)
+        .tint(AppColors.Brand.accent)
         .environment(session)
         .environment(bookmarks)
         .environment(readingHistory)

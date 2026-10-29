@@ -22,7 +22,6 @@ struct DiscoverView: View {
         .background(AppColors.Adaptive.background.ignoresSafeArea())
         .navigationTitle("Explorer")
         .navigationBarTitleDisplayMode(.large)
-        .optiqueNavigationBar()
         .searchable(
             text: $searchText,
             placement: .navigationBarDrawer(displayMode: .always),
@@ -247,8 +246,8 @@ private struct TopicTile: View {
                     ZStack(alignment: .topTrailing) {
                         AppColors.Adaptive.cardSurface
                         Image(systemName: topic.systemImage)
-                            .font(.system(size: 64, weight: .semibold))
-                            .foregroundStyle(AppColors.Brand.accent.opacity(0.18))
+                            .font(.geist(64, .medium, relativeTo: .largeTitle))
+                            .foregroundStyle(AppColors.Adaptive.textPrimary.opacity(0.1))
                             .offset(x: 12, y: -6)
                     }
                 }
@@ -258,7 +257,7 @@ private struct TopicTile: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Image(systemName: topic.systemImage)
                         .font(.appHeadline)
-                        .foregroundStyle(AppColors.Brand.accent)
+                        .foregroundStyle(AppColors.Brand.onImage)
                     Text(topic.rawValue)
                         .font(.appHeadline)
                         .foregroundStyle(.white)
