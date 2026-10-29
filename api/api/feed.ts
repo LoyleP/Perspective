@@ -6,7 +6,10 @@ export async function GET(request: Request): Promise<Response> {
   const offset = Math.max(Number(q.get("offset") ?? 0), 0);
   const topic = q.get("topic");
   const search = q.get("q")?.trim();
-  const where = ["EXISTS (SELECT 1 FROM articles a WHERE a.story_id = s.id AND a.is_primary)"];
+  // Only stories covered by several outlets: 3+ sources for browsing, 2+ for search.
+  // Override with ?min_sources=N.
+  const minSources = Math.min(Math.max(Number(q.get("min_sources") ?? (search ? 2 : 3)), 1), 10);
+  const where = ["(SELECT count(*) FROM articles a WHERE a.story_id = s.id AND a.is_primary) >= " + minSources];
   const params: unknown[] = [limit, offset];
   if (topic) {
     params.push(topic);

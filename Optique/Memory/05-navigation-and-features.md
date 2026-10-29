@@ -28,7 +28,7 @@ Notification tapped → `NotificationManager.pendingStoryID` → RootView select
 ## Features
 
 1. **Feed** — date overline, hero card, "L'essentiel" (5 most-covered, numbered in Barlow Condensed), latest stories as rows with a photo card every 5th. Long-press: save / share.
-2. **Story** — photo header, detailed spectrum (logos on the 7 positions, verdict, left/centre/right shares), per-side AI summary, articles left→right, thread, ownership.
+2. **Story** — photo header, detailed spectrum (logos on the 5 positions, verdict, left/centre/right shares), per-side AI summary, articles left→right, thread, ownership.
 3. **Explorer** — server headline search (accent-insensitive), Angles morts (≥ 80 % one side, ≥ 3 sources), 8 topic tiles with distinct photos (preferred first), sources row.
 4. **Topics** — tagged server-side by keyword (`api/lib/topics.ts`) when stories are created; 8 topics incl. Sport.
 5. **Sources** — list grouped by lean; detail with position axis, owner, recent articles.

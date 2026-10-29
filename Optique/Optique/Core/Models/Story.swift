@@ -17,9 +17,9 @@ struct SpectrumPerspective: Codable, Hashable, Identifiable {
     private static let leanStringMap: [String: PoliticalLean] = [
         "extreme_gauche": .extremeGauche,
         "gauche":         .gauche,
-        "centre_gauche":  .centreGauche,
+        "centre_gauche":  .gauche,
         "centre":         .centre,
-        "centre_droite":  .centreDroite,
+        "centre_droite":  .droite,
         "droite":         .droite,
         "extreme_droite": .extremeDroite,
     ]
@@ -27,9 +27,7 @@ struct SpectrumPerspective: Codable, Hashable, Identifiable {
     private static let leanStringReverseMap: [Int: String] = [
         PoliticalLean.extremeGauche.rawValue:  "extreme_gauche",
         PoliticalLean.gauche.rawValue:         "gauche",
-        PoliticalLean.centreGauche.rawValue:   "centre_gauche",
         PoliticalLean.centre.rawValue:         "centre",
-        PoliticalLean.centreDroite.rawValue:   "centre_droite",
         PoliticalLean.droite.rawValue:         "droite",
         PoliticalLean.extremeDroite.rawValue:  "extreme_droite",
     ]

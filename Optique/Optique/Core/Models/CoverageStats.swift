@@ -1,6 +1,6 @@
 import Foundation
 
-// Five named buckets collapsed from the 7-point political scale.
+// Five named buckets collapsed from the stored 7-point scale.
 // Conforms to Equatable so CoverageSpectrum can animate transitions.
 struct FiveBucketCoverage: Equatable {
     let extGauche: Double  // lean 1
@@ -126,10 +126,9 @@ struct CoverageStats: Codable, Hashable {
 
     // The lean position (1–7) with the highest article count
     var dominantLean: Int {
-        let counts = [lean1Count, lean2Count, lean3Count, lean4Count,
-                      lean5Count, lean6Count, lean7Count]
-        let maxCount = counts.max() ?? 0
-        return (counts.firstIndex(of: maxCount) ?? 3) + 1
+        let counts = countsByLean
+        let maxCount = counts.values.max() ?? 0
+        return PoliticalLean.allCases.first { counts[$0] == maxCount }?.rawValue ?? PoliticalLean.centre.rawValue
     }
 
     // True when all 5 spectrum buckets have at least one article and total >= 5.
@@ -236,12 +235,26 @@ extension CoverageStats {
     /// Share of coverage from leans 5–7.
     var rightShare: Double { lean5Pct + lean6Pct + lean7Pct }
 
+    /// Articles per position; the stored centre-gauche count folds into gauche, centre-droite into droite.
     var countsByLean: [PoliticalLean: Int] {
-        let counts = [lean1Count, lean2Count, lean3Count, lean4Count,
-                      lean5Count, lean6Count, lean7Count]
-        var result: [PoliticalLean: Int] = [:]
-        for lean in PoliticalLean.allCases { result[lean] = counts[lean.rawValue - 1] }
-        return result
+        [
+            .extremeGauche: lean1Count,
+            .gauche: lean2Count + lean3Count,
+            .centre: lean4Count,
+            .droite: lean5Count + lean6Count,
+            .extremeDroite: lean7Count
+        ]
+    }
+
+    /// Share (0…1) of coverage for one position, with the same folding.
+    func share(of lean: PoliticalLean) -> Double {
+        switch lean {
+        case .extremeGauche: return lean1Pct
+        case .gauche: return lean2Pct + lean3Pct
+        case .centre: return lean4Pct
+        case .droite: return lean5Pct + lean6Pct
+        case .extremeDroite: return lean7Pct
+        }
     }
 
     /// One-line reading of the coverage, shown next to the spectrum.

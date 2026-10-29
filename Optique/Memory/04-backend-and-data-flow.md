@@ -30,7 +30,7 @@ Shared code: `api/lib/db.ts` (pg Pool, `storiesWithArticles()` builds the Story 
 |-------|-------------|
 | `stories` | id, title, summary, first_published_at, last_updated_at, topic_tags (text[]), is_featured, spectrum_summary (jsonb), summary_generated_at, cycle_id |
 | `articles` | id, url (unique), title, description, summary, image_url, published_at, fetched_at, source_id (FK), story_id (FK, cascade), raw_keywords, click_count, is_primary, entities (text[]), tfidf_weights, clustered_at |
-| `sources` | id, name, url, rss_url, logo_url, is_active, political_lean (1-7), owner_name, owner_type, owner_notes, lean_source |
+| `sources` | id, name, url, rss_url, logo_url, is_active, political_lean (stored 1-7; only 1, 2, 4, 6, 7 are used since 2026-10-29), owner_name, owner_type, owner_notes, lean_source |
 | `notifications` | id, title, body, story_count, story_id (FK, set null), sent_at |
 
 No views, triggers or functions. Coverage is computed in code; featured story and notifications are written by `refresh-stories`.

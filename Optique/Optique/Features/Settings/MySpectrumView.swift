@@ -121,9 +121,9 @@ struct MySpectrumView: View {
     private var barSegments: [BarSegment] {
         let total = Double(store.leans.count)
         guard total > 0 else { return [] }
-        return (1...7).compactMap { leanInt -> BarSegment? in
-            let count = store.leans.filter { $0 == leanInt }.count
-            guard count > 0, let lean = PoliticalLean.from(leanInt) else { return nil }
+        return PoliticalLean.allCases.compactMap { lean -> BarSegment? in
+            let count = store.leans.filter { PoliticalLean.from($0) == lean }.count
+            guard count > 0 else { return nil }
             return BarSegment(lean: lean, fraction: Double(count) / total)
         }
     }

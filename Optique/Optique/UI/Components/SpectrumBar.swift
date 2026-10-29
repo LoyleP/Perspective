@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Coverage across the 7-point spectrum.
+/// Coverage across the 5-position spectrum.
 /// - `.compact`: thin line whose segments are proportional to each position's share.
 /// - `.detailed`: verdict, source logos stacked above each position, the 7-step
 ///   axis, and left / centre / right shares.
@@ -33,7 +33,7 @@ struct SpectrumBar: View {
     private var compact: some View {
         ProportionalHStack(spacing: 2) {
             ForEach(PoliticalLean.allCases) { lean in
-                let share = coverage.spectrumData[lean.rawValue - 1]
+                let share = coverage.share(of: lean)
                 if share > 0 {
                     Capsule()
                         .fill(lean.spectrumColor)

@@ -40,6 +40,10 @@
 - **Stale clusters never re-evaluated** — Phase 2 only processes `story_id IS NULL`, so a bad merge persists until the story is deleted. Clustering fixes only affect future runs.
 - **Residual over-merge via dominant entities** — a "Choose France"/Macron story still mixes unrelated subjects bridged by a single high-frequency entity (e.g. "Macron"). Not addressed: would need entity IDF weighting or a dominant-entity requirement. Existing bad clusters won't self-heal (see above).
 
+## Spectrum scale (2026-10-29)
+
+- The political scale went from 7 to 5 positions. In the `sources` table, 12 sources moved from 3 to 2 and 7 from 5 to 6 (the DB column keeps 1–7 for compatibility). New sources must use 1, 2, 4, 6 or 7. Old AI summaries that contain `centre_gauche` / `centre_droite` still decode (mapped to gauche / droite).
+
 ## Story size (2026-10-29)
 
 - Coverage per story was low because only the 200 newest unclustered articles were clustered per run (87 % of the last 48 h stayed unclustered). Now up to 4,000 per run, a 72 h window, daily cron, lone articles attach to existing stories, and 13 French sources were added (53 active): Ouest-France, La Dépêche, Midi Libre, Le Dauphiné libéré, France Inter, Courrier International, HuffPost France, Challenges, Europe 1, Sud Radio, Atlantico, CNews, Le JDD. **Their political leans are my editorial estimates: review them.** Le Monde now uses the `en_continu` feed.

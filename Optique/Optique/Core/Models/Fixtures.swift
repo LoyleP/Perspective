@@ -68,12 +68,12 @@ enum Fixtures {
         source("Reporterre", lean: 1, type: .nonprofit),
         source("Libération", lean: 2, owner: "Altice / Patrick Drahi", type: .billionaire),
         source("Mediapart", lean: 2, type: .independent),
-        source("Le Monde", lean: 3, owner: "Xavier Niel, Matthieu Pigasse", type: .billionaire),
-        source("Le Nouvel Obs", lean: 3, type: .privateOwned),
+        source("Le Monde", lean: 2, owner: "Xavier Niel, Matthieu Pigasse", type: .billionaire),
+        source("Le Nouvel Obs", lean: 2, type: .privateOwned),
         source("France Info", lean: 4, owner: "France Télévisions", type: .publicMedia),
         source("20 Minutes", lean: 4, owner: "Groupe Rossel", type: .pressGroup),
-        source("BFM TV", lean: 5, owner: "Altice / Patrick Drahi", type: .billionaire),
-        source("Le Parisien", lean: 5, owner: "LVMH / Bernard Arnault", type: .billionaire),
+        source("BFM TV", lean: 6, owner: "Altice / Patrick Drahi", type: .billionaire),
+        source("Le Parisien", lean: 6, owner: "LVMH / Bernard Arnault", type: .billionaire),
         source("Le Figaro", lean: 6, owner: "Dassault", type: .privateConglomerate),
         source("Valeurs Actuelles", lean: 7, type: .privateOwned)
     ]
@@ -91,7 +91,9 @@ enum Fixtures {
         let id = UUID()
         var used = Set<UUID>()
         let articles: [Article] = leans.enumerated().compactMap { index, lean in
-            let pool = sources.filter { $0.politicalLean == lean && !used.contains($0.id) }
+            // Fixtures use the 5 positions: 3 → gauche (2), 5 → droite (6).
+            let position = PoliticalLean.from(lean)?.rawValue ?? lean
+            let pool = sources.filter { $0.politicalLean == position && !used.contains($0.id) }
             guard let source = pool.first else { return nil }
             used.insert(source.id)
             return Article(

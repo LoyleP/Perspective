@@ -214,7 +214,7 @@ struct SettingsView: View {
     // MARK: - Static text
 
     private let methodologieText = """
-    Optique classe les médias français sur un spectre politique en 7 positions, de l'extrême-gauche (position 1) à l'extrême-droite (position 7).
+    Optique classe les médias français sur un spectre politique en 5 positions, de l'extrême-gauche (position 1) à l'extrême-droite (position 7).
 
     Cette classification repose sur une analyse éditoriale des lignes politiques des publications, de leurs positionnements historiques et de la couverture internationale des think tanks et baromètres de confiance.
 

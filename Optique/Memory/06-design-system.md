@@ -21,9 +21,9 @@ Direction (2026-10-29): **black or white, Geist, Regular/Medium only.** The UI i
 No brand color. `accent` = ink (black on white / white on black), `accentSoft` = ink 10–14 %, `onInk` = inverse (text on ink fills such as primary buttons), `onImage` = white.
 
 ### Spectrum (`AppColors.Spectrum`, `PoliticalLean.spectrumColor`)
-Red → grey → blue, each with a light-theme and dark-theme value (≥ 3:1 on its background):
-EG #A81F26 / #C2272D · G #D9383F / #EF5A5F · CG #DE6A70 / #F5A3A6 · C #86868C / #B5B5BA · CD #6B93E8 / #A3BEFA · D #3A6FE0 / #4F86F7 · ED #2442B8 / #2D55D8.
-`tagTextColor` is adaptive (≥ 4.5:1 on a solid fill). `code` = EG/G/CG/C/CD/D/ED.
+5 positions (since 2026-10-29 centre-gauche is merged into gauche and centre-droite into droite): red → grey → blue, each with a light-theme and dark-theme value (≥ 3:1 on its background):
+EG #A81F26 / #C2272D · G #D9383F / #EF5A5F · C #86868C / #B5B5BA · D #3A6FE0 / #4F86F7 · ED #2442B8 / #2D55D8.
+`tagTextColor` is adaptive (≥ 4.5:1 on a solid fill). `code` = EG/G/C/D/ED. `PoliticalLean` raw values stay on the stored 1–7 scale (1, 2, 4, 6, 7); `PoliticalLean.from(_:)` folds a stored 3 into gauche and 5 into droite, and `CoverageStats.countsByLean` / `share(of:)` fold the matching counts.
 
 ## Typography (`UI/Theme/Typography.swift`)
 **Geist** (variable font, named instances `Geist-Regular`, `Geist-Medium`) everywhere. Weights are capped at Medium: hierarchy comes from size and Regular vs Medium. All tokens use `Font.custom(_, size:, relativeTo:)` so they follow Dynamic Type.

@@ -1,13 +1,12 @@
 import SwiftUI
 
-// French political spectrum — 1 (extrême-gauche) to 7 (extrême-droite)
+// French political spectrum in 5 positions. Raw values keep the stored 1–7 scale: the former
+// "centre-gauche" (3) is folded into gauche and "centre-droite" (5) into droite.
 // Convention: red = left, neutral gray = centre, blue = right
 enum PoliticalLean: Int, Codable, CaseIterable, Identifiable {
     case extremeGauche   = 1
     case gauche          = 2
-    case centreGauche    = 3
     case centre          = 4
-    case centreDroite    = 5
     case droite          = 6
     case extremeDroite   = 7
 
@@ -16,7 +15,7 @@ enum PoliticalLean: Int, Codable, CaseIterable, Identifiable {
     init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         let raw = try container.decode(Int.self)
-        guard let value = PoliticalLean(rawValue: raw) else {
+        guard let value = PoliticalLean.from(raw) else {
             throw DecodingError.dataCorruptedError(
                 in: container,
                 debugDescription: "Unknown PoliticalLean rawValue: \(raw)"
@@ -29,9 +28,7 @@ enum PoliticalLean: Int, Codable, CaseIterable, Identifiable {
         switch self {
         case .extremeGauche:  return "Extrême-gauche"
         case .gauche:         return "Gauche"
-        case .centreGauche:   return "Centre-gauche"
         case .centre:         return "Centre"
-        case .centreDroite:   return "Centre-droite"
         case .droite:         return "Droite"
         case .extremeDroite:  return "Extrême-droite"
         }
@@ -41,9 +38,7 @@ enum PoliticalLean: Int, Codable, CaseIterable, Identifiable {
         switch self {
         case .extremeGauche:  return "E. gauche"
         case .gauche:         return "Gauche"
-        case .centreGauche:   return "C. gauche"
         case .centre:         return "Centre"
-        case .centreDroite:   return "C. droite"
         case .droite:         return "Droite"
         case .extremeDroite:  return "E. droite"
         }
@@ -56,7 +51,7 @@ enum PoliticalLean: Int, Codable, CaseIterable, Identifiable {
             return .white
         case .gauche, .droite:
             return Color(light: "FFFFFF", dark: "000000")
-        case .centreGauche, .centre, .centreDroite:
+        case .centre:
             return .black
         }
     }
@@ -65,9 +60,7 @@ enum PoliticalLean: Int, Codable, CaseIterable, Identifiable {
         switch self {
         case .extremeGauche: return AppColors.Spectrum.eGauche
         case .gauche:        return AppColors.Spectrum.gauche
-        case .centreGauche:  return AppColors.Spectrum.centreGauche
         case .centre:        return AppColors.Spectrum.centre
-        case .centreDroite:  return AppColors.Spectrum.centreDroite
         case .droite:        return AppColors.Spectrum.droite
         case .extremeDroite: return AppColors.Spectrum.eDroite
         }
@@ -81,15 +74,18 @@ enum PoliticalLean: Int, Codable, CaseIterable, Identifiable {
         switch self {
         case .extremeGauche: return "EG"
         case .gauche:        return "G"
-        case .centreGauche:  return "CG"
         case .centre:        return "C"
-        case .centreDroite:  return "CD"
         case .droite:        return "D"
         case .extremeDroite: return "ED"
         }
     }
 
+    /// Maps a stored 1–7 position to one of the 5 positions (3 → gauche, 5 → droite).
     static func from(_ rawValue: Int) -> PoliticalLean? {
-        PoliticalLean(rawValue: rawValue)
+        switch rawValue {
+        case 3: return .gauche
+        case 5: return .droite
+        default: return PoliticalLean(rawValue: rawValue)
+        }
     }
 }

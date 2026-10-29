@@ -21,14 +21,12 @@ enum AppColors {
         static let n950 = Color(hex: "000000")
     }
 
-    /// 7-step diverging scale: red (left) → grey → blue (right). The only color in the app.
+    /// 5-step diverging scale: red (left) → grey → blue (right). The only color in the app.
     /// Each step has a dark-theme and a light-theme value so it stays ≥ 3:1 on its background.
     enum Spectrum {
         static let eGauche      = Color(light: "A81F26", dark: "C2272D")
         static let gauche       = Color(light: "D9383F", dark: "EF5A5F")
-        static let centreGauche = Color(light: "DE6A70", dark: "F5A3A6")
         static let centre       = Color(light: "86868C", dark: "B5B5BA")
-        static let centreDroite = Color(light: "6B93E8", dark: "A3BEFA")
         static let droite       = Color(light: "3A6FE0", dark: "4F86F7")
         static let eDroite      = Color(light: "2442B8", dark: "2D55D8")
     }

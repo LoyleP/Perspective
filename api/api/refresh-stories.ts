@@ -687,6 +687,18 @@ async function clusterStories(): Promise<{
     );
   }
 
+  // A story's "last updated" is when its newest article was published, not when we merged it.
+  const touched = [...new Set(assignments.map((a) => a.storyId))];
+  if (touched.length > 0) {
+    await pool.query(
+      `UPDATE stories s SET last_updated_at = m.latest
+         FROM (SELECT story_id, max(published_at) AS latest FROM articles
+                WHERE story_id = ANY($1::uuid[]) GROUP BY story_id) m
+        WHERE s.id = m.story_id`,
+      [touched]
+    );
+  }
+
   // Mark lone articles as seen (they stay unclustered and are retried while inside the window).
   const unseen = singletonIds.filter((id) => !attached.has(id));
   if (unseen.length > 0) {

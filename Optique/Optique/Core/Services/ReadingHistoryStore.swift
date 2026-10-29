@@ -81,9 +81,9 @@ final class ReadingHistoryStore {
     // MARK: - Derived
 
     var breakdown: [(lean: PoliticalLean, count: Int)] {
-        (1...7).compactMap { leanInt in
-            let count = leans.filter { $0 == leanInt }.count
-            guard count > 0, let lean = PoliticalLean.from(leanInt) else { return nil }
+        PoliticalLean.allCases.compactMap { lean in
+            let count = leans.filter { PoliticalLean.from($0) == lean }.count
+            guard count > 0 else { return nil }
             return (lean: lean, count: count)
         }
         .sorted { $0.count > $1.count }

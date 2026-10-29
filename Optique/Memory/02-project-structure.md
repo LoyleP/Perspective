@@ -32,7 +32,7 @@ Optique/
 │   │   └── AlertesViewModel.swift    # Loads notifications, permission request, fetchStory.
 │   ├── Source/
 │   │   ├── SourcesView.swift         # Sources grouped by lean (pinned headers), name search.
-│   │   └── SourceDetailView.swift    # Logo header, position on the 7-step axis, owner card, recent articles (open in reader).
+│   │   └── SourceDetailView.swift    # Logo header, position on the 5-step axis, owner card, recent articles (open in reader).
 │   ├── Profile/
 │   │   └── ProfileView.swift         # "Mon Optique": reading spectrum card (→ MySpectrumView), Enregistrés / Historique lists, gear → Settings sheet.
 │   ├── Onboarding/
