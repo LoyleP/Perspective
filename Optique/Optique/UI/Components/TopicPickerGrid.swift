@@ -19,17 +19,23 @@ struct TopicPickerGrid: View {
                     if isOn { selection.remove(topic) } else { selection.insert(topic) }
                 } label: {
                     HStack(spacing: AppSpacing.s) {
-                        Image(systemName: topic.systemImage)
-                            .font(.appHeadline)
+                        HeroIcon(topic.heroIcon, size: 22)
+                            .font(.appBodyStrong)
                             .foregroundStyle(isOn ? AppColors.Brand.accent : AppColors.Adaptive.textTertiary)
                             .frame(width: 24)
                         Text(topic.rawValue)
-                            .font(.appHeadline)
+                            .font(.appBodyStrong)
                             .foregroundStyle(AppColors.Adaptive.textPrimary)
                             .lineLimit(1)
                             .minimumScaleFactor(0.8)
                         Spacer(minLength: 0)
-                        Image(systemName: isOn ? "checkmark.circle.fill" : "circle")
+                        Group {
+                            if isOn {
+                                HeroIcon("check-circle", solid: true, size: 22)
+                            } else {
+                                Circle().stroke(AppColors.Adaptive.textMeta, lineWidth: 1.5).frame(width: 20, height: 20)
+                            }
+                        }
                             .foregroundStyle(isOn ? AppColors.Brand.accent : AppColors.Adaptive.textMeta)
                     }
                     .padding(.horizontal, AppSpacing.m)
@@ -58,7 +64,7 @@ struct TopicPreferencesView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: AppSpacing.m) {
                 Text("Vos thèmes apparaissent en premier dans Explorer.")
-                    .font(.appSubheadline)
+                    .font(.appBody)
                     .foregroundStyle(AppColors.Adaptive.textMeta)
                 TopicPickerGrid(selection: Binding(
                     get: { StoryTopic.preferred(from: preferredTopicsRaw) },

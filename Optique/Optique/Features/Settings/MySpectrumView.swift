@@ -29,11 +29,10 @@ struct MySpectrumView: View {
 
     private var emptyState: some View {
         VStack(spacing: AppSpacing.m) {
-            Image(systemName: "chart.bar")
-                .font(.geist(44, .regular, relativeTo: .largeTitle))
+            HeroIcon("chart-bar", size: 44)
                 .foregroundStyle(AppColors.Adaptive.textTertiary)
             Text("Aucun historique")
-                .font(.appHeadline)
+                .font(.appBodyStrong)
                 .foregroundStyle(AppColors.Adaptive.textPrimary)
             Text("Lisez des articles pour voir comment votre consommation d'information se répartit sur le spectre politique.")
                 .font(.appBody)
@@ -50,7 +49,7 @@ struct MySpectrumView: View {
     private var spectrumBar: some View {
         VStack(alignment: .leading, spacing: AppSpacing.m) {
             Text("RÉPARTITION · \(store.leans.count) ARTICLE\(store.leans.count > 1 ? "S" : "")")
-                .font(.appCaption1)
+                .font(.appCaption)
                 .foregroundStyle(AppColors.Adaptive.textTertiary)
                 .padding(.horizontal, AppSpacing.m)
 

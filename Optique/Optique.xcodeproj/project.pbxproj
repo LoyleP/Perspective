@@ -6,10 +6,6 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXBuildFile section */
-		8E871C4E2F6EA28A000C6A81 /* FeedKit in Frameworks */ = {isa = PBXBuildFile; productRef = GNF0001000000000000000008 /* FeedKit */; };
-/* End PBXBuildFile section */
-
 /* Begin PBXContainerItemProxy section */
 		8E871BF52F6EA117000C6A81 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -56,7 +52,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				8E871C4E2F6EA28A000C6A81 /* FeedKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -116,9 +111,6 @@
 				8E871BE72F6EA115000C6A81 /* Optique */,
 			);
 			name = Optique;
-			packageProductDependencies = (
-				GNF0001000000000000000008 /* FeedKit */,
-			);
 			productName = Optique;
 			productReference = 8E871BE52F6EA115000C6A81 /* Optique.app */;
 			productType = "com.apple.product-type.application";
@@ -140,8 +132,6 @@
 				8E871BF72F6EA117000C6A81 /* OptiqueTests */,
 			);
 			name = OptiqueTests;
-			packageProductDependencies = (
-			);
 			productName = OptiqueTests;
 			productReference = 8E871BF42F6EA117000C6A81 /* OptiqueTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -163,8 +153,6 @@
 				8E871C012F6EA117000C6A81 /* OptiqueUITests */,
 			);
 			name = OptiqueUITests;
-			packageProductDependencies = (
-			);
 			productName = OptiqueUITests;
 			productReference = 8E871BFE2F6EA117000C6A81 /* OptiqueUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
@@ -202,9 +190,6 @@
 			);
 			mainGroup = 8E871BDC2F6EA115000C6A81;
 			minimizedProjectReferenceProxies = 1;
-			packageReferences = (
-				GNF0001000000000000000002 /* XCRemoteSwiftPackageReference "FeedKit" */,
-			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 8E871BE62F6EA115000C6A81 /* Products */;
 			projectDirPath = "";
@@ -587,25 +572,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		GNF0001000000000000000002 /* XCRemoteSwiftPackageReference "FeedKit" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/nmdias/FeedKit";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 9.0.0;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		GNF0001000000000000000008 /* FeedKit */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = GNF0001000000000000000002 /* XCRemoteSwiftPackageReference "FeedKit" */;
-			productName = FeedKit;
-		};
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 8E871BDD2F6EA115000C6A81 /* Project object */;
 }

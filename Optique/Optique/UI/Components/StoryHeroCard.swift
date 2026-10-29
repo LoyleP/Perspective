@@ -42,9 +42,10 @@ struct StoryHeroCard: View {
     private var content: some View {
         VStack(alignment: .leading, spacing: AppSpacing.st) {
             Text(story.metaLine)
-                .overlineStyle(.white.opacity(0.75))
+                .font(.appCaption)
+                .foregroundStyle(.white.opacity(0.75))
             Text(story.title)
-                .font(size == .large ? .appLargeTitle : .appTitle1)
+                .font(size == .large ? .appTitle : .appHeading)
                 .foregroundStyle(.white)
                 .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : (size == .large ? 4 : 3))
                 .minimumScaleFactor(0.8)

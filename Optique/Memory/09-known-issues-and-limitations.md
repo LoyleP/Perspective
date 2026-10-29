@@ -15,7 +15,7 @@
 
 ## UI
 
-- **Not redesigned:** `StoryThreadView`, `ArticleBrowserView`, `MySpectrumView`, `SplashView` keep their earlier look (they use the new tokens).
+- **Not redesigned:** `ArticleBrowserView`, `MySpectrumView`, `SplashView` keep their earlier look (they use the new tokens).
 - **Search tab placement** — the iOS 26 bottom search field (search-role tab morph) did not render on the test runtime; Explorer uses an always-visible drawer field instead.
 - **"Effacer l'historique" in Réglages** renders white instead of red (Form `.tint` overrides the destructive role).
 - **Paywall copy** promises only what is true: Optique+ removes the 5-stories-per-session banner (which does not block reading). "Financé par ses lecteurs" / "Sans publicité ni pistage" need product confirmation.

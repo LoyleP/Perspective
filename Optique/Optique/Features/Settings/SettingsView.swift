@@ -23,13 +23,14 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
+            if AppConfig.paywallEnabled {
             Section("Abonnement") {
                 LabeledContent("Formule", value: session.isPremium ? "Optique+" : "Gratuite")
                 if !session.isPremium {
                     Button {
                         showPaywall = true
                     } label: {
-                        Label("Passer à Optique+", systemImage: "sparkles")
+                        Label("Passer à Optique+", hero: "sparkles")
                             .foregroundStyle(AppColors.Brand.accent)
                     }
                 }
@@ -41,7 +42,7 @@ struct SettingsView: View {
                     }
                 } label: {
                     HStack {
-                        Label("Restaurer les achats", systemImage: "arrow.clockwise")
+                        Label("Restaurer les achats", hero: "arrow-path")
                         if isRestoring {
                             Spacer()
                             ProgressView()
@@ -50,10 +51,11 @@ struct SettingsView: View {
                 }
                 .disabled(isRestoring)
             }
+            }
 
             Section {
                 Toggle(isOn: $notificationsEnabled) {
-                    Label("Alertes des grands sujets", systemImage: "bell")
+                    Label("Alertes des grands sujets", hero: "bell")
                 }
                 .onChange(of: notificationsEnabled) { oldValue, newValue in
                     guard newValue, !oldValue else { return }
@@ -78,17 +80,17 @@ struct SettingsView: View {
                 NavigationLink {
                     MySpectrumView()
                 } label: {
-                    Label("Mon spectre de lecture", systemImage: "chart.bar")
+                    Label("Mon spectre de lecture", hero: "chart-bar")
                 }
                 NavigationLink {
                     TopicPreferencesView()
                 } label: {
-                    Label("Thèmes préférés", systemImage: "square.grid.2x2")
+                    Label("Thèmes préférés", hero: "squares-2x2")
                 }
                 Button(role: .destructive) {
                     confirmReset = true
                 } label: {
-                    Label("Effacer l'historique", systemImage: "trash")
+                    Label("Effacer l'historique", hero: "trash")
                 }
                 .disabled(history.leans.isEmpty && history.stories.isEmpty)
             }
@@ -97,21 +99,21 @@ struct SettingsView: View {
                 Button {
                     showMethodologie = true
                 } label: {
-                    Label("Méthodologie", systemImage: "doc.text")
+                    Label("Méthodologie", hero: "document-text")
                 }
                 Button {
                     showOwnership = true
                 } label: {
-                    Label("Propriété des médias", systemImage: "building.2")
+                    Label("Propriété des médias", hero: "building-office-2")
                 }
                 if let url = URL(string: "https://loylep.github.io/Perspective/legal/privacy-policy") {
                     Link(destination: url) {
-                        Label("Politique de confidentialité", systemImage: "hand.raised")
+                        Label("Politique de confidentialité", hero: "hand-raised")
                     }
                 }
                 if let url = URL(string: "https://loylep.github.io/Perspective/legal/terms-of-service") {
                     Link(destination: url) {
-                        Label("Conditions d'utilisation", systemImage: "doc.plaintext")
+                        Label("Conditions d'utilisation", hero: "document")
                     }
                 }
                 LabeledContent("Version", value: appVersion)
@@ -122,10 +124,10 @@ struct SettingsView: View {
                 NavigationLink {
                     DesignSystemGalleryView()
                 } label: {
-                    Label("Design system", systemImage: "paintpalette")
+                    Label("Design system", hero: "swatch")
                 }
                 Toggle(isOn: $devIsPremium) {
-                    Label("Mode premium", systemImage: "crown")
+                    Label("Mode premium", hero: "star")
                 }
                 .onChange(of: devIsPremium) { _, newValue in
                     if newValue { session.storiesOpened = 0 }
@@ -133,18 +135,18 @@ struct SettingsView: View {
                 Button {
                     Task { await testNotifications() }
                 } label: {
-                    Label("Tester les notifications", systemImage: "bell.badge")
+                    Label("Tester les notifications", hero: "bell-alert")
                 }
                 if !notificationTestMessage.isEmpty {
                     Text(notificationTestMessage)
-                        .font(.appFootnote)
+                        .font(.appCaption)
                         .foregroundStyle(AppColors.Adaptive.textMeta)
                 }
                 Button {
                     hasCompletedOnboarding = false
                     showOnboarding = true
                 } label: {
-                    Label("Rejouer l'onboarding", systemImage: "arrow.counterclockwise")
+                    Label("Rejouer l'onboarding", hero: "arrow-uturn-left")
                 }
             }
             #endif

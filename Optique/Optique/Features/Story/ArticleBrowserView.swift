@@ -6,7 +6,7 @@ struct ArticleBrowserView: View {
 
     let articles: [Article]
     let initialArticle: Article
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.tabBarState) private var tabBar
     @Environment(ReadingHistoryStore.self) private var readingHistory
 
     @State private var currentIndex: Int
@@ -33,89 +33,82 @@ struct ArticleBrowserView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                if let url = URL(string: currentArticle.url) {
-                    WebViewRepresentable(
-                        webView: webView,
-                        url: url,
-                        isLoading: $isLoading,
-                        barsVisible: $barsVisible
-                    )
-                    .background(AppColors.Adaptive.background)
-                    .id(currentArticle.id)
-                }
-
-                if isLoading {
-                    ProgressView()
-                        .tint(AppColors.Adaptive.textPrimary)
-                }
+        ZStack {
+            if let url = URL(string: currentArticle.url) {
+                WebViewRepresentable(
+                    webView: webView,
+                    url: url,
+                    isLoading: $isLoading,
+                    barsVisible: $barsVisible
+                )
+                .background(AppColors.Adaptive.background)
+                .id(currentArticle.id)
             }
-            .navigationBarTitleDisplayMode(.inline)
-            .task(id: currentIndex) {
-                guard let lean = currentArticle.source?.politicalLean else { return }
-                try? await Task.sleep(for: .seconds(2))
-                guard !Task.isCancelled else { return }
-                readingHistory.record(lean: lean)
+
+            if isLoading {
+                ProgressView()
+                    .tint(AppColors.Adaptive.textPrimary)
             }
-            .toolbar(barsVisible ? .visible : .hidden, for: .navigationBar, .bottomBar)
-            .toolbar {
-                ToolbarItem(placement: .principal) {
-                    if let source = currentArticle.source,
-                       let logoURL = source.logoURL,
-                       let url = URL(string: logoURL) {
-                        AsyncImage(url: url) { phase in
-                            if let img = phase.image {
-                                img.resizable()
-                                    .scaledToFill()
-                                    .frame(width: 48, height: 48)
-                                    .clipShape(Circle())
-                            } else {
-                                sourceLogoPlaceholder(source)
-                            }
-                        }
-                    } else if let source = currentArticle.source {
-                        sourceLogoPlaceholder(source)
-                    }
-                }
-
-                ToolbarItemGroup(placement: .bottomBar) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.appBody)
-                            .foregroundStyle(AppColors.Adaptive.textPrimary)
-                    }
-
-                    Spacer()
-
-                    Button {
-                        if canGoBack {
-                            currentIndex -= 1
-                        }
-                    } label: {
-                        Image(systemName: "chevron.left")
-                            .font(.appBody)
-                            .foregroundStyle(canGoBack ? AppColors.Adaptive.textPrimary : AppColors.Adaptive.textTertiary)
-                    }
-                    .disabled(!canGoBack)
-
-                    Button {
-                        if canGoForward {
-                            currentIndex += 1
-                        }
-                    } label: {
-                        Image(systemName: "chevron.right")
-                            .font(.appBody)
-                            .foregroundStyle(canGoForward ? AppColors.Adaptive.textPrimary : AppColors.Adaptive.textTertiary)
-                    }
-                    .disabled(!canGoForward)
-                }
-            }
-            .toolbarBackground(.visible, for: .bottomBar)
-            .toolbarBackground(AppColors.Adaptive.background, for: .bottomBar)
         }
+        .navigationBarTitleDisplayMode(.inline)
+        .task(id: currentIndex) {
+            guard let lean = currentArticle.source?.politicalLean else { return }
+            try? await Task.sleep(for: .seconds(2))
+            guard !Task.isCancelled else { return }
+            readingHistory.record(lean: lean)
+        }
+        .toolbar(barsVisible ? .visible : .hidden, for: .navigationBar, .bottomBar)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                if let source = currentArticle.source,
+                   let logoURL = source.logoURL,
+                   let url = URL(string: logoURL) {
+                    AsyncImage(url: url) { phase in
+                        if let img = phase.image {
+                            img.resizable()
+                                .scaledToFill()
+                                .frame(width: 48, height: 48)
+                                .clipShape(Circle())
+                        } else {
+                            sourceLogoPlaceholder(source)
+                        }
+                    }
+                } else if let source = currentArticle.source {
+                    sourceLogoPlaceholder(source)
+                }
+            }
+
+            ToolbarItemGroup(placement: .bottomBar) {
+                Spacer()
+
+                Button {
+                    if canGoBack {
+                        currentIndex -= 1
+                    }
+                } label: {
+                    HeroIcon("chevron-left", size: 20)
+                        .font(.appBody)
+                        .foregroundStyle(canGoBack ? AppColors.Adaptive.textPrimary : AppColors.Adaptive.textTertiary)
+                }
+                .disabled(!canGoBack)
+
+                Button {
+                    if canGoForward {
+                        currentIndex += 1
+                    }
+                } label: {
+                    HeroIcon("chevron-right", size: 20)
+                        .font(.appBody)
+                        .foregroundStyle(canGoForward ? AppColors.Adaptive.textPrimary : AppColors.Adaptive.textTertiary)
+                }
+                .disabled(!canGoForward)
+            }
+        }
+        .toolbarBackground(.visible, for: .bottomBar)
+        .toolbarBackground(AppColors.Adaptive.background, for: .bottomBar)
+        // The reader has its own bottom bar: hide the floating tab bar while it is open.
+        .onAppear { tabBar.isHidden = true }
+        .onDisappear { tabBar.isHidden = false }
     }
 
     private func sourceAvatar(_ source: Source) -> some View {
@@ -142,7 +135,7 @@ struct ArticleBrowserView: View {
         return ZStack {
             Circle().fill(lean?.spectrumColor ?? AppColors.Adaptive.placeholder)
             Text(String(source.name.prefix(1)).uppercased())
-                .font(.geist(12, .medium, relativeTo: .caption))
+                .font(.appCaption)
                 .foregroundStyle(lean?.tagTextColor ?? AppColors.Adaptive.textSecondary)
         }
     }
@@ -153,7 +146,7 @@ struct ArticleBrowserView: View {
             Circle()
                 .fill(lean?.spectrumColor ?? AppColors.Adaptive.placeholder)
             Text(String(source.name.prefix(1)).uppercased())
-                .font(.geist(20, .medium, relativeTo: .title3))
+                .font(.appHeading)
                 .foregroundStyle(lean?.tagTextColor ?? AppColors.Adaptive.textSecondary)
         }
         .frame(width: 48, height: 48)

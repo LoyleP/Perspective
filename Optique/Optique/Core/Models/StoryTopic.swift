@@ -28,17 +28,18 @@ enum StoryTopic: String, CaseIterable, Identifiable {
         }
     }
 
-    var systemImage: String {
+    /// Heroicon name (see `HeroIcon`).
+    var heroIcon: String {
         switch self {
-        case .tout:          return "square.grid.2x2"
-        case .politique:     return "building.columns"
-        case .economie:      return "chart.line.uptrend.xyaxis"
-        case .societe:       return "person.3"
-        case .international: return "globe.europe.africa"
-        case .environnement: return "leaf"
-        case .justice:       return "scalemass"
-        case .culture:       return "theatermasks"
-        case .sport:         return "figure.run"
+        case .tout:          return "squares-2x2"
+        case .politique:     return "building-library"
+        case .economie:      return "arrow-trending-up"
+        case .societe:       return "users"
+        case .international: return "globe-europe-africa"
+        case .environnement: return "sun"
+        case .justice:       return "scale"
+        case .culture:       return "film"
+        case .sport:         return "trophy"
         }
     }
 

@@ -34,14 +34,14 @@ struct SourceDetailView: View {
             if let url = URL(string: source.url) {
                 ToolbarItem(placement: .topBarTrailing) {
                     Link(destination: url) {
-                        Image(systemName: "safari")
+                        HeroIcon("globe-alt", size: 22)
                     }
                     .accessibilityLabel("Ouvrir le site")
                 }
             }
         }
         .tint(AppColors.Adaptive.textPrimary)
-        .sheet(item: $selectedArticle) { article in
+        .navigationDestination(item: $selectedArticle) { article in
             ArticleBrowserView(articles: articles, initialArticle: article)
         }
         .task { await loadArticles() }
@@ -53,12 +53,12 @@ struct SourceDetailView: View {
         VStack(alignment: .leading, spacing: AppSpacing.st) {
             SourceAvatarView(source: source, size: 72)
             Text(source.name)
-                .font(.appDisplay)
+                .font(.appTitle)
                 .foregroundStyle(AppColors.Adaptive.textPrimary)
                 .accessibilityAddTraits(.isHeader)
             if let host = URL(string: source.url)?.host() {
                 Text(host.replacingOccurrences(of: "www.", with: ""))
-                    .font(.appFootnote)
+                    .font(.appCaption)
                     .foregroundStyle(AppColors.Adaptive.textMeta)
             }
         }
@@ -71,7 +71,7 @@ struct SourceDetailView: View {
         VStack(alignment: .leading, spacing: AppSpacing.m) {
             HStack {
                 Text("Positionnement")
-                    .font(.appHeadline)
+                    .font(.appBodyStrong)
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
                 Spacer()
                 LeanTagView(lean: lean)
@@ -84,7 +84,7 @@ struct SourceDetailView: View {
                             .fill(position.spectrumColor.opacity(isSource ? 1 : 0.2))
                             .frame(height: isSource ? 10 : 6)
                         Text(position.code)
-                            .font(.appCaption2)
+                            .font(.appCaption)
                             .foregroundStyle(isSource ? AppColors.Adaptive.textPrimary : AppColors.Adaptive.textMeta)
                     }
                     .frame(maxWidth: .infinity)
@@ -104,7 +104,7 @@ struct SourceDetailView: View {
         VStack(alignment: .leading, spacing: AppSpacing.s) {
             HStack {
                 Text("Propriétaire")
-                    .font(.appHeadline)
+                    .font(.appBodyStrong)
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
                 Spacer()
                 if let type = source.ownerType {
@@ -112,7 +112,7 @@ struct SourceDetailView: View {
                         Circle().fill(type.color).frame(width: 8, height: 8)
                         Text(type.displayName)
                     }
-                    .font(.appCaption1)
+                    .font(.appCaption)
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
@@ -121,12 +121,12 @@ struct SourceDetailView: View {
             }
             if let owner = source.ownerName {
                 Text(owner)
-                    .font(.appTitle3)
+                    .font(.appHeading)
                     .foregroundStyle(AppColors.Adaptive.textSecondary)
             }
             if let notes = source.ownerNotes {
                 Text(notes)
-                    .font(.appSubheadline)
+                    .font(.appBody)
                     .foregroundStyle(AppColors.Adaptive.textBody)
                     .lineSpacing(3)
             }
@@ -147,7 +147,7 @@ struct SourceDetailView: View {
                     .padding(.top, AppSpacing.s)
             } else if articles.isEmpty {
                 Text("Aucun article récent.")
-                    .font(.appSubheadline)
+                    .font(.appBody)
                     .foregroundStyle(AppColors.Adaptive.textMeta)
                     .padding(.vertical, AppSpacing.m)
             } else {
@@ -160,7 +160,7 @@ struct SourceDetailView: View {
                                 Text(article.publishedAt.relativeToNowFrench())
                                     .overlineStyle()
                                 Text(article.title)
-                                    .font(.appHeadline)
+                                    .font(.appBodyStrong)
                                     .foregroundStyle(AppColors.Adaptive.textPrimary)
                                     .lineLimit(3)
                                     .multilineTextAlignment(.leading)

@@ -6,46 +6,33 @@ struct FeedView: View {
     @Environment(BookmarkStore.self) private var bookmarks
     @Namespace private var transition
     @State private var visibleCount = 12
-    @State private var latestAlertAt: Date?
     @State private var deepLinkStory: Story?
-    @AppStorage("lastSeenAlertsAt") private var lastSeenAlertsAt: Double = 0
+    @State private var topic: StoryTopic = .tout
     private let notificationManager = NotificationManager.shared
 
-    private var hasUnreadAlerts: Bool {
-        guard let latestAlertAt else { return false }
-        return latestAlertAt.timeIntervalSince1970 > lastSeenAlertsAt
-    }
-
     var body: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 0) {
-                content
+        VStack(spacing: 0) {
+            AppHeader()
+            TopicTabs(selection: $topic)
+
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 0) {
+                    content
+                }
+                .padding(.horizontal, AppSpacing.m)
+                .padding(.top, AppSpacing.m)
+                .padding(.bottom, AppSpacing.xxl)
             }
-            .padding(.horizontal, AppSpacing.m)
-            .padding(.bottom, AppSpacing.xxl)
+            .refreshable { await viewModel.refresh() }
         }
         .background(AppColors.Adaptive.background.ignoresSafeArea())
-        .refreshable { await viewModel.refresh() }
-        .navigationTitle("À la une")
-        .navigationBarTitleDisplayMode(.large)
+        .toolbar(.hidden, for: .navigationBar)
         .navigationDestination(for: Story.self) { story in
             if #available(iOS 18.0, *) {
                 StoryDetailView(story: story)
                     .navigationTransition(.zoom(sourceID: story.id, in: transition))
             } else {
                 StoryDetailView(story: story)
-            }
-        }
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                NavigationLink {
-                    AlertesView()
-                } label: {
-                    Image(systemName: hasUnreadAlerts ? "bell.badge" : "bell")
-                        .symbolRenderingMode(.palette)
-                        .foregroundStyle(AppColors.Adaptive.textPrimary, AppColors.Adaptive.textPrimary)
-                }
-                .accessibilityLabel(hasUnreadAlerts ? "Alertes, nouvelles alertes" : "Alertes")
             }
         }
         // Notification tapped: open its story on top of the feed.
@@ -57,8 +44,11 @@ struct FeedView: View {
             notificationManager.pendingStoryID = nil
             Task { deepLinkStory = try? await StoryRepository.shared.fetchStory(id: storyID) }
         }
+        .onChange(of: topic) { _, new in
+            visibleCount = 12
+            Task { await viewModel.select(new) }
+        }
         .task { await viewModel.load() }
-        .task { latestAlertAt = await notificationManager.latestNotificationDate() }
     }
 
     // MARK: - State routing
@@ -71,14 +61,14 @@ struct FeedView: View {
             unavailable(
                 title: "Impossible de charger",
                 message: error.localizedDescription,
-                systemImage: "wifi.slash",
+                icon: "signal-slash",
                 action: "Réessayer"
             )
         } else if viewModel.stories.isEmpty {
             unavailable(
                 title: "Aucune actualité",
                 message: "Aucun sujet n'est disponible pour le moment.",
-                systemImage: "newspaper",
+                icon: "newspaper",
                 action: "Rafraîchir"
             )
         } else {
@@ -90,10 +80,6 @@ struct FeedView: View {
 
     @ViewBuilder
     private var stories: some View {
-        Text(Date.now, format: .dateTime.weekday(.wide).day().month(.wide).locale(Locale(identifier: "fr_FR")))
-            .overlineStyle()
-            .padding(.bottom, AppSpacing.st)
-
         if let hero = viewModel.cetteSemanineHero {
             storyLink(hero) {
                 StoryHeroCard(story: hero)
@@ -146,12 +132,11 @@ struct FeedView: View {
                         .zoomSource(id: story.id, in: transition)
                 }
                 if index < viewModel.essentials.count - 1 {
-                    Divider().overlay(AppColors.Adaptive.divider)
+                    // Inset past the rank gutter so the rule lines up with the text.
+                    Divider().overlay(AppColors.Adaptive.divider).padding(.leading, 38)
                 }
             }
         }
-        .padding(AppSpacing.m)
-        .cardSurface()
     }
 
     private func storyLink<Content: View>(_ story: Story, @ViewBuilder label: () -> Content) -> some View {
@@ -162,14 +147,14 @@ struct FeedView: View {
                     bookmarks.toggle(story)
                 } label: {
                     if bookmarks.isBookmarked(story) {
-                        Label("Retirer des enregistrés", systemImage: "bookmark.slash")
+                        Label("Retirer des enregistrés", hero: "bookmark-slash")
                     } else {
-                        Label("Enregistrer", systemImage: "bookmark")
+                        Label("Enregistrer", hero: "bookmark")
                     }
                 }
                 if let url = story.articles.first.flatMap({ URL(string: $0.url) }) {
                     ShareLink(item: url, subject: Text(story.title)) {
-                        Label("Partager", systemImage: "square.and.arrow.up")
+                        Label("Partager", hero: "arrow-up-on-square")
                     }
                 }
             }
@@ -190,9 +175,9 @@ struct FeedView: View {
         .padding(.top, AppSpacing.l)
     }
 
-    private func unavailable(title: String, message: String, systemImage: String, action: String) -> some View {
+    private func unavailable(title: String, message: String, icon: String, action: String) -> some View {
         ContentUnavailableView {
-            Label(title, systemImage: systemImage)
+            Label(title, hero: icon, size: 44)
         } description: {
             Text(message)
         } actions: {
@@ -212,23 +197,31 @@ private struct EssentialRow: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: AppSpacing.m) {
             Text("\(rank)")
-                .font(.geist(30, .medium, relativeTo: .title))
-                .foregroundStyle(AppColors.Brand.accent)
-                .frame(minWidth: 22, alignment: .leading)
+                .font(.appCaption)
+                .monospacedDigit()
+                .foregroundStyle(AppColors.Adaptive.textMeta)
+                .frame(width: 22, alignment: .leading)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 6) {
                 Text(story.title)
-                    .font(.appHeadline)
+                    .font(.appBodyStrong)
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
                     .lineLimit(3)
                     .multilineTextAlignment(.leading)
+                if let dek = story.summary, !dek.isEmpty {
+                    Text(dek)
+                        .font(.appBody)
+                        .foregroundStyle(AppColors.Adaptive.textMeta)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                }
                 HStack(spacing: AppSpacing.s) {
                     if let coverage = story.computedCoverage {
                         SpectrumBar(coverage: coverage)
                             .frame(width: 56)
                     }
                     Text(story.metaLine)
-                        .font(.appFootnote)
+                        .font(.appCaption)
                         .foregroundStyle(AppColors.Adaptive.textMeta)
                 }
             }

@@ -7,10 +7,13 @@ struct FloatingTabBar: View {
     struct Item: Identifiable {
         let id: Int
         let accessibilityLabel: String
-        /// SF Symbol name, or an asset name when `isAsset` is true.
+        /// Heroicon name, or an asset name when `isAsset` is true.
         let icon: String
-        var selectedIcon: String? = nil
+        /// Whether a solid variant of the Heroicon exists, shown when selected.
+        var hasSolid = false
         var isAsset = false
+        /// Shows a small dot on the icon (unread alerts).
+        var showsBadge = false
     }
 
     let items: [Item]
@@ -44,6 +47,16 @@ struct FloatingTabBar: View {
             withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) { selection = item.id }
         } label: {
             icon(for: item, isSelected: isSelected)
+                .overlay(alignment: .topTrailing) {
+                    if item.showsBadge {
+                        Circle()
+                            .fill(AppColors.Adaptive.textPrimary)
+                            .frame(width: 9, height: 9)
+                            .overlay(Circle().stroke(AppColors.Adaptive.background, lineWidth: 2))
+                            .offset(x: 3, y: -2)
+                            .accessibilityHidden(true)
+                    }
+                }
                 .frame(width: itemSize.width, height: itemSize.height)
                 .background {
                     if isSelected {
@@ -69,10 +82,8 @@ struct FloatingTabBar: View {
                 .frame(width: iconSize, height: iconSize)
                 .foregroundStyle(color)
         } else {
-            Image(systemName: isSelected ? (item.selectedIcon ?? item.icon) : item.icon)
-                .font(.system(size: iconSize - 4, weight: isSelected ? .medium : .regular))
+            HeroIcon(item.icon, solid: isSelected && item.hasSolid, size: iconSize)
                 .foregroundStyle(color)
-                .frame(width: iconSize, height: iconSize)
         }
     }
 
@@ -98,9 +109,9 @@ struct FloatingTabBar: View {
         AppColors.Adaptive.background.ignoresSafeArea()
         FloatingTabBar(
             items: [
-                .init(id: 0, accessibilityLabel: "À la une", icon: "AppLogoTab", isAsset: true),
-                .init(id: 1, accessibilityLabel: "Mon Optique", icon: "person.crop.circle", selectedIcon: "person.crop.circle.fill"),
-                .init(id: 2, accessibilityLabel: "Explorer", icon: "magnifyingglass")
+                .init(id: 0, accessibilityLabel: "À la une", icon: "home", hasSolid: true),
+                .init(id: 1, accessibilityLabel: "Explorer", icon: "magnifying-glass"),
+                .init(id: 2, accessibilityLabel: "Alertes", icon: "bell", hasSolid: true)
             ],
             selection: $selection
         )

@@ -38,8 +38,8 @@ struct PaywallView: View {
             Button {
                 dismiss()
             } label: {
-                Image(systemName: "xmark")
-                    .font(.appHeadline)
+                HeroIcon("x-mark", size: 20)
+                    .font(.appBodyStrong)
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
                     .frame(width: 44, height: 44)
                     .background(AppColors.Adaptive.surfaceElevated, in: Circle())
@@ -68,7 +68,7 @@ struct PaywallView: View {
             Text("Optique+")
                 .overlineStyle(AppColors.Brand.accent)
             Text("Lisez sans limite")
-                .font(.appDisplay)
+                .font(.appTitle)
                 .foregroundStyle(AppColors.Adaptive.textPrimary)
                 .accessibilityAddTraits(.isHeader)
             Text("Et soutenez une information qui montre tous les points de vue.")
@@ -81,26 +81,25 @@ struct PaywallView: View {
 
     private var benefits: some View {
         VStack(alignment: .leading, spacing: AppSpacing.m) {
-            benefit("infinity", "Sujets illimités", "Plus de limite de 5 sujets par session.")
+            benefit("book-open", "Sujets illimités", "Plus de limite de 5 sujets par session.")
             benefit("heart", "Un projet indépendant", "Financé par ses lecteurs, sans groupe de presse derrière.")
-            benefit("eye.slash", "Sans publicité ni pistage", "Ce que vous lisez reste sur votre iPhone.")
+            benefit("eye-slash", "Sans publicité ni pistage", "Ce que vous lisez reste sur votre iPhone.")
         }
     }
 
     private func benefit(_ icon: String, _ title: String, _ detail: String) -> some View {
         HStack(alignment: .top, spacing: AppSpacing.m) {
-            Image(systemName: icon)
-                .font(.appHeadline)
+            HeroIcon(icon, size: 20)
                 .foregroundStyle(AppColors.Brand.accent)
                 .frame(width: 36, height: 36)
                 .background(AppColors.Brand.accentSoft, in: Circle())
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.appHeadline)
+                    .font(.appBodyStrong)
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
                 Text(detail)
-                    .font(.appSubheadline)
+                    .font(.appBody)
                     .foregroundStyle(AppColors.Adaptive.textMeta)
             }
         }
@@ -145,23 +144,29 @@ struct PaywallView: View {
             VStack(alignment: .leading, spacing: AppSpacing.xs) {
                 HStack {
                     Text(title)
-                        .font(.appHeadline)
+                        .font(.appBodyStrong)
                         .foregroundStyle(AppColors.Adaptive.textPrimary)
                     Spacer()
-                    Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                    Group {
+                        if selected {
+                            HeroIcon("check-circle", solid: true, size: 22)
+                        } else {
+                            Circle().stroke(AppColors.Adaptive.textMeta, lineWidth: 1.5).frame(width: 20, height: 20)
+                        }
+                    }
                         .foregroundStyle(selected ? AppColors.Brand.accent : AppColors.Adaptive.textMeta)
                 }
                 Text(price)
-                    .font(.appTitle2)
+                    .font(.appHeading)
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
                     .minimumScaleFactor(0.7)
                     .lineLimit(1)
                 Text(detail)
-                    .font(.appFootnote)
+                    .font(.appCaption)
                     .foregroundStyle(AppColors.Adaptive.textMeta)
                 if let badge {
                     Text(badge)
-                        .font(.appCaption1)
+                        .font(.appCaption)
                         .foregroundStyle(AppColors.Brand.onInk)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
@@ -220,7 +225,7 @@ struct PaywallView: View {
             .disabled(isPurchasing)
 
             Text("Renouvellement automatique, annulable à tout moment dans les Réglages de l'iPhone.")
-                .font(.appCaption2)
+                .font(.appCaption)
                 .foregroundStyle(AppColors.Adaptive.textMeta)
                 .multilineTextAlignment(.center)
 
@@ -235,7 +240,7 @@ struct PaywallView: View {
                     Link("Confidentialité", destination: url)
                 }
             }
-            .font(.appCaption1)
+            .font(.appCaption)
             .foregroundStyle(AppColors.Adaptive.textTertiary)
         }
         .padding(.horizontal, AppSpacing.m)

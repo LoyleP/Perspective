@@ -22,7 +22,7 @@ struct TopicStoriesView: View {
                     } else {
                         ContentUnavailableView(
                             "Aucun sujet",
-                            systemImage: topic.systemImage,
+                            hero: topic.heroIcon,
                             description: Text(didFail ? "Impossible de charger ce thème." : "Aucun sujet récent dans ce thème.")
                         )
                         .padding(.top, AppSpacing.xxl)

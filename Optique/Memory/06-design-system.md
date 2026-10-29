@@ -27,15 +27,21 @@ EG #A81F26 / #C2272D · G #D9383F / #EF5A5F · C #86868C / #B5B5BA · D #3A6FE0 
 
 ## Typography (`UI/Theme/Typography.swift`)
 **Geist** (variable font, named instances `Geist-Regular`, `Geist-Medium`) everywhere. Weights are capped at Medium: hierarchy comes from size and Regular vs Medium. All tokens use `Font.custom(_, size:, relativeTo:)` so they follow Dynamic Type.
-appDisplay 34 M · appLargeTitle 28 M · appTitle1 22 M · appTitle2 20 M · appTitle3 18 M · appHeadline 17 M · appBody 17 R · appSubheadline 15 R · appFootnote 13 M · appCaption1 12 M · appCaption2 11 R · appOverline 11 M (+ `.overlineStyle()`: uppercase, tracked). Use `.geist(size, .regular|.medium, relativeTo:)` for one-offs and `UIFont.geist` for UIKit. `UI/Theme/AppAppearance.swift` applies Geist to the navigation bar, tab bar items, segmented controls and search field; system alerts, context menus and the share sheet stay in the system font. Barlow Condensed was removed.
+Exactly four sizes, enforced by `Font.AppTextSize` (`.geist(_:_:)` and `UIFont.geist(_:_:)` only accept it, so a fifth size won't compile): title 28 · heading 20 · body 16 · caption 13. Tokens: `appTitle` 28 M · `appHeading` 20 M · `appBodyStrong` 16 M · `appBody` 16 R · `appCaption` 13 M (+ `.overlineStyle()`: uppercase, tracked). Never add a size or a raw `.system`/`.footnote` font; change the enum deliberately instead. `UI/Theme/AppAppearance.swift` applies Geist to the navigation bar, segmented controls and search field; system alerts, context menus and the share sheet stay in the system font. Barlow Condensed was removed.
+
+- **AppHeader / TopicTabs / ProfileAvatarButton** (`UI/Components/AppHeader.swift`) — X-style header (avatar left, logo center) and the sliding topic tab row under it.
+
+## Icons
+All icons are **Heroicons 2.2.0** (MIT, heroicons.com), outline 24 px with a few solid variants (user-circle, bookmark, check-circle), stored as template SVGs in `Assets.xcassets/Icons` as `hero-<name>` / `hero-<name>-solid`. Use `HeroIcon("bell", solid:, size:)`, `Label("Title", hero: "bell")` or `ContentUnavailableView("Title", hero: "bell", description:)` (`UI/Components/HeroIcon.swift`); never `Image(systemName:)`. Topic icons: `StoryTopic.heroIcon`. The brand logo (`AppLogo`, `AppLogoTab`) is separate. Still system-drawn (cannot be replaced): the navigation back chevron, the search field magnifier and clear button, `ContentUnavailableView.search`, segmented controls, toggles, disclosure chevrons, alerts/menus/share sheet. The debug menu and design-system gallery still use SF Symbols. To add an icon, copy `package/24/outline/<name>.svg` from the `heroicons` npm package into a new `hero-<name>.imageset` (template rendering, preserve vector data, `currentColor` replaced by `#000000`).
 
 ## Spacing & radii
 Unchanged: `AppSpacing` 4-pt grid (xs 4 … xxxl 64), `AppRadius` (xs 4 … xl 20, pill).
 
 ## Components (`UI/Components`)
+- **SideCarouselView** (Features/Story) — horizontal carousel of one card per political side; `scrollTransition` scales/dims off-center cards, `viewAligned` snapping with symmetric content margins, `scrollPosition(id:anchor: .center)` tracks the centered card.
 - **SpectrumBar** — `.compact` (proportional line, `barHeight`) and `.detailed` (verdict, logos stacked per position, 7-step axis, left/centre/right shares; wraps at large text sizes). Single VoiceOver label with the shares and verdict.
 - **StoryHeroCard** — photo card (text over photos is always white on the scrim, in both themes), `.large` 4:5 / `.medium` 3:2; text under the photo at accessibility text sizes.
-- **StoryRow** — overline meta, headline, spectrum line + verdict, scaled thumbnail (hidden at accessibility sizes).
+- **StoryRow** — compact row: small meta (10), headline (15), spectrum line + verdict (11); trailing photo is a square as tall as the text (SquareTrailingLayout, 64–120 pt), hidden at accessibility text sizes.ne meta, headline, spectrum line + verdict, scaled thumbnail (hidden at accessibility sizes).
 - **SourceAvatarView / SourceStack** — logo (from `/api/logo`) or initial on lean color; overlapping stack with "+N".
 - **LeanTagView** — chip with color dot, optional share.
 - **SectionHeader**, **RemoteImage** (fading AsyncImage with tinted placeholder), **Shimmer / SkeletonLines** (static with Reduce Motion), **OptiqueButtonStyle** (`.optiquePrimary` light capsule, `.optiqueSecondary` elevated), **CardPressStyle**, **TopicPickerGrid** (1 column at accessibility sizes), **PaywallBannerView**, **OwnershipBreakdownView**.
@@ -50,5 +56,5 @@ Unchanged: `AppSpacing` 4-pt grid (xs 4 … xxxl 64), `AppRadius` (xs 4 … xl 2
 1. **Xcode previews** — every shared component and main screen has `#Preview`s (normal, large text, edge cases). In previews the repositories return offline fixtures (`Core/Models/Fixtures.swift`, active when `XCODE_RUNNING_FOR_PREVIEWS=1`, `--fixtures` or `--screen`).
 2. **Screen launcher** — open one screen directly with fixture data:
    `xcrun simctl launch <udid> com.flow.optique --screen <name> [--state normal|loading|empty|error] [--text-size xs…xxxl|ax1…ax5] [--story <n>]`
-   Screens: feed, story, thread, explorer, topic, sources, source, profile, alerts, settings, onboarding, paywall, gallery. Code: `App/DebugScreenHost.swift`.
+   Screens: feed, story, explorer, topic, sources, source, profile, alerts, settings, onboarding, paywall, gallery. Code: `App/DebugScreenHost.swift`.
 3. **Live reload (simulator)** — install InjectionIII (Mac App Store / github.com/johnno1962/InjectionIII), run it, open the project. Debug simulator builds link with `-interposable` and load its bundle at launch; `RootView` re-renders on each injection. Not set up on device.

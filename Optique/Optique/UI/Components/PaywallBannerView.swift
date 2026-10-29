@@ -11,24 +11,24 @@ struct PaywallBannerView: View {
 
     var body: some View {
         HStack(spacing: AppSpacing.st) {
-            Image(systemName: "sparkles")
-                .font(.appHeadline)
+            HeroIcon("sparkles", size: 22)
+                .font(.appBodyStrong)
                 .foregroundStyle(AppColors.Brand.accent)
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("Lisez sans limite")
-                    .font(.appHeadline)
+                    .font(.appBodyStrong)
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
                 Text("\(session.storiesOpened) sujets ouverts · Optique+")
-                    .font(.appFootnote)
+                    .font(.appCaption)
                     .foregroundStyle(AppColors.Adaptive.textMeta)
             }
 
             Spacer(minLength: 0)
 
             Button("Voir", action: onUpgradeTapped)
-                .font(.appFootnote)
+                .font(.appCaption)
                 .foregroundStyle(AppColors.Brand.onInk)
                 .padding(.horizontal, AppSpacing.m)
                 .padding(.vertical, AppSpacing.s)
@@ -39,8 +39,8 @@ struct PaywallBannerView: View {
                     isPresented = false
                 }
             } label: {
-                Image(systemName: "xmark")
-                    .font(.appCaption1)
+                HeroIcon("x-mark", size: 16)
+                    .font(.appCaption)
                     .foregroundStyle(AppColors.Adaptive.textTertiary)
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())

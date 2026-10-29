@@ -18,7 +18,7 @@ struct SourceStack: View {
             }
             if sources.count > limit {
                 Text("+\(sources.count - limit)")
-                    .font(.appFootnote)
+                    .font(.appCaption)
                     .monospacedDigit()
                     .foregroundStyle(AppColors.Adaptive.textTertiary)
             }

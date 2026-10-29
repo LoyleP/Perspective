@@ -20,8 +20,7 @@ struct DiscoverView: View {
             }
         }
         .background(AppColors.Adaptive.background.ignoresSafeArea())
-        .navigationTitle("Explorer")
-        .navigationBarTitleDisplayMode(.large)
+        .appHeaderToolbar()
         .searchable(
             text: $searchText,
             placement: .navigationBarDrawer(displayMode: .always),
@@ -61,7 +60,7 @@ struct DiscoverView: View {
             loadingSkeleton
         } else if let error = viewModel.error, viewModel.stories.isEmpty {
             ContentUnavailableView {
-                Label("Impossible de charger", systemImage: "wifi.slash")
+                Label("Impossible de charger", hero: "signal-slash", size: 44)
             } description: {
                 Text(error.localizedDescription)
             } actions: {
@@ -173,7 +172,7 @@ struct DiscoverView: View {
                             VStack(spacing: AppSpacing.s) {
                                 SourceAvatarView(source: source, size: 56)
                                 Text(source.name)
-                                    .font(.appCaption1)
+                                    .font(.appCaption)
                                     .foregroundStyle(AppColors.Adaptive.textTertiary)
                                     .lineLimit(2)
                                     .multilineTextAlignment(.center)
@@ -245,8 +244,7 @@ private struct TopicTile: View {
                 } else {
                     ZStack(alignment: .topTrailing) {
                         AppColors.Adaptive.cardSurface
-                        Image(systemName: topic.systemImage)
-                            .font(.geist(64, .medium, relativeTo: .largeTitle))
+                        HeroIcon(topic.heroIcon, size: 64)
                             .foregroundStyle(AppColors.Adaptive.textPrimary.opacity(0.1))
                             .offset(x: 12, y: -6)
                     }
@@ -255,14 +253,13 @@ private struct TopicTile: View {
             .overlay { AppColors.Adaptive.imageScrim }
             .overlay(alignment: .bottomLeading) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Image(systemName: topic.systemImage)
-                        .font(.appHeadline)
+                    HeroIcon(topic.heroIcon, size: 22)
                         .foregroundStyle(AppColors.Brand.onImage)
                     Text(topic.rawValue)
-                        .font(.appHeadline)
+                        .font(.appBodyStrong)
                         .foregroundStyle(.white)
                     Text(count == 0 ? "Voir les sujets" : "\(count) sujets récents")
-                        .font(.appCaption1)
+                        .font(.appCaption)
                         .foregroundStyle(.white.opacity(0.7))
                 }
                 .padding(AppSpacing.st)
@@ -285,7 +282,7 @@ private struct BlindspotBadge: View {
                 .frame(width: 8, height: 8)
             Text(side.label)
         }
-        .font(.appCaption1)
+        .font(.appCaption)
         .foregroundStyle(.white)
         .padding(.horizontal, 10)
         .padding(.vertical, 6)

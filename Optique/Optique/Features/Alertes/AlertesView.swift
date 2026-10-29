@@ -1,35 +1,41 @@
 import SwiftUI
 import UserNotifications
 
-/// Past alerts grouped by day, pushed from the feed's bell. Marks alerts as seen.
+/// Alerts tab: past alerts grouped by day. Marks alerts as seen.
 struct AlertesView: View {
 
     @State private var viewModel = AlertesViewModel()
     @State private var selectedStory: Story?
-    @AppStorage("lastSeenAlertsAt") private var lastSeenAlertsAt: Double = 0
+    /// False while the tab is in the background; the list reloads each time it becomes active.
+    var isActive = true
     @Environment(\.openURL) private var openURL
 
     var body: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: AppSpacing.l) {
-                if viewModel.authorizationStatus != .authorized && viewModel.authorizationStatus != .provisional {
-                    permissionCard
+        VStack(spacing: 0) {
+            AppHeader()
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: AppSpacing.l) {
+                    Text("Alertes")
+                        .font(.appTitle)
+                        .foregroundStyle(AppColors.Adaptive.textPrimary)
+                        .accessibilityAddTraits(.isHeader)
+                    if viewModel.authorizationStatus != .authorized && viewModel.authorizationStatus != .provisional {
+                        permissionCard
+                    }
+                    content
                 }
-                content
+                .padding(.horizontal, AppSpacing.m)
+                .padding(.bottom, AppSpacing.xxl)
             }
-            .padding(.horizontal, AppSpacing.m)
-            .padding(.bottom, AppSpacing.xxl)
+            .refreshable { await viewModel.refresh() }
         }
         .background(AppColors.Adaptive.background.ignoresSafeArea())
-        .navigationTitle("Alertes")
-        .navigationBarTitleDisplayMode(.large)
-        .refreshable { await viewModel.refresh() }
+        .toolbar(.hidden, for: .navigationBar)
         .navigationDestination(item: $selectedStory) { story in
             StoryDetailView(story: story)
         }
-        .task {
-            await viewModel.load()
-            lastSeenAlertsAt = Date().timeIntervalSince1970
+        .task(id: isActive) {
+            if isActive { await viewModel.load() }
         }
     }
 
@@ -42,7 +48,7 @@ struct AlertesView: View {
                 .padding(.top, AppSpacing.m)
         } else if let error = viewModel.error, viewModel.notifications.isEmpty {
             ContentUnavailableView {
-                Label("Impossible de charger", systemImage: "wifi.slash")
+                Label("Impossible de charger", hero: "signal-slash", size: 44)
             } description: {
                 Text(error.localizedDescription)
             } actions: {
@@ -52,14 +58,14 @@ struct AlertesView: View {
         } else if viewModel.notifications.isEmpty {
             ContentUnavailableView(
                 "Aucune alerte",
-                systemImage: "bell",
+                hero: "bell",
                 description: Text("Les grands sujets du jour apparaîtront ici.")
             )
         } else {
             ForEach(days, id: \.day) { group in
                 VStack(alignment: .leading, spacing: 0) {
                     Text(group.title)
-                        .font(.appTitle3)
+                        .font(.appHeading)
                         .foregroundStyle(AppColors.Adaptive.textPrimary)
                         .accessibilityAddTraits(.isHeader)
                         .padding(.bottom, AppSpacing.xs)
@@ -91,11 +97,11 @@ struct AlertesView: View {
 
     private var permissionCard: some View {
         VStack(alignment: .leading, spacing: AppSpacing.st) {
-            Label("Notifications désactivées", systemImage: "bell.slash")
-                .font(.appHeadline)
+            Label("Notifications désactivées", hero: "bell-slash")
+                .font(.appBodyStrong)
                 .foregroundStyle(AppColors.Adaptive.textPrimary)
             Text("Activez-les pour être prévenu quand un grand sujet est couvert par plusieurs médias.")
-                .font(.appSubheadline)
+                .font(.appBody)
                 .foregroundStyle(AppColors.Adaptive.textBody)
             Button(viewModel.authorizationStatus == .notDetermined ? "Activer" : "Ouvrir les Réglages") {
                 if viewModel.authorizationStatus == .notDetermined {
@@ -147,7 +153,7 @@ private struct AlertRow: View {
             Text(notification.sentAt.formatted(.dateTime.hour().minute().locale(Locale(identifier: "fr_FR"))))
                 .overlineStyle()
             Text(notification.title)
-                .font(.appHeadline)
+                .font(.appBodyStrong)
                 .foregroundStyle(AppColors.Adaptive.textPrimary)
                 .lineLimit(3)
                 .multilineTextAlignment(.leading)
@@ -157,7 +163,7 @@ private struct AlertRow: View {
                         .frame(width: 72)
                 }
                 Text(notification.body)
-                    .font(.appFootnote)
+                    .font(.appCaption)
                     .foregroundStyle(AppColors.Adaptive.textMeta)
                     .lineLimit(1)
             }

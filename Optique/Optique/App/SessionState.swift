@@ -17,7 +17,7 @@ final class SessionState {
     }
 
     var shouldShowPaywall: Bool {
-        !isPremium && storiesOpened >= 5
+        AppConfig.paywallEnabled && !isPremium && storiesOpened >= 5
     }
 
     func recordStoryOpen() {

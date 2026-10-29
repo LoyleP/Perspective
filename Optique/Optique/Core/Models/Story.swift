@@ -92,6 +92,11 @@ struct Story: Codable, Identifiable, Hashable {
     let spectrumSummary: SpectrumSummary?
     let summaryGeneratedAt: Date?
 
+    // Derived once at init: views read these in `body` on every scroll/tab update.
+    let computedCoverage: CoverageStats?
+    let sources: [Source]
+    let leadImageURL: URL?
+
     enum CodingKeys: String, CodingKey {
         case id
         case title
@@ -127,6 +132,7 @@ struct Story: Codable, Identifiable, Hashable {
         coverage = try container.decodeIfPresent(CoverageStats.self, forKey: .coverage)
         spectrumSummary = try container.decodeIfPresent(SpectrumSummary.self, forKey: .spectrumSummary)
         summaryGeneratedAt = try container.decodeIfPresent(Date.self, forKey: .summaryGeneratedAt)
+        (computedCoverage, sources, leadImageURL) = Self.derive(id: id, articles: articles, coverage: coverage)
     }
 
     init(
@@ -157,6 +163,7 @@ struct Story: Codable, Identifiable, Hashable {
         self.coverage = coverage
         self.spectrumSummary = spectrumSummary
         self.summaryGeneratedAt = summaryGeneratedAt
+        (computedCoverage, self.sources, leadImageURL) = Self.derive(id: id, articles: articles, coverage: coverage)
     }
 
     var sourceCount: Int { articles.count }
@@ -164,28 +171,29 @@ struct Story: Codable, Identifiable, Hashable {
     // Coverage derived from the analyzed articles' source leans. Preferred over
     // the joined `coverage` (story_coverage_view), which can be stale and skew
     // the spectrum. Falls back to the view only when no article carries a lean.
-    var computedCoverage: CoverageStats? {
-        CoverageStats.from(storyID: id, articles: articles) ?? coverage
+    private static func derive(id: UUID, articles: [Article], coverage: CoverageStats?)
+        -> (CoverageStats?, [Source], URL?) {
+        var seen = Set<UUID>()
+        let sources = articles
+            .compactMap(\.source)
+            .filter { seen.insert($0.id).inserted }
+            .sorted { $0.politicalLean < $1.politicalLean }
+        let lead = articles.lazy.compactMap { $0.imageURL.flatMap(URL.init) }.first
+        return (CoverageStats.from(storyID: id, articles: articles) ?? coverage, sources, lead)
     }
+
+    // Identity + the fields that change after load; hashing every article is needlessly slow.
+    static func == (a: Story, b: Story) -> Bool {
+        a.id == b.id && a.summary == b.summary && a.lastUpdatedAt == b.lastUpdatedAt
+            && a.articles.count == b.articles.count && a.spectrumSummary == b.spectrumSummary
+    }
+
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
 }
 
 // MARK: - Presentation helpers
 
 extension Story {
-    /// First article image, used as the story's visual.
-    var leadImageURL: URL? {
-        articles.lazy.compactMap { $0.imageURL.flatMap(URL.init) }.first
-    }
-
-    /// Distinct sources covering the story, ordered left → right.
-    var sources: [Source] {
-        var seen = Set<UUID>()
-        return articles
-            .compactMap(\.source)
-            .filter { seen.insert($0.id).inserted }
-            .sorted { $0.politicalLean < $1.politicalLean }
-    }
-
     /// "8 sources · il y a 2 h"
     var metaLine: String {
         let count = sources.count == 1 ? "1 source" : "\(sources.count) sources"

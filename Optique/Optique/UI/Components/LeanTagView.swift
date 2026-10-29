@@ -23,7 +23,7 @@ struct LeanTagView: View {
             }
             Text(style == .capsule ? lean.label : lean.shortLabel)
         }
-        .font(.appCaption1)
+        .font(.appCaption)
         .foregroundStyle(AppColors.Adaptive.textPrimary)
         .padding(.horizontal, 10)
         .padding(.vertical, 6)

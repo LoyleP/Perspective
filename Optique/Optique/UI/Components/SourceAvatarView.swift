@@ -9,9 +9,9 @@ struct SourceAvatarView: View {
         ZStack {
             initialView
             if let url = source.logoURL.flatMap(URL.init) {
-                AsyncImage(url: url) { phase in
-                    if let image = phase.image {
-                        image.resizable().scaledToFill().background(.white)
+                PipelineImage(url: url, maxPixel: 128) { image in
+                    if let image {
+                        Image(uiImage: image).resizable().scaledToFill().background(.white)
                     }
                 }
             }
@@ -26,9 +26,11 @@ struct SourceAvatarView: View {
         let lean = source.lean
         return ZStack {
             Circle().fill(lean?.spectrumColor ?? AppColors.Adaptive.surfaceElevated)
-            Text(String(source.name.prefix(1)).uppercased())
-                .font(.geist(size * 0.44, .medium, relativeTo: .caption))
-                .foregroundStyle(lean?.tagTextColor ?? AppColors.Adaptive.textSecondary)
+            if size >= 24 {   // the smallest type size doesn't fit tiny avatars
+                Text(String(source.name.prefix(1)).uppercased())
+                    .font(.appCaption)
+                    .foregroundStyle(lean?.tagTextColor ?? AppColors.Adaptive.textSecondary)
+            }
         }
     }
 }

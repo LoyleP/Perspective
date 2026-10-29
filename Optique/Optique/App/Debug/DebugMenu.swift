@@ -29,7 +29,7 @@ private struct DebugMenuModifier: ViewModifier {
                     showMenu = true
                 } label: {
                     Image(systemName: "ladybug.fill")
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.appHeading)
                         .foregroundStyle(.black)
                         .frame(width: 44, height: 44)
                         .background(Color.yellow, in: Circle())
@@ -105,7 +105,7 @@ private struct DebugMenuView: View {
 
     enum Cover: String, Identifiable {
         case onboarding, paywall
-        case feed, story, thread, explorer, topic, sources, source, profile, alerts, settings, gallery
+        case feed, story, explorer, topic, sources, source, profile, alerts, settings, gallery
         var id: String { rawValue }
     }
 
@@ -128,7 +128,7 @@ private struct DebugMenuView: View {
             .safeAreaInset(edge: .bottom) {
                 if !message.isEmpty {
                     Text(message)
-                        .font(.footnote)
+                        .font(.appCaption)
                         .padding(10)
                         .frame(maxWidth: .infinity)
                         .background(.regularMaterial)
@@ -193,7 +193,6 @@ private struct DebugMenuView: View {
             DisclosureGroup("Écrans (plein écran)") {
                 launch("À la une", "newspaper", .feed)
                 launch("Sujet", "doc.text", .story)
-                launch("Fil de l'histoire", "clock.arrow.circlepath", .thread)
                 launch("Explorer", "magnifyingglass", .explorer)
                 launch("Thème", "square.grid.2x2", .topic)
                 launch("Sources", "building.columns", .sources)
@@ -340,7 +339,7 @@ private struct DebugMenuView: View {
     private var apiSection: some View {
         Section("API") {
             LabeledContent("Base", value: AppConfig.apiBaseURL.absoluteString)
-                .font(.footnote)
+                .font(.appCaption)
             ForEach(["health", "feed?limit=1", "sources", "notifications?limit=1"], id: \.self) { path in
                 Button {
                     Task { await check(path) }
@@ -402,7 +401,7 @@ private struct CoverHost: View {
         content
             .overlay(alignment: .bottom) {
                 Button("Fermer le debug", action: close)
-                    .font(.footnote.weight(.semibold))
+                    .font(.appCaption)
                     .foregroundStyle(.black)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 8)

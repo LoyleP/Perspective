@@ -43,7 +43,7 @@ struct DesignSystemGalleryView: View {
                         RoundedRectangle(cornerRadius: AppRadius.st)
                             .fill(lean.spectrumColor)
                             .frame(height: 44)
-                            .overlay(Text(lean.code).font(.appCaption1).foregroundStyle(lean.tagTextColor))
+                            .overlay(Text(lean.code).font(.appCaption).foregroundStyle(lean.tagTextColor))
                     }
                 }
             }
@@ -62,7 +62,7 @@ struct DesignSystemGalleryView: View {
                 .fill(color)
                 .frame(height: 36)
                 .overlay(RoundedRectangle(cornerRadius: AppRadius.st).stroke(AppColors.stroke))
-            Text(name).font(.appCaption2).foregroundStyle(AppColors.Adaptive.textMeta)
+            Text(name).font(.appCaption).foregroundStyle(AppColors.Adaptive.textMeta)
         }
     }
 
@@ -70,12 +70,12 @@ struct DesignSystemGalleryView: View {
         VStack(alignment: .leading, spacing: AppSpacing.s) {
             SectionHeader(title: "Typographie")
             Text("8 sources · il y a 2 h").overlineStyle(AppColors.Brand.accent)
-            Text("À la une").font(.appDisplay)
-            Text("Titre sur image").font(.appLargeTitle)
-            Text("Titre de l'article").font(.appTitle1)
-            Text("Titre de ligne").font(.appHeadline)
+            Text("À la une").font(.appTitle)
+            Text("Titre sur image").font(.appTitle)
+            Text("Titre de l'article").font(.appHeading)
+            Text("Titre de ligne").font(.appBodyStrong)
             Text("Corps de texte, aligné sur Dynamic Type.").font(.appBody).foregroundStyle(AppColors.Adaptive.textBody)
-            Text("Métadonnées").font(.appFootnote).foregroundStyle(AppColors.Adaptive.textMeta)
+            Text("Métadonnées").font(.appCaption).foregroundStyle(AppColors.Adaptive.textMeta)
         }
         .foregroundStyle(AppColors.Adaptive.textPrimary)
     }

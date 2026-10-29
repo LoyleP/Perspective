@@ -3,23 +3,24 @@
 ## Tab Structure
 
 ```
-Custom FloatingTabBar (icons only, 30 pt) over three always-alive NavigationStacks (follows system light/dark)
-├── 0 "À la une" (custom AppLogoTab, template image)
-│   └── FeedView → StoryDetailView (zoom transition)
-│       ├── bell → AlertesView → StoryDetailView
-│       ├── StoryThreadView, ArticleBrowserView (sheet), PaywallView (sheet)
-│
-├── 1 "Mon Optique" (person.crop.circle)
-│   └── ProfileView → MySpectrumView, StoryDetailView
-│       └── gear → SettingsView (sheet) → MySpectrumView, TopicPreferencesView, DesignSystemGalleryView (DEBUG)
-│
-└── 2 "Explorer" (search role)
-    └── DiscoverView → StoryDetailView, TopicStoriesView, SourcesView → SourceDetailView
+Custom FloatingTabBar (icons only) over three always-alive NavigationStacks (follows system light/dark)
+├── 0 "À la une" (AppLogoTab)
+│   └── FeedView (nav bar hidden; AppHeader + TopicTabs) → StoryDetailView (zoom transition)
+│       ├── ArticleBrowserView (pushed), SideArticlesSheet
+├── 1 "Explorer" (magnifying glass)
+│   └── DiscoverView (nav-bar header: avatar + logo, search field) → StoryDetailView, TopicStoriesView, SourcesView → SourceDetailView
+└── 2 "Alertes" (bell, filled when selected, dot when unread)
+    └── AlertesView (AppHeader) → StoryDetailView
 
-Overlays: OnboardingView (full-screen cover, first launch), PaywallBannerView (on story detail after 5 opens)
+Profile: the avatar button at the left of the header (all three tabs) pushes ProfileView ("Mon Optique")
+  └── MySpectrumView, StoryDetailView, gear → SettingsView (sheet) → TopicPreferencesView, DesignSystemGalleryView (DEBUG)
+
+Overlays: OnboardingView (full-screen cover, first launch)
 ```
 
-The iOS 26 "search field replaces the tab bar" behaviour did not render on the test runtime (iOS build 24A434), so the search field is a `.navigationBarDrawer(displayMode: .always)` field inside Explorer. Search text lives in RootView so it survives tab switches.
+Header (X-style): `AppHeader` = profile avatar left, Optique logo center, empty right. Feed and Alertes hide the navigation bar and draw it; Explorer keeps the navigation bar (needed for the search field) and gets the same items via `appHeaderToolbar()`. Under the feed header, `TopicTabs` (À la une + 8 topics, underline on the selected one) reloads the feed filtered by topic. The paywall is switched off (`AppConfig.paywallEnabled = false`).
+
+The iOS 26 "search field replaces the tab bar" behaviour did not render on the test runtime, so the search field is a `.navigationBarDrawer(displayMode: .always)` field inside Explorer. Search text lives in RootView so it survives tab switches.
 
 ## Deep link
 
@@ -28,7 +29,7 @@ Notification tapped → `NotificationManager.pendingStoryID` → RootView select
 ## Features
 
 1. **Feed** — date overline, hero card, "L'essentiel" (5 most-covered, numbered in Barlow Condensed), latest stories as rows with a photo card every 5th. Long-press: save / share.
-2. **Story** — photo header, detailed spectrum (logos on the 5 positions, verdict, left/centre/right shares), per-side AI summary, articles left→right, thread, ownership.
+2. **Story** — photo header, summary, side carousel (5 cards: share, source logos, AI summary; centered card enlarged, snapping, tapping a card opens that side's articles in a sheet (SideArticlesSheet)), articles left→right, "Fil de l'histoire" thread inline (StoryThreadSection), ownership.
 3. **Explorer** — server headline search (accent-insensitive), Angles morts (≥ 80 % one side, ≥ 3 sources), 8 topic tiles with distinct photos (preferred first), sources row.
 4. **Topics** — tagged server-side by keyword (`api/lib/topics.ts`) when stories are created; 8 topics incl. Sport.
 5. **Sources** — list grouped by lean; detail with position axis, owner, recent articles.

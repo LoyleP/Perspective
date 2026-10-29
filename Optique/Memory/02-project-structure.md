@@ -4,7 +4,7 @@
 Optique/
 ├── App/
 │   ├── OptiqueApp.swift              # @main. Registers fonts (Geist, BarlowCondensed). Checks notification status (never prompts). Splash overlay. Scene phase → notification check.
-│   ├── RootView.swift                # À la une · Mon Optique · Explorer as three always-alive NavigationStacks under the custom FloatingTabBar (no system TabView). Injects SessionState, BookmarkStore, ReadingHistoryStore. Onboarding cover. Push deep-link → selects the feed tab. 
+│   ├── RootView.swift                # À la une · Explorer · Alertes as three always-alive NavigationStacks under the custom FloatingTabBar (no system TabView). Injects SessionState, BookmarkStore, ReadingHistoryStore. Onboarding cover. Push deep-link → selects the feed tab. 
 │   ├── SessionState.swift            # @Observable @MainActor. In-memory story counter, owns StoreManager, isPremium (+ DEBUG override), shouldShowPaywall at 5 opens.
 │   ├── BookmarkStore.swift           # @Observable @MainActor. UserDefaults JSON of saved [Story].
 │   └── SplashView.swift              # Launch splash animation
@@ -17,10 +17,10 @@ Optique/
 │   │   ├── FeedView.swift            # Date overline, hero StoryHeroCard, "L'essentiel" (top 5 by sources, numbered), "Dernières actualités" rows with a photo card every 5th. Bell → AlertesView (badge from latest alert date). Opens pushed stories (pendingStoryID). Context menu: save/share.
 │   │   └── FeedViewModel.swift       # 48h in-memory cache. stories (≥2 articles), cetteSemanineHero, essentials, feedStories.
 │   ├── Story/
-│   │   ├── StoryDetailView.swift     # Stretchy photo header, detailed SpectrumBar with logos, summary, PerspectivesView, articles left→right (ArticleSourceRow), thread link, ownership. Share + bookmark. Records the open in ReadingHistoryStore.
+│   │   ├── StoryDetailView.swift     # Stretchy photo header, summary, SideCarouselView, articles left→right (ArticleSourceRow, filtered by a tapped card), thread link, ownership. Share + bookmark. Records the open in ReadingHistoryStore.
 │   │   ├── StoryDetailViewModel.swift# triggerSummaryGeneration(): POST then refetch; summaryUnavailable on failure.
-│   │   ├── PerspectivesView.swift    # "Ce que disent les médias": Gauche/Centre/Droite segmented, bullets per perspective, skeleton/unavailable states.
-│   │   ├── StoryThreadView.swift     # Chronological timeline (not redesigned)
+│   │   ├── SideCarouselView.swift    # "Ce que disent les médias": one card per side (share, logos, AI summary), centered card full size and snapping, dimmed card for an empty side.
+│   │   ├── StoryThreadSection.swift  # "Fil de l'histoire" inline on the story page: all articles newest first as a thread (logo column + vertical line, outlet · side · time, headline); tap opens the reader.
 │   │   ├── ArticleBrowserView.swift  # WebKit reader; records the article's lean after 2 s (not redesigned)
 │   │   └── PaywallView.swift         # Optique+ sheet: benefits, two plan cards (computed savings), purchase bar with restore/terms/privacy.
 │   ├── Discover/

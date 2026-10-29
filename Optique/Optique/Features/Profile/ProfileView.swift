@@ -43,7 +43,7 @@ struct ProfileView: View {
                 Button {
                     showSettings = true
                 } label: {
-                    Image(systemName: "gearshape")
+                    HeroIcon("cog-6-tooth", size: 24)
                 }
                 .accessibilityLabel("Réglages")
             }
@@ -74,13 +74,13 @@ struct ProfileView: View {
                 if list == .saved {
                     ContentUnavailableView(
                         "Aucun sujet enregistré",
-                        systemImage: "bookmark",
+                        hero: "bookmark",
                         description: Text("Touchez le signet d'un sujet pour le retrouver ici.")
                     )
                 } else {
                     ContentUnavailableView(
                         "Aucun historique",
-                        systemImage: "clock",
+                        hero: "clock",
                         description: Text("Les sujets que vous ouvrez apparaîtront ici.")
                     )
                 }
@@ -91,11 +91,11 @@ struct ProfileView: View {
                 if list == .history {
                     HStack {
                         Text(stories.count == 1 ? "1 sujet" : "\(stories.count) sujets")
-                            .font(.appFootnote)
+                            .font(.appCaption)
                             .foregroundStyle(AppColors.Adaptive.textMeta)
                         Spacer()
                         Button("Effacer") { confirmClearHistory = true }
-                            .font(.appFootnote)
+                            .font(.appCaption)
                             .foregroundStyle(AppColors.Brand.accent)
                     }
                 }
@@ -110,7 +110,7 @@ struct ProfileView: View {
                         } label: {
                             Label(
                                 list == .saved ? "Retirer des enregistrés" : "Retirer de l'historique",
-                                systemImage: "trash"
+                                hero: "trash"
                             )
                         }
                     }
@@ -132,12 +132,12 @@ private struct ReadingSpectrumCard: View {
                 Text("Votre spectre de lecture")
                     .overlineStyle(AppColors.Brand.accent)
                 Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.appFootnote)
+                HeroIcon("chevron-right", size: 14)
+                    .font(.appCaption)
                     .foregroundStyle(AppColors.Adaptive.textMeta)
             }
             Text(history.insight)
-                .font(.appTitle2)
+                .font(.appHeading)
                 .foregroundStyle(AppColors.Adaptive.textPrimary)
                 .multilineTextAlignment(.leading)
 
@@ -148,11 +148,11 @@ private struct ReadingSpectrumCard: View {
                     VStack(alignment: .leading, spacing: AppSpacing.xs) { shares(coverage) }
                 }
                 Text(coverage.totalCount == 1 ? "1 article lu" : "\(coverage.totalCount) articles lus")
-                    .font(.appFootnote)
+                    .font(.appCaption)
                     .foregroundStyle(AppColors.Adaptive.textMeta)
             } else {
                 Text("Chaque article ouvert depuis Optique compte, selon la position de son média.")
-                    .font(.appSubheadline)
+                    .font(.appBody)
                     .foregroundStyle(AppColors.Adaptive.textMeta)
                     .multilineTextAlignment(.leading)
             }
@@ -180,7 +180,7 @@ private struct ReadingSpectrumCard: View {
                 .monospacedDigit()
                 .foregroundStyle(AppColors.Adaptive.textPrimary)
         }
-        .font(.appFootnote)
+        .font(.appCaption)
         .fixedSize()
     }
 }

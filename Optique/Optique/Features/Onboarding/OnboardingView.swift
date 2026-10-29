@@ -60,7 +60,7 @@ struct OnboardingView: View {
             .accessibilityLabel("Étape \(step + 1) sur \(stepCount)")
 
             Button("Passer") { finish() }
-                .font(.appFootnote)
+                .font(.appCaption)
                 .foregroundStyle(AppColors.Adaptive.textTertiary)
         }
         .padding(.horizontal, AppSpacing.m)
@@ -167,15 +167,15 @@ struct OnboardingView: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
                     Text("OPTIQUE")
-                        .font(.appCaption1)
+                        .font(.appCaption)
                         .foregroundStyle(AppColors.Adaptive.textTertiary)
                     Spacer()
                     Text("maintenant")
-                        .font(.appCaption2)
+                        .font(.appCaption)
                         .foregroundStyle(AppColors.Adaptive.textMeta)
                 }
                 Text(example?.title ?? "Réforme des retraites : le gouvernement présente son projet")
-                    .font(.appSubheadline)
+                    .font(.appBody)
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
                     .lineLimit(2)
                 HStack(spacing: AppSpacing.s) {
@@ -183,7 +183,7 @@ struct OnboardingView: View {
                         SpectrumBar(coverage: coverage).frame(width: 64)
                     }
                     Text("\(example?.sources.count ?? 8) sources · nouvelle actualité")
-                        .font(.appFootnote)
+                        .font(.appCaption)
                         .foregroundStyle(AppColors.Adaptive.textMeta)
                 }
             }
@@ -198,7 +198,7 @@ struct OnboardingView: View {
 
     private func title(_ text: String) -> some View {
         Text(text)
-            .font(.appDisplay)
+            .font(.appTitle)
             .foregroundStyle(AppColors.Adaptive.textPrimary)
             .fixedSize(horizontal: false, vertical: true)
             .accessibilityAddTraits(.isHeader)

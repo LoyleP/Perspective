@@ -1,16 +1,18 @@
 import SwiftUI
 
-/// AsyncImage that fills its frame, fades in, and shows a tinted placeholder
+/// Image that fills its frame, fades in, and shows a tinted placeholder
 /// while loading or when there is no image. Size it from the outside, e.g.
 /// `Color.clear.frame(...).overlay { RemoteImage(url:) }.clipped()`.
+/// `maxPixel` caps the decoded size (default fits a full-width card on a 3x screen).
 struct RemoteImage: View {
     let url: URL?
     var tint: Color? = nil
+    var maxPixel: Int = 1000
 
     var body: some View {
-        AsyncImage(url: url, transaction: Transaction(animation: .easeOut(duration: 0.25))) { phase in
-            if let image = phase.image {
-                image.resizable().scaledToFill()
+        PipelineImage(url: url, maxPixel: maxPixel) { image in
+            if let image {
+                Image(uiImage: image).resizable().scaledToFill()
             } else {
                 placeholder
             }

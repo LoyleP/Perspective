@@ -86,7 +86,6 @@ struct DebugScreenHost: View {
         switch screen {
         case "feed": NavigationStack { FeedView() }
         case "story": NavigationStack { StoryDetailView(story: story) }
-        case "thread": NavigationStack { StoryThreadView(story: story) }
         case "explorer": NavigationStack { DiscoverView(searchText: $searchText) }
         case "topic": NavigationStack { TopicStoriesView(topic: .politique) }
         case "sources": NavigationStack { SourcesView() }
