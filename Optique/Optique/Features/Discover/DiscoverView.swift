@@ -19,6 +19,7 @@ struct DiscoverView: View {
                 searchResults
             }
         }
+        .shrinksTabBarOnScroll()
         .background(AppColors.Adaptive.background.ignoresSafeArea())
         .appHeaderToolbar()
         .searchable(
@@ -112,19 +113,25 @@ struct DiscoverView: View {
     }
 
     private var topics: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.m) {
+        VStack(alignment: .leading, spacing: AppSpacing.xs) {
             SectionHeader(title: "Thèmes")
-            LazyVGrid(
-                columns: [GridItem(.flexible(), spacing: AppSpacing.st), GridItem(.flexible(), spacing: AppSpacing.st)],
-                spacing: AppSpacing.st
-            ) {
-                let images = tileImages
-                ForEach(orderedTopics) { topic in
-                    NavigationLink(value: topic) {
-                        TopicTile(topic: topic, count: viewModel.stories(in: topic).count, imageURL: images[topic])
+            ForEach(orderedTopics) { topic in
+                NavigationLink(value: topic) {
+                    HStack {
+                        Text(topic.rawValue)
+                            .font(.appBodyStrong)
+                            .foregroundStyle(AppColors.Adaptive.textPrimary)
+                        Spacer(minLength: AppSpacing.s)
+                        Text("\(viewModel.stories(in: topic).count)")
+                            .font(.appCaption)
+                            .monospacedDigit()
+                            .foregroundStyle(AppColors.Adaptive.textMeta)
                     }
-                    .buttonStyle(CardPressStyle())
+                    .padding(.vertical, AppSpacing.st)
+                    .contentShape(Rectangle())
                 }
+                .buttonStyle(CardPressStyle())
+                Divider().overlay(AppColors.Adaptive.divider)
             }
         }
         .padding(.horizontal, AppSpacing.m)
@@ -134,23 +141,6 @@ struct DiscoverView: View {
     private var orderedTopics: [StoryTopic] {
         let preferred = StoryTopic.preferred(from: preferredTopicsRaw)
         return StoryTopic.selectable.filter(preferred.contains) + StoryTopic.selectable.filter { !preferred.contains($0) }
-    }
-
-    /// One photo per topic: its most-covered story's image, skipping photos already
-    /// used by an earlier tile (a story is often tagged with several topics).
-    private var tileImages: [StoryTopic: URL] {
-        var used = Set<URL>()
-        var images: [StoryTopic: URL] = [:]
-        for topic in orderedTopics {
-            let candidates = viewModel.stories(in: topic)
-                .sorted { $0.sources.count > $1.sources.count }
-                .compactMap(\.leadImageURL)
-            if let url = candidates.first(where: { !used.contains($0) }) {
-                images[topic] = url
-                used.insert(url)
-            }
-        }
-        return images
     }
 
     private var sources: some View {
@@ -224,49 +214,6 @@ struct DiscoverView: View {
             }
             .padding(.horizontal, AppSpacing.m)
         }
-    }
-}
-
-// MARK: - Topic tile
-
-/// Image-led tile: a recent photo from the topic, or a symbol when there is none.
-private struct TopicTile: View {
-    let topic: StoryTopic
-    let count: Int
-    let imageURL: URL?
-
-    var body: some View {
-        Color.clear
-            .aspectRatio(4.0 / 3.0, contentMode: .fit)
-            .overlay {
-                if let url = imageURL {
-                    RemoteImage(url: url)
-                } else {
-                    ZStack(alignment: .topTrailing) {
-                        AppColors.Adaptive.cardSurface
-                        HeroIcon(topic.heroIcon, size: 64)
-                            .foregroundStyle(AppColors.Adaptive.textPrimary.opacity(0.1))
-                            .offset(x: 12, y: -6)
-                    }
-                }
-            }
-            .overlay { AppColors.Adaptive.imageScrim }
-            .overlay(alignment: .bottomLeading) {
-                VStack(alignment: .leading, spacing: 2) {
-                    HeroIcon(topic.heroIcon, size: 22)
-                        .foregroundStyle(AppColors.Brand.onImage)
-                    Text(topic.rawValue)
-                        .font(.appBodyStrong)
-                        .foregroundStyle(.white)
-                    Text(count == 0 ? "Voir les sujets" : "\(count) sujets récents")
-                        .font(.appCaption)
-                        .foregroundStyle(.white.opacity(0.7))
-                }
-                .padding(AppSpacing.st)
-            }
-            .clipShape(RoundedRectangle(cornerRadius: AppRadius.l))
-            .overlay(RoundedRectangle(cornerRadius: AppRadius.l).stroke(AppColors.stroke, lineWidth: 1))
-            .accessibilityElement(children: .combine)
     }
 }
 

@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct CardSurface: ViewModifier {
-    var fill: Color = AppColors.Adaptive.cardSurface
+    var fill: Color = .clear
     var radius: CGFloat = AppRadius.ml
 
     func body(content: Content) -> some View {
@@ -14,7 +14,7 @@ struct CardSurface: ViewModifier {
 
 extension View {
     func cardSurface(
-        fill: Color = AppColors.Adaptive.cardSurface,
+        fill: Color = .clear,
         radius: CGFloat = AppRadius.ml
     ) -> some View {
         modifier(CardSurface(fill: fill, radius: radius))

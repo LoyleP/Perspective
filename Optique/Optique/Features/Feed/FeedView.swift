@@ -8,12 +8,14 @@ struct FeedView: View {
     @State private var visibleCount = 12
     @State private var deepLinkStory: Story?
     @State private var topic: StoryTopic = .tout
+    /// True from the tab tap until the new topic has loaded: shows the loader immediately.
+    @State private var isSwitching = false
     private let notificationManager = NotificationManager.shared
 
     var body: some View {
         VStack(spacing: 0) {
             AppHeader()
-            TopicTabs(selection: $topic)
+            TopicTabs(selection: $topic, onWillSwitch: { isSwitching = true }, onSwitchCancelled: { isSwitching = false })
 
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
@@ -24,6 +26,7 @@ struct FeedView: View {
                 .padding(.bottom, AppSpacing.xxl)
             }
             .refreshable { await viewModel.refresh() }
+            .shrinksTabBarOnScroll()
         }
         .background(AppColors.Adaptive.background.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
@@ -46,7 +49,10 @@ struct FeedView: View {
         }
         .onChange(of: topic) { _, new in
             visibleCount = 12
-            Task { await viewModel.select(new) }
+            Task {
+                await viewModel.select(new)
+                isSwitching = false
+            }
         }
         .task { await viewModel.load() }
     }
@@ -55,7 +61,7 @@ struct FeedView: View {
 
     @ViewBuilder
     private var content: some View {
-        if viewModel.isLoading && viewModel.allStories.isEmpty {
+        if isSwitching || (viewModel.isLoading && viewModel.allStories.isEmpty) {
             loadingSkeleton
         } else if let error = viewModel.error, viewModel.allStories.isEmpty {
             unavailable(

@@ -22,9 +22,10 @@ struct FloatingTabBar: View {
     @Namespace private var indicator
 
     /// Height the bar occupies at the bottom of the screen (for content insets).
-    static let height: CGFloat = 64 + 8
+    static let margin: CGFloat = 24
+    static let height: CGFloat = 64 + margin
 
-    private let itemSize = CGSize(width: 88, height: 56)
+    private let itemHeight: CGFloat = 56
     private let iconSize: CGFloat = 30
 
     var body: some View {
@@ -35,7 +36,8 @@ struct FloatingTabBar: View {
         }
         .padding(4)
         .background { barBackground }
-        .padding(.bottom, 8)
+        .padding(.horizontal, Self.margin)
+        .padding(.bottom, Self.margin)
     }
 
     // MARK: - Items
@@ -44,7 +46,7 @@ struct FloatingTabBar: View {
         let isSelected = selection == item.id
         return Button {
             guard selection != item.id else { return }
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) { selection = item.id }
+            withAnimation(.app) { selection = item.id }
         } label: {
             icon(for: item, isSelected: isSelected)
                 .overlay(alignment: .topTrailing) {
@@ -57,7 +59,8 @@ struct FloatingTabBar: View {
                             .accessibilityHidden(true)
                     }
                 }
-                .frame(width: itemSize.width, height: itemSize.height)
+                .frame(maxWidth: .infinity)
+                .frame(height: itemHeight)
                 .background {
                     if isSelected {
                         Capsule()

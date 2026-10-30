@@ -28,6 +28,7 @@ struct AlertesView: View {
                 .padding(.bottom, AppSpacing.xxl)
             }
             .refreshable { await viewModel.refresh() }
+            .shrinksTabBarOnScroll()
         }
         .background(AppColors.Adaptive.background.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
@@ -149,23 +150,27 @@ private struct AlertRow: View {
     let notification: PushNotification
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        HStack(alignment: .firstTextBaseline, spacing: AppSpacing.m) {
             Text(notification.sentAt.formatted(.dateTime.hour().minute().locale(Locale(identifier: "fr_FR"))))
-                .overlineStyle()
-            Text(notification.title)
-                .font(.appBodyStrong)
-                .foregroundStyle(AppColors.Adaptive.textPrimary)
-                .lineLimit(3)
-                .multilineTextAlignment(.leading)
-            HStack(spacing: AppSpacing.s) {
+                .font(.appCaption)
+                .monospacedDigit()
+                .foregroundStyle(AppColors.Adaptive.textMeta)
+                .frame(width: 44, alignment: .leading)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(notification.title)
+                    .font(.appBodyStrong)
+                    .foregroundStyle(AppColors.Adaptive.textPrimary)
+                    .lineLimit(3)
+                    .multilineTextAlignment(.leading)
+                Text(notification.body)
+                    .font(.appBody)
+                    .foregroundStyle(AppColors.Adaptive.textMeta)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
                 if let coverage = notification.coverage {
                     SpectrumBar(coverage: coverage)
                         .frame(width: 72)
                 }
-                Text(notification.body)
-                    .font(.appCaption)
-                    .foregroundStyle(AppColors.Adaptive.textMeta)
-                    .lineLimit(1)
             }
         }
         .padding(.vertical, AppSpacing.st)

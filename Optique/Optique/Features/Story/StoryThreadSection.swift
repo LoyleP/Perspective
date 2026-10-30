@@ -31,7 +31,7 @@ struct StoryThreadSection: View {
 
             if sorted.count > visibleCount {
                 Button("Voir plus") {
-                    withAnimation(.snappy) { visibleCount += pageSize }
+                    withAnimation(.app) { visibleCount += pageSize }
                 }
                 .buttonStyle(.optiqueSecondary)
                 .frame(maxWidth: .infinity)

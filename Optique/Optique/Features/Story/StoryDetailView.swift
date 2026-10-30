@@ -7,10 +7,13 @@ struct StoryDetailView: View {
     @Environment(SessionState.self) private var session
     @Environment(BookmarkStore.self) private var bookmarks
     @Environment(ReadingHistoryStore.self) private var readingHistory
+    @Environment(\.tabBarState) private var tabBar
+    @Environment(\.commentStore) private var comments
     @State private var showPaywallBanner = false
     @State private var showPaywallSheet = false
     /// Side whose articles are shown in the sheet (opened by tapping a card).
     @State private var sheetSide: PoliticalLean?
+    @State private var showComments = false
 
     init(story: Story) {
         _viewModel = State(initialValue: StoryDetailViewModel(story: story))
@@ -42,6 +45,10 @@ struct StoryDetailView: View {
                     .padding(.top, AppSpacing.l)
                 }
 
+                discussion
+                    .padding(.horizontal, AppSpacing.m)
+                    .padding(.top, AppSpacing.xl)
+
                 StoryThreadSection(articles: story.articles)
                     .padding(.horizontal, AppSpacing.m)
                     .padding(.top, AppSpacing.xl)
@@ -58,6 +65,7 @@ struct StoryDetailView: View {
             }
             .padding(.bottom, AppSpacing.xxl)
         }
+        .shrinksTabBarOnScroll()
         .ignoresSafeArea(edges: .top)
         .background(AppColors.Adaptive.background.ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
@@ -83,11 +91,14 @@ struct StoryDetailView: View {
                 PaywallBannerView(isPresented: $showPaywallBanner) {
                     showPaywallSheet = true
                 }
-                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .transition(.move(edge: .bottom))
             }
         }
         .sheet(isPresented: $showPaywallSheet) {
             PaywallView()
+        }
+        .sheet(isPresented: $showComments) {
+            CommentsSheet(story: story)
         }
         .sheet(item: $sheetSide) { side in
             SideArticlesSheet(side: side, articles: articles(for: side))
@@ -96,12 +107,54 @@ struct StoryDetailView: View {
             session.recordStoryOpen()
             readingHistory.recordOpen(story)
             if session.shouldShowPaywall {
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                withAnimation(.app) {
                     showPaywallBanner = true
                 }
             }
         }
+        .onDisappear { tabBar.isCompact = false }
         .task { await viewModel.triggerSummaryGeneration() }
+    }
+
+    // MARK: - Discussion
+
+    /// Entry to the comments sheet: title with the count, then a field-like button.
+    private var discussion: some View {
+        let count = comments.count(for: story.id)
+        return VStack(alignment: .leading, spacing: AppSpacing.st) {
+            HStack(alignment: .firstTextBaseline, spacing: AppSpacing.s) {
+                Text("Discussion")
+                    .font(.appHeading)
+                    .foregroundStyle(AppColors.Adaptive.textPrimary)
+                    .accessibilityAddTraits(.isHeader)
+                if count > 0 {
+                    Text("\(count)")
+                        .font(.appCaption)
+                        .monospacedDigit()
+                        .foregroundStyle(AppColors.Adaptive.textMeta)
+                }
+            }
+            Button { showComments = true } label: {
+                HStack(spacing: AppSpacing.st) {
+                    Image("ProfilePlaceholder")
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 36, height: 36)
+                        .clipShape(Circle())
+                    Text("Ajouter un commentaire…")
+                        .font(.appBody)
+                        .foregroundStyle(AppColors.Adaptive.textMeta)
+                    Spacer(minLength: 0)
+                }
+                .padding(.leading, AppSpacing.xs)
+                .padding(.vertical, AppSpacing.xs)
+                .frame(minHeight: 44)
+                .overlay(Capsule().stroke(AppColors.stroke, lineWidth: 1))
+                .contentShape(Capsule())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Ouvrir la discussion")
+        }
     }
 
     // MARK: - Header
@@ -129,6 +182,7 @@ struct StoryDetailView: View {
                 Text(story.title)
                     .font(.appTitle)
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
+                    .lineLimit(3)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityAddTraits(.isHeader)
             }

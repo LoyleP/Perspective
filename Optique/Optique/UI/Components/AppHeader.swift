@@ -65,42 +65,65 @@ extension View {
 /// Horizontal topic tabs under the header: the selected tab is bold ink with an underline.
 struct TopicTabs: View {
     @Binding var selection: StoryTopic
+    /// Called on tap, before the (deferred) selection change, so the page can show its loader at once.
+    var onWillSwitch: () -> Void = {}
+    /// Called when the deferred change turned out to be a no-op (tapped back to the current tab).
+    var onSwitchCancelled: () -> Void = {}
+    @Namespace private var indicator
+    /// Drives the indicator on its own, so only the tab bar animates and the page below doesn't.
+    @State private var shown: StoryTopic = .tout
+    @State private var pending: Task<Void, Never>?
 
     private var topics: [StoryTopic] { [.tout] + StoryTopic.selectable }
 
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: AppSpacing.l) {
+                HStack(spacing: 0) {
                     ForEach(topics) { topic in
-                        let isSelected = topic == selection
+                        let isSelected = topic == shown
                         Button {
-                            withAnimation(.snappy) { selection = topic }
-                        } label: {
-                            VStack(spacing: 6) {
-                                Text(topic == .tout ? "À la une" : topic.rawValue)
-                                    .font(.appCaption)
-                                    .foregroundStyle(isSelected ? AppColors.Adaptive.textPrimary : AppColors.Adaptive.textMeta)
-                                Capsule()
-                                    .fill(isSelected ? AppColors.Adaptive.textPrimary : .clear)
-                                    .frame(height: 3)
+                            if topic != shown { onWillSwitch() }
+                            withAnimation(.app) { shown = topic }
+                            // The page below switches once the indicator has landed, so loading
+                            // it never competes with the animation. The animation never waits on it.
+                            pending?.cancel()
+                            pending = Task {
+                                try? await Task.sleep(for: .milliseconds(420))
+                                guard !Task.isCancelled else { return }
+                                if selection == topic { onSwitchCancelled() }
+                                selection = topic
+                                pending = nil
                             }
-                            .frame(minHeight: 44)
-                            .contentShape(Rectangle())
+                        } label: {
+                            Text(topic == .tout ? "À la une" : topic.rawValue)
+                                .font(.appCaption)
+                                .foregroundStyle(isSelected ? AppColors.Adaptive.textPrimary : AppColors.Adaptive.textMeta)
+                                .padding(.horizontal, AppSpacing.st)
+                                .frame(minHeight: 44)
+                                .overlay(alignment: .bottom) {
+                                    // One shared view: it slides and resizes to the selected tab.
+                                    if isSelected {
+                                        Rectangle()
+                                            .fill(AppColors.Adaptive.textPrimary)
+                                            .frame(height: 2)
+                                            .matchedGeometryEffect(id: "indicator", in: indicator)
+                                    }
+                                }
+                                .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                         .accessibilityAddTraits(isSelected ? .isSelected : [])
                         .id(topic)
                     }
                 }
-                .padding(.horizontal, AppSpacing.m)
+                .padding(.horizontal, AppSpacing.s)
             }
+            .onAppear { shown = selection }
             .onChange(of: selection) { _, new in
-                withAnimation(.snappy) { proxy.scrollTo(new, anchor: .center) }
+                if pending == nil, shown != new { withAnimation(.app) { shown = new } }
+                withAnimation(.app) { proxy.scrollTo(new, anchor: .center) }
             }
-        }
-        .overlay(alignment: .bottom) {
-            Divider().overlay(AppColors.Adaptive.divider)
         }
     }
 }

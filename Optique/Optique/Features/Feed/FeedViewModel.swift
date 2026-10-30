@@ -74,10 +74,11 @@ final class FeedViewModel {
     func select(_ newTopic: StoryTopic) async {
         guard newTopic != topic else { return }
         topic = newTopic
+        // Show the loading placeholder right away (the tab animation has already finished).
         allStories = []
         rebuild()
         lastFetchedAt = nil
-        isLoading = false
+        isLoading = false   // load() sets it true before the first suspension, so the skeleton shows
         await load()
     }
 

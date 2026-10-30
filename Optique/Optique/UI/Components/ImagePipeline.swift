@@ -78,7 +78,7 @@ struct PipelineImage<Content: View>: View {
                     guard let url else { loaded = nil; return }
                     if ImagePipeline.shared.cached(url, maxPixel: maxPixel) != nil { return }
                     let image = await ImagePipeline.shared.image(url, maxPixel: maxPixel)
-                    withAnimation(.easeOut(duration: 0.2)) { loaded = image }
+                    loaded = image
                 }
             content(loaded ?? url.flatMap { ImagePipeline.shared.cached($0, maxPixel: maxPixel) })
         }

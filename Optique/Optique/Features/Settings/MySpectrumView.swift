@@ -56,14 +56,14 @@ struct MySpectrumView: View {
             GeometryReader { geo in
                 HStack(spacing: 2) {
                     ForEach(barSegments, id: \.lean) { seg in
-                        RoundedRectangle(cornerRadius: 3)
+                        RoundedRectangle(cornerRadius: 2)
                             .fill(seg.lean.spectrumColor)
                             .frame(width: geo.size.width * seg.fraction - 2)
                     }
                 }
             }
             .frame(height: 20)
-            .clipShape(RoundedRectangle(cornerRadius: 5))
+            .clipShape(RoundedRectangle(cornerRadius: 4))
             .padding(.horizontal, AppSpacing.m)
         }
     }

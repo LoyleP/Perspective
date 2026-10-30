@@ -35,7 +35,7 @@ struct PaywallBannerView: View {
                 .background(AppColors.Brand.accent, in: Capsule())
 
             Button {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                withAnimation(.app) {
                     isPresented = false
                 }
             } label: {

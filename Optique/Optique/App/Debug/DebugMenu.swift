@@ -382,10 +382,10 @@ private struct DebugMenuView: View {
     }
 
     private func done(_ text: String) {
-        withAnimation { message = text }
+        withAnimation(.app) { message = text }
         Task {
             try? await Task.sleep(for: .seconds(4))
-            withAnimation { if message == text { message = "" } }
+            withAnimation(.app) { if message == text { message = "" } }
         }
     }
 }

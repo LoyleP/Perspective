@@ -62,12 +62,10 @@ extension UIFont {
 }
 
 extension View {
-    /// Uppercase, tracked overline used above headlines and section titles.
+    /// Small grey meta line above headlines and section titles (sentence case, like the rest).
     func overlineStyle(_ color: Color = AppColors.Adaptive.textMeta) -> some View {
         self
             .font(.appCaption)
-            .textCase(.uppercase)
-            .tracking(0.6)
             .foregroundStyle(color)
     }
 }

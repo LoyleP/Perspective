@@ -13,7 +13,7 @@ struct StoryRow: View {
                 Text(story.title)
                     .font(.appBodyStrong)
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
-                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 3)
+                    .lineLimit(3)
                     .multilineTextAlignment(.leading)
                 if let dek = story.summary, !dek.isEmpty, !dynamicTypeSize.isAccessibilitySize {
                     Text(dek)

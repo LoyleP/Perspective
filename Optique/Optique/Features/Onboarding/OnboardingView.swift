@@ -33,8 +33,8 @@ struct OnboardingView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .id(step)
                 .transition(.asymmetric(
-                    insertion: .move(edge: .trailing).combined(with: .opacity),
-                    removal: .move(edge: .leading).combined(with: .opacity)
+                    insertion: .move(edge: .trailing),
+                    removal: .move(edge: .leading)
                 ))
             }
             .scrollBounceBehavior(.basedOnSize)
@@ -71,7 +71,7 @@ struct OnboardingView: View {
         VStack(spacing: AppSpacing.s) {
             if step < stepCount - 1 {
                 Button {
-                    withAnimation(.snappy) { step += 1 }
+                    withAnimation(.app) { step += 1 }
                 } label: {
                     Text(step == 1 && topics.isEmpty ? "Continuer sans choisir" : "Continuer")
                         .frame(maxWidth: .infinity)
@@ -163,7 +163,7 @@ struct OnboardingView: View {
                 .resizable()
                 .scaledToFit()
                 .frame(width: 38, height: 38)
-                .clipShape(RoundedRectangle(cornerRadius: 9))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
                     Text("OPTIQUE")

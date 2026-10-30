@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS stories (
   is_featured boolean NOT NULL DEFAULT false,
   spectrum_summary jsonb,
   summary_generated_at timestamptz,
+  title_rewritten_at timestamptz,
   cycle_id text,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()

@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { pool } from "../lib/db.js";
 import { topicTags } from "../lib/topics.js";
+import { rewriteStoryTitles } from "../lib/titles.js";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -760,6 +761,10 @@ async function handle(req: Request): Promise<Response> {
     // Phase 2: Cluster unclustered articles into stories
     const clusterResult = await clusterStories();
 
+    // Phase 3: Gemini rewrites the titles of new stories (short, neutral, 3 lines max)
+    let titlesRewritten = 0;
+    try { titlesRewritten = await rewriteStoryTitles(); } catch (e) { console.error("title rewrite failed:", e); }
+
     return new Response(
       JSON.stringify({
         ok: true,
@@ -768,6 +773,7 @@ async function handle(req: Request): Promise<Response> {
           source_log: ingestResult.log,
         },
         cluster: clusterResult,
+        titles_rewritten: titlesRewritten,
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );

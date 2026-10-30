@@ -20,9 +20,9 @@ struct OptiqueButtonStyle: ButtonStyle {
                 kind == .primary ? AppColors.Brand.accent : AppColors.Adaptive.surfaceElevated,
                 in: Capsule()
             )
-            .opacity(configuration.isPressed ? 0.85 : 1)
             .scaleEffect(configuration.isPressed ? 0.98 : 1)
-            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+            .animation(.app, value: configuration.isPressed)
+            .opacity(configuration.isPressed ? 0.85 : 1)
     }
 }
 

@@ -9,6 +9,8 @@ struct RootView: View {
     @State private var discoverSearchText = ""
     @State private var tabBarState = TabBarState()
     @State private var latestAlertAt: Date?
+    /// Home-indicator inset: the tab bar sits 24pt from the screen edge, so content only needs the rest.
+    @State private var bottomSafeInset: CGFloat = 0
     @State private var lastAlertCheck = Date()
     @AppStorage("lastSeenAlertsAt") private var lastSeenAlertsAt: Double = 0
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
@@ -40,6 +42,13 @@ struct RootView: View {
 
     private var tabs: some View {
         ZStack {
+            Color.clear
+                .overlay(GeometryReader { geo in
+                    Color.clear
+                        .onAppear { bottomSafeInset = geo.safeAreaInsets.bottom }
+                        .onChange(of: geo.safeAreaInsets.bottom) { _, new in bottomSafeInset = new }
+                })
+                .ignoresSafeArea(edges: [])
             tab(0) { NavigationStack { FeedView() } }
             tab(1) { NavigationStack { DiscoverView(searchText: $discoverSearchText) } }
             tab(2) { NavigationStack { AlertesView(isActive: selectedTab == 2) } }
@@ -55,10 +64,13 @@ struct RootView: View {
                 selection: $selectedTab
             )
             .ignoresSafeArea(.keyboard)
+            .ignoresSafeArea(.container, edges: .bottom)
+            .scaleEffect(tabBarState.isCompact ? 0.82 : 1, anchor: .bottom)
+            .offset(y: tabBarState.isHidden ? 160 : 0)
+            .animation(.app, value: tabBarState.isHidden)
+            .animation(.app, value: tabBarState.isCompact)
             .opacity(tabBarState.isHidden ? 0 : 1)
-            .offset(y: tabBarState.isHidden ? 120 : 0)
             .allowsHitTesting(!tabBarState.isHidden)
-            .animation(.snappy, value: tabBarState.isHidden)
         }
         .tint(AppColors.Brand.accent)
         // Must come before the .environment calls: the debug menu sheet reads those objects,
@@ -90,9 +102,10 @@ struct RootView: View {
     private func tab<Content: View>(_ index: Int, @ViewBuilder content: () -> Content) -> some View {
         content()
             .safeAreaInset(edge: .bottom, spacing: 0) {
-                Color.clear.frame(height: FloatingTabBar.height)
+                Color.clear.frame(height: max(FloatingTabBar.height - bottomSafeInset, 0))
             }
             .opacity(selectedTab == index ? 1 : 0)
+            .animation(nil, value: selectedTab)   // switching tabs is instant
             .allowsHitTesting(selectedTab == index)
             .accessibilityHidden(selectedTab != index)
     }

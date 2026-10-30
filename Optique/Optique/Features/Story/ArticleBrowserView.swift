@@ -210,13 +210,13 @@ struct WebViewRepresentable: UIViewRepresentable {
 
             if currentOffset > lastContentOffset && currentOffset > threshold {
                 if barsVisible {
-                    withAnimation(.easeOut(duration: 0.2)) {
+                    withAnimation(.app) {
                         barsVisible = false
                     }
                 }
             } else if currentOffset < lastContentOffset {
                 if !barsVisible {
-                    withAnimation(.easeOut(duration: 0.2)) {
+                    withAnimation(.app) {
                         barsVisible = true
                     }
                 }
