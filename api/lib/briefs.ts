@@ -8,7 +8,7 @@ import { generate, parseJSON } from "./llm.js";
 //   - spectrum_summary: what each political side's outlets say (same format as the on-demand endpoint).
 // Runs inside the refresh cron and from scripts/backfill-briefs.ts. Several stories per model call (Groq, Gemini fallback).
 
-const BATCH = 4;
+const BATCH = 2;   // keeps each request under Groq's free tokens-per-minute limit
 const MIN_SOURCES = 3;
 const WINDOW_HOURS = 72;
 const TOPICS = ["politique", "economie", "societe", "international", "environnement", "justice", "culture", "sport"];
