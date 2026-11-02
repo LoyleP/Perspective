@@ -73,7 +73,7 @@ function promptFor(stories: Input[]): string {
 
   return `Tu es éditeur d'une application d'actualité française qui montre comment chaque bord politique couvre un même sujet. Pour chaque sujet ci-dessous (titres d'articles regroupés par tendance politique du média), produis :
 
-1. "dek" : UNE phrase simple et factuelle (140 caractères maximum) qui dit ce qui s'est passé, compréhensible sans contexte. Première lettre en majuscule, pas de point final, pas de guillemets.
+1. "dek" : UNE phrase simple et factuelle (140 caractères maximum) qui complète le titre sans le répéter : le contexte, la cause ou la conséquence principale. Compréhensible sans avoir lu l'article. Première lettre en majuscule, pas de point final, pas de guillemets.
 2. "topic" : un seul thème parmi ${TOPICS.join(", ")}.
 3. "political" : true si le sujet a un enjeu politique ou de société sur lequel les bords peuvent diverger, false sinon (sport, faits divers sans enjeu, météo, culture sans débat…).
 4. "perspectives" : pour chaque tendance présente, 3 points courts (une phrase chacun, 120 caractères maximum) qui disent ce que CES médias mettent en avant : faits retenus, angle, vocabulaire. Formule directement, sans « les médias disent que ». Si les tendances racontent la même chose, dis-le dans le premier point.
