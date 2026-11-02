@@ -142,6 +142,23 @@ enum LawExplainer {
         }
     }
 
+    /// Plain explanation of a stage name, for the "i" next to it.
+    static func glossary(_ term: String) -> String? {
+        switch term {
+        case "1re lecture": return "Premier passage du texte dans cette chambre : une commission l'étudie et le modifie, puis tous les élus le débattent et le votent."
+        case "2e lecture", "3e lecture": return "Le texte revient dans cette chambre parce que l'autre l'a modifié. Seuls les articles encore en désaccord sont rediscutés."
+        case "Nouvelle lecture": return "Après l'échec d'un accord entre députés et sénateurs, chaque chambre réexamine le texte une dernière fois."
+        case "Lecture définitive": return "Quand le désaccord persiste, le gouvernement peut demander à l'Assemblée de trancher : c'est elle qui a le dernier mot."
+        case "Lecture unique": return "Un seul passage dans cette chambre, sans aller-retour."
+        case "Commission mixte paritaire": return "Sept députés et sept sénateurs se réunissent pour écrire une version commune quand les deux chambres ne sont pas d'accord."
+        case "Conseil constitutionnel": return "Il vérifie que la loi respecte la Constitution. Il peut l'annuler en tout ou partie."
+        case "Promulgation": return "Le président de la République signe la loi, qui est publiée au Journal officiel et s'applique."
+        case "Adoption définitive": return "Pour devenir loi, le même texte doit être voté mot pour mot par l'Assemblée et le Sénat."
+        case "Dépôt": return "Le gouvernement (projet de loi) ou des parlementaires (proposition de loi) déposent le texte dans une des deux chambres."
+        default: return nil
+        }
+    }
+
     /// The four moments of a reading, with the index of the current one.
     static let readingStages = ["Dépôt", "Commission", "Séance", "Vote"]
 

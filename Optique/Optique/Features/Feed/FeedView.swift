@@ -4,6 +4,9 @@ struct FeedView: View {
 
     @State private var viewModel = FeedViewModel()
     @Environment(BookmarkStore.self) private var bookmarks
+    @Environment(ReadingHistoryStore.self) private var readingHistory
+    @AppStorage("alertsPromptDismissed") private var alertsPromptDismissed = false
+    @AppStorage("notificationsEnabled") private var notificationsEnabled = false
     @Namespace private var transition
     @State private var visibleCount = 12
     @State private var deepLinkStory: Story?
@@ -50,7 +53,10 @@ struct FeedView: View {
                 isSwitching = false
             }
         }
-        .task { await viewModel.load() }
+        .task {
+            await viewModel.load()
+            await notificationManager.checkAuthorizationStatus()
+        }
         // News goes stale fast: coming back to the app reloads a feed older than a few minutes.
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { Task { await viewModel.refreshIfStale() } }
@@ -93,8 +99,18 @@ struct FeedView: View {
             }
         }
 
+        if showsAlertsPrompt {
+            alertsPrompt
+                .padding(.top, AppSpacing.xl)
+        }
+
         if !viewModel.essentials.isEmpty {
             essentials
+                .padding(.top, AppSpacing.xl)
+        }
+
+        if !viewModel.blindspots.isEmpty {
+            blindspots
                 .padding(.top, AppSpacing.xl)
         }
 
@@ -138,6 +154,65 @@ struct FeedView: View {
                 }
                 Divider().overlay(AppColors.Adaptive.divider)
             }
+        }
+    }
+
+    /// Alerts are offered once the reader has opened a first story, not at first launch.
+    private var showsAlertsPrompt: Bool {
+        !alertsPromptDismissed && !readingHistory.stories.isEmpty
+            && notificationManager.authorizationStatus == .notDetermined
+    }
+
+    private var alertsPrompt: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.st) {
+            Label("Être prévenu des grands sujets ?", hero: "bell")
+                .font(.geist(.body, .medium))
+                .foregroundStyle(AppColors.Adaptive.textPrimary)
+            Text("Une alerte quand un sujet est repris par plusieurs médias, avec le bord qui en parle le plus. Au plus une par heure.")
+                .font(.appBody)
+                .foregroundStyle(AppColors.Adaptive.textBody)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: AppSpacing.s) {
+                Button("Activer") {
+                    Task {
+                        try? await notificationManager.requestAuthorization()
+                        await notificationManager.checkAuthorizationStatus()
+                        notificationsEnabled = notificationManager.authorizationStatus == .authorized
+                        alertsPromptDismissed = true
+                    }
+                }
+                .buttonStyle(.optiquePrimary)
+                Button("Non merci") { alertsPromptDismissed = true }
+                    .buttonStyle(.optiqueSecondary)
+            }
+        }
+        .padding(AppSpacing.m)
+        .background(AppColors.Adaptive.cardSurface, in: RoundedRectangle(cornerRadius: AppRadius.xl))
+    }
+
+    /// Stories one side barely covers: what each camp's readers don't see.
+    private var blindspots: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.m) {
+            SectionHeader(title: "Angles morts", subtitle: "Ce qu'un bord ne vous montre pas")
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(alignment: .top, spacing: AppSpacing.st) {
+                    ForEach(viewModel.blindspots) { story in
+                        storyLink(story) {
+                            StoryHeroCard(story: story, size: .medium)
+                                .overlay(alignment: .topLeading) {
+                                    if let side = story.computedCoverage?.blindspotSide {
+                                        BlindspotBadge(side: side).padding(AppSpacing.st)
+                                    }
+                                }
+                                .zoomSource(id: story.id, in: transition)
+                        }
+                        .containerRelativeFrame(.horizontal) { width, _ in width * 0.8 }
+                    }
+                }
+                .scrollTargetLayout()
+            }
+            .scrollTargetBehavior(.viewAligned)
+            .scrollClipDisabled()
         }
     }
 

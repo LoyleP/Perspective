@@ -114,6 +114,9 @@ struct LawStepsCarousel: View {
                 Text(item.label)
                     .font(.geist(.title, .medium))
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
+                if let help = LawExplainer.glossary(item.label) {
+                    JargonHelp(term: item.label, text: help)
+                }
                 if let date = dateBeside(item) {
                     Text(date)
                         .font(.appCaption)
@@ -213,12 +216,28 @@ struct LawStepsCarousel: View {
     private func voteBlock(_ vote: LawVote) -> some View {
         VStack(alignment: .leading, spacing: AppSpacing.s) {
             SeatsHemicycle(vote: vote)
-            Text("\(vote.yes) pour · \(vote.no) contre · \(vote.abstained) abst.")
+            // Legend: how to read a seat (colour = the group's political side).
+            HStack(spacing: AppSpacing.st) {
+                legendItem(Circle().fill(AppColors.Adaptive.textPrimary), "\(vote.yes) pour")
+                legendItem(Circle().fill(AppColors.Adaptive.textPrimary.opacity(0.38)), "\(vote.no) contre")
+                legendItem(Circle().stroke(AppColors.Adaptive.textPrimary.opacity(0.55), lineWidth: 1), "\(vote.abstained) abst.")
+            }
+            .frame(maxWidth: .infinity, alignment: .center)
+            Text("Couleur : bord politique du groupe")
                 .font(.appCaption)
                 .foregroundStyle(AppColors.Adaptive.textMeta)
                 .frame(maxWidth: .infinity, alignment: .center)
         }
         .padding(.top, AppSpacing.s)
+    }
+
+    private func legendItem(_ dot: some View, _ text: String) -> some View {
+        HStack(spacing: 5) {
+            dot.frame(width: 8, height: 8)
+            Text(text)
+                .font(.appCaption)
+                .foregroundStyle(AppColors.Adaptive.textMeta)
+        }
     }
 
     /// Short line for the stages that have no reading strip, with an icon above it, centred in the card's free space.
@@ -290,5 +309,32 @@ private struct StatusTag: View {
         .padding(.trailing, 10)
         .padding(.vertical, 3)
         .background(color.opacity(0.16), in: Capsule())
+    }
+}
+
+/// A small "i" next to a legal term; tapping it explains the term in a popover.
+private struct JargonHelp: View {
+    let term: String
+    let text: String
+    @State private var shown = false
+
+    var body: some View {
+        Button { shown = true } label: {
+            HeroIcon("information-circle", size: 18)
+                .foregroundStyle(AppColors.Adaptive.textMeta)
+                .frame(width: 28, height: 28)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Qu'est-ce que « \(term) » ?")
+        .popover(isPresented: $shown) {
+            Text(text)
+                .font(.appBody)
+                .foregroundStyle(AppColors.Adaptive.textBody)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(width: 260, alignment: .leading)
+                .padding(AppSpacing.m)
+                .presentationCompactAdaptation(.popover)
+        }
     }
 }

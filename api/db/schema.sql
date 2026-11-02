@@ -112,3 +112,7 @@ ALTER TABLE stories ADD COLUMN IF NOT EXISTS dek text;
 ALTER TABLE stories ADD COLUMN IF NOT EXISTS topic text;
 ALTER TABLE stories ADD COLUMN IF NOT EXISTS is_political boolean;
 ALTER TABLE stories ADD COLUMN IF NOT EXISTS brief_at timestamptz;
+
+-- Plain-language explanation of a law (lib/laws.ts).
+ALTER TABLE laws ADD COLUMN IF NOT EXISTS plain_title text;
+ALTER TABLE laws ADD COLUMN IF NOT EXISTS why_it_matters text;

@@ -2,7 +2,7 @@ import { waitUntil } from "@vercel/functions";
 import { err, json, pool } from "../lib/db.js";
 import { syncLaws, upcoming } from "../lib/laws.js";
 
-const LAW_COLS = `uid, title, short_title, kind, status, state, accelerated, deposited_at, last_act_at,
+const LAW_COLS = `uid, title, short_title, plain_title, why_it_matters, kind, status, state, accelerated, deposited_at, last_act_at,
   steps, summary, cardinality(story_ids) AS story_count, senat_url`;
 
 /** Laws in the "Lois" tab, most recent activity first. `?sync=full` runs the daily full sync (cron). */

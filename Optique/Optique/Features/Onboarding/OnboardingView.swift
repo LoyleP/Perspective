@@ -1,19 +1,17 @@
 import SwiftUI
 
-/// First launch, three steps: what Optique shows (with a live story), topic choice,
-/// then an explanation of alerts before the system notification prompt.
+/// First launch, two steps: what Optique shows (a live story told by the left and by the right),
+/// then topic choice. Alerts are offered later, in the feed, once a first story has been read.
 struct OnboardingView: View {
 
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @AppStorage("preferredTopics") private var preferredTopicsRaw = ""
-    @AppStorage("notificationsEnabled") private var notificationsEnabled = false
 
     @State private var step = 0
     @State private var topics: Set<StoryTopic> = []
     @State private var example: Story?
-    @State private var isRequestingAlerts = false
 
-    private let stepCount = 3
+    private let stepCount = 2
 
     var body: some View {
         VStack(spacing: 0) {
@@ -23,8 +21,7 @@ struct OnboardingView: View {
                 Group {
                     switch step {
                     case 0: valueStep
-                    case 1: topicsStep
-                    default: alertsStep
+                    default: topicsStep
                     }
                 }
                 .padding(.horizontal, AppSpacing.m)
@@ -73,32 +70,14 @@ struct OnboardingView: View {
                 Button {
                     withAnimation(.app) { step += 1 }
                 } label: {
-                    Text(step == 1 && topics.isEmpty ? "Continuer sans choisir" : "Continuer")
-                        .frame(maxWidth: .infinity)
+                    Text("Continuer").frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.optiquePrimary)
             } else {
-                Button {
-                    Task { await enableAlerts() }
-                } label: {
-                    Group {
-                        if isRequestingAlerts {
-                            ProgressView().tint(AppColors.Brand.onInk)
-                        } else {
-                            Text("Activer les alertes")
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
+                Button { finish() } label: {
+                    Text(topics.isEmpty ? "Commencer sans choisir" : "Commencer").frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.optiquePrimary)
-                .disabled(isRequestingAlerts)
-
-                Button {
-                    finish()
-                } label: {
-                    Text("Plus tard").frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.optiqueSecondary)
             }
         }
         .padding(.horizontal, AppSpacing.m)
@@ -110,17 +89,32 @@ struct OnboardingView: View {
 
     private var valueStep: some View {
         VStack(alignment: .leading, spacing: AppSpacing.l) {
-            title("Voyez l'info\nde tous les côtés")
-            Text("Optique regroupe les articles de dizaines de médias sur un même sujet et montre qui en parle, de l'extrême-gauche à l'extrême-droite.")
+            title("Le même sujet,\nraconté autrement")
+            Text("Optique regroupe les articles de dizaines de médias sur un même sujet et vous montre ce que chaque bord en dit.")
                 .font(.appBody)
                 .foregroundStyle(AppColors.Adaptive.textBody)
 
-            if let example, let coverage = example.computedCoverage {
-                StoryHeroCard(story: example, size: .medium)
-                    .allowsHitTesting(false)
-                SpectrumBar(coverage: coverage, style: .detailed, sources: example.sources)
-                    .padding(AppSpacing.m)
-                    .cardSurface()
+            if let example {
+                VStack(alignment: .leading, spacing: AppSpacing.st) {
+                    Text(example.title)
+                        .font(.geist(.heading, .medium))
+                        .foregroundStyle(AppColors.Adaptive.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    ForEach(Self.sides(of: example), id: \.label) { side in
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(side.label)
+                                .font(.appCaption)
+                                .foregroundStyle(side.color)
+                            Text(side.line)
+                                .font(.appBody)
+                                .foregroundStyle(AppColors.Adaptive.textBody)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding(AppSpacing.st)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(AppColors.Adaptive.cardSurface, in: RoundedRectangle(cornerRadius: AppRadius.l))
+                    }
+                }
             } else {
                 RoundedRectangle(cornerRadius: AppRadius.xl)
                     .fill(AppColors.Adaptive.placeholder)
@@ -136,62 +130,11 @@ struct OnboardingView: View {
     private var topicsStep: some View {
         VStack(alignment: .leading, spacing: AppSpacing.l) {
             title("Qu'est-ce qui\nvous intéresse ?")
-            Text("Vos thèmes apparaîtront en premier dans Explorer. Vous pourrez les modifier dans les Réglages.")
+            Text("Vos thèmes passeront en premier dans votre fil. Vous pourrez les modifier dans les Réglages.")
                 .font(.appBody)
                 .foregroundStyle(AppColors.Adaptive.textBody)
             TopicPickerGrid(selection: $topics)
         }
-    }
-
-    // MARK: - Step 3: alerts
-
-    private var alertsStep: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.l) {
-            title("Soyez prévenu\ndes grands sujets")
-            Text("Une alerte quand un sujet est couvert par plusieurs médias, au plus une fois par heure. Rien d'autre.")
-                .font(.appBody)
-                .foregroundStyle(AppColors.Adaptive.textBody)
-            sampleAlert
-                .padding(.top, AppSpacing.s)
-        }
-    }
-
-    /// Lock-screen style preview of what an alert looks like.
-    private var sampleAlert: some View {
-        HStack(alignment: .top, spacing: AppSpacing.st) {
-            Image("AppLogo")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 38, height: 38)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Text("OPTIQUE")
-                        .font(.appCaption)
-                        .foregroundStyle(AppColors.Adaptive.textTertiary)
-                    Spacer()
-                    Text("maintenant")
-                        .font(.appCaption)
-                        .foregroundStyle(AppColors.Adaptive.textMeta)
-                }
-                Text(example?.title ?? "Réforme des retraites : le gouvernement présente son projet")
-                    .font(.appBody)
-                    .foregroundStyle(AppColors.Adaptive.textPrimary)
-                    .lineLimit(2)
-                HStack(spacing: AppSpacing.s) {
-                    if let coverage = example?.computedCoverage {
-                        SpectrumBar(coverage: coverage).frame(width: 64)
-                    }
-                    Text("\(example?.sources.count ?? 8) sources · nouvelle actualité")
-                        .font(.appCaption)
-                        .foregroundStyle(AppColors.Adaptive.textMeta)
-                }
-            }
-        }
-        .padding(AppSpacing.st)
-        .background(AppColors.Adaptive.surfaceElevated, in: RoundedRectangle(cornerRadius: AppRadius.xl))
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Exemple d'alerte")
     }
 
     // MARK: - Helpers
@@ -204,26 +147,36 @@ struct OnboardingView: View {
             .accessibilityAddTraits(.isHeader)
     }
 
-    private func enableAlerts() async {
-        isRequestingAlerts = true
-        try? await NotificationManager.shared.requestAuthorization()
-        await NotificationManager.shared.checkAuthorizationStatus()
-        notificationsEnabled = NotificationManager.shared.authorizationStatus == .authorized
-        isRequestingAlerts = false
-        finish()
-    }
-
     private func finish() {
         preferredTopicsRaw = StoryTopic.storageValue(topics)
         hasCompletedOnboarding = true
     }
 
-    /// A recent story covered by many sources, with a photo, to show the spectrum for real.
+    /// A recent political story covered by both the left and the right, to show the idea for real.
     private static func loadExample() async -> Story? {
         let stories = (try? await StoryRepository.shared.fetchFeed(topic: nil, limit: 30, offset: 0)) ?? []
         return stories
-            .filter { $0.leadImageURL != nil && $0.computedCoverage != nil }
-            .max { $0.sources.count < $1.sources.count }
+            .filter { $0.hasPoliticalAngle && sides(of: $0).count == 2 }
+            .max { ($0.spectrumSummary != nil ? 1 : 0, $0.sources.count) < ($1.spectrumSummary != nil ? 1 : 0, $1.sources.count) }
+    }
+
+    /// What the left and the right say: the first point of each side's summary, else a headline.
+    private static func sides(of story: Story) -> [(label: String, line: String, color: Color)] {
+        let groups: [(String, [PoliticalLean], Color)] = [
+            ("À gauche", [.gauche, .extremeGauche], PoliticalLean.gauche.spectrumColor),
+            ("À droite", [.droite, .extremeDroite], PoliticalLean.droite.spectrumColor)
+        ]
+        return groups.compactMap { label, leans, color in
+            let point = story.spectrumSummary?.perspectives
+                .first { leans.contains($0.lean) }?
+                .summary.components(separatedBy: "\n").first?
+                .trimmingCharacters(in: CharacterSet(charactersIn: "• ").union(.whitespaces))
+            let headline = story.articles
+                .first { leans.contains(PoliticalLean.from($0.source?.politicalLean ?? 4) ?? .centre) }?
+                .title
+            guard let line = (point?.isEmpty == false ? point : headline) else { return nil }
+            return (label, line, color)
+        }
     }
 }
 

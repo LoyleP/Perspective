@@ -180,6 +180,7 @@ struct SideCarouselView: View {
                             .accessibilityHidden(true)
                         Text(bullet)
                             .font(.appBody)
+                            .lineSpacing(3)
                             .foregroundStyle(AppColors.Adaptive.textBody)
                             .multilineTextAlignment(.leading)
                             .fixedSize(horizontal: false, vertical: true)

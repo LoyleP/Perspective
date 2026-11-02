@@ -726,9 +726,13 @@ async function clusterStories(): Promise<{
         [newStoryIds]
       );
       if (top) {
-        const body = `${top.n} ${top.n === 1 ? "source" : "sources"} • ${newStoryIds.length} ${
-          newStoryIds.length === 1 ? "nouvelle actualité" : "nouvelles actualités"
-        }`;
+        // Say what the story's angle is, not just how many outlets covered it.
+        const { rows: leans } = await pool.query(
+          `SELECT src.political_lean AS lean FROM articles a JOIN sources src ON src.id = a.source_id
+            WHERE a.story_id = $1::uuid AND src.political_lean IS NOT NULL`,
+          [top.id]
+        );
+        const body = `${coverageVerdict(leans.map((r) => r.lean))} · ${top.n} ${top.n === 1 ? "source" : "sources"}`;
         await pool.query(
           "INSERT INTO notifications (title, body, story_count, story_id) VALUES ($1, $2, $3, $4)",
           [top.title, body, newStoryIds.length, top.id]
@@ -744,6 +748,18 @@ async function clusterStories(): Promise<{
     singletons: singletonIds.length - attached.size,
     attached_to_existing: attached.size,
   };
+}
+
+/** Same reading as the app's coverage tag: the side clearly ahead, or "tous les bords". */
+function coverageVerdict(leans: number[]): string {
+  if (leans.length < 3) return "Peu de sources";
+  const bucket = (l: number) => (l === 1 ? 0 : l <= 3 ? 1 : l === 4 ? 2 : l <= 6 ? 3 : 4);
+  const counts = [0, 0, 0, 0, 0];
+  for (const l of leans) counts[bucket(l)]++;
+  const ranked = counts.map((c, i) => [c, i]).sort((x, y) => y[0] - x[0]);
+  if ((ranked[0][0] - ranked[1][0]) / leans.length < 0.1) return "Relayé par tous les bords";
+  return ["Surtout relayé à l'extrême gauche", "Surtout relayé à gauche", "Surtout relayé au centre",
+          "Surtout relayé à droite", "Surtout relayé à l'extrême droite"][ranked[0][1]];
 }
 
 // ── Main Handler ──────────────────────────────────────────────────────────────

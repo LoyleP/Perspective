@@ -70,6 +70,15 @@ struct LawsView: View {
 
     private var visibleLaws: [Law] { viewModel.laws.filter(filter.includes) }
 
+    private var groups: [(section: LawSection, laws: [Law])] {
+        LawSection.allCases.compactMap { section in
+            let laws = visibleLaws
+                .filter { LawSection.of($0) == section }
+                .sorted { ($0.storyCount ?? 0, $0.lastActAt ?? .distantPast) > ($1.storyCount ?? 0, $1.lastActAt ?? .distantPast) }
+            return laws.isEmpty ? nil : (section, laws)
+        }
+    }
+
     @ViewBuilder
     private var content: some View {
         if viewModel.isLoading {
@@ -79,10 +88,15 @@ struct LawsView: View {
         } else if visibleLaws.isEmpty {
             ContentUnavailableView("Aucun texte", hero: "building-library", description: Text("Aucun texte ne correspond à ce filtre pour le moment."))
         } else {
-            ForEach(visibleLaws) { law in
-                Button { selected = law } label: { LawRow(law: law) }
-                    .buttonStyle(.plain)
-                Divider().overlay(AppColors.Adaptive.divider)
+            // Grouped by what is happening now, the most talked-about texts first in each group.
+            ForEach(Array(groups.enumerated()), id: \.element.section) { index, group in
+                SectionHeader(title: group.section.rawValue)
+                    .padding(.top, index == 0 ? AppSpacing.s : AppSpacing.xl)
+                ForEach(group.laws) { law in
+                    Button { selected = law } label: { LawRow(law: law) }
+                        .buttonStyle(.plain)
+                    Divider().overlay(AppColors.Adaptive.divider)
+                }
             }
         }
     }
@@ -153,7 +167,31 @@ struct LawProgressBar: View {
     }
 }
 
-/// List row: the law's title, its status in a plain sentence, a simple progress bar and what's next.
+/// List groups: what is happening to the text right now.
+enum LawSection: String, CaseIterable, Identifiable {
+    case voted = "Votés récemment"
+    case debate = "En débat"
+    case committee = "En commission"
+    case filed = "Déposés"
+
+    var id: String { rawValue }
+
+    static func of(_ law: Law) -> LawSection {
+        guard let step = law.current else { return .filed }
+        if law.isPromulgated { return .voted }
+        switch step.stage {
+        case "vote", "done":
+            let decided = LawDates.date(step.decidedAt ?? step.startedAt) ?? .distantPast
+            return decided > Date().addingTimeInterval(-21 * 86_400) ? .voted : .committee
+        case "seance": return .debate
+        case "commission": return .committee
+        default: return .filed
+        }
+    }
+}
+
+/// List row: a plain title, who it concerns, its status in a plain sentence, a simple progress bar
+/// and what's next.
 private struct LawRow: View {
     let law: Law
 
@@ -162,8 +200,15 @@ private struct LawRow: View {
             Text(law.displayTitle)
                 .font(.geist(.body, .medium))
                 .foregroundStyle(AppColors.Adaptive.textPrimary)
-                .lineLimit(3)
+                .lineLimit(2)
                 .multilineTextAlignment(.leading)
+            if let why = law.whyItMatters, !why.isEmpty {
+                Text(why)
+                    .font(.appBody)
+                    .foregroundStyle(AppColors.Adaptive.textBody)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+            }
             Text(LawExplainer.headline(for: law))
                 .font(.appBody)
                 .foregroundStyle(AppColors.Adaptive.textMeta)

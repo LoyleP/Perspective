@@ -26,12 +26,12 @@ extension AppColors {
 
         /// Titles and prominent text
         static let textPrimary = Color(light: AppColors.Zinc.Hex.z950, dark: AppColors.Zinc.Hex.z50)
-        /// Card titles
-        static let textSecondary = Color(light: AppColors.Zinc.Hex.z900, dark: AppColors.Zinc.Hex.z100)
+        /// Card titles (same as primary: the text scale has three greys — primary, body, meta)
+        static let textSecondary = textPrimary
         /// Body and paragraph text
         static let textBody = Color(light: AppColors.Zinc.Hex.z700, dark: AppColors.Zinc.Hex.z300)
-        /// Captions and section headers
-        static let textTertiary = Color(light: AppColors.Zinc.Hex.z700, dark: AppColors.Zinc.Hex.z300)
+        /// Captions and section headers (same as body)
+        static let textTertiary = textBody
         /// Source names, counts, metadata
         static let textMeta = Color(light: AppColors.Zinc.Hex.z600, dark: AppColors.Zinc.Hex.z400)
 

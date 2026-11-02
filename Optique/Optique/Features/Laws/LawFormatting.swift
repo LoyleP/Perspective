@@ -28,6 +28,10 @@ enum LawDates {
         return dayOutput.string(from: date)
     }
 
+    static func date(_ value: String?) -> Date? {
+        value.flatMap { input.date(from: $0) }
+    }
+
     static func short(_ value: String?) -> String? {
         guard let value, let date = input.date(from: value) else { return nil }
         return output.string(from: date)

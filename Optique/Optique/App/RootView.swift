@@ -57,11 +57,11 @@ struct RootView: View {
         .overlay(alignment: .bottom) {
             FloatingTabBar(
                 items: [
-                    .init(id: 0, accessibilityLabel: "À la une", icon: "home", hasSolid: true),
-                    .init(id: 3, accessibilityLabel: "Lois", icon: "building-library"),
-                    .init(id: 1, accessibilityLabel: "Explorer", icon: "magnifying-glass"),
+                    .init(id: 0, accessibilityLabel: "À la une", title: "À la une", icon: "home", hasSolid: true),
+                    .init(id: 3, accessibilityLabel: "Lois", title: "Lois", icon: "building-library"),
+                    .init(id: 1, accessibilityLabel: "Explorer", title: "Explorer", icon: "magnifying-glass"),
                     .init(id: 2, accessibilityLabel: hasUnreadAlerts ? "Alertes, nouvelles alertes" : "Alertes",
-                          icon: "bell", hasSolid: true, showsBadge: hasUnreadAlerts)
+                          title: "Alertes", icon: "bell", hasSolid: true, showsBadge: hasUnreadAlerts)
                 ],
                 selection: $selectedTab
             )

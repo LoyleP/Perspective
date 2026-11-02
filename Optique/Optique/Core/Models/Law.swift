@@ -74,6 +74,10 @@ struct Law: Codable, Hashable, Identifiable {
     let uid: String
     let title: String
     let shortTitle: String?
+    /// Title anyone can understand ("Interdire les réseaux sociaux aux moins de 15 ans"), and who it
+    /// concerns, written by Gemini (nil until then).
+    let plainTitle: String?
+    let whyItMatters: String?
     /// "Projet de loi" (government) or "Proposition de loi" (members).
     let kind: String?
     let status: String?
@@ -93,6 +97,8 @@ struct Law: Codable, Hashable, Identifiable {
     enum CodingKeys: String, CodingKey {
         case uid, title, kind, status, state, accelerated, steps, summary, upcoming, stories
         case shortTitle = "short_title"
+        case plainTitle = "plain_title"
+        case whyItMatters = "why_it_matters"
         case depositedAt = "deposited_at"
         case lastActAt = "last_act_at"
         case storyCount = "story_count"
@@ -100,7 +106,7 @@ struct Law: Codable, Hashable, Identifiable {
     }
 
     var displayTitle: String {
-        let raw = shortTitle?.isEmpty == false ? shortTitle! : title
+        let raw = [plainTitle, shortTitle].compactMap { $0 }.first { !$0.isEmpty } ?? title
         guard let first = raw.first else { return raw }
         return first.uppercased() + raw.dropFirst()
     }

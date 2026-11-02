@@ -1,12 +1,14 @@
 import SwiftUI
 
 /// The app's tab bar: a floating glass capsule, with the selected tab on a darker inner
-/// capsule. Icons only (no labels), larger than the system tab bar's.
+/// capsule. Each tab shows its icon with a short name under it, so no tab has to be guessed.
 struct FloatingTabBar: View {
 
     struct Item: Identifiable {
         let id: Int
         let accessibilityLabel: String
+        /// Short visible name under the icon.
+        var title: String = ""
         /// Heroicon name, or an asset name when `isAsset` is true.
         let icon: String
         /// Whether a solid variant of the Heroicon exists, shown when selected.
@@ -26,7 +28,7 @@ struct FloatingTabBar: View {
     static let height: CGFloat = 64 + margin
 
     private let itemHeight: CGFloat = 56
-    private let iconSize: CGFloat = 30
+    private let iconSize: CGFloat = 24
 
     var body: some View {
         HStack(spacing: 0) {
@@ -78,16 +80,23 @@ struct FloatingTabBar: View {
     @ViewBuilder
     private func icon(for item: Item, isSelected: Bool) -> some View {
         let color = isSelected ? AppColors.Adaptive.textPrimary : AppColors.Adaptive.textPrimary.opacity(0.62)
-        if item.isAsset {
-            Image(item.icon)
-                .resizable()
-                .scaledToFit()
-                .frame(width: iconSize, height: iconSize)
-                .foregroundStyle(color)
-        } else {
-            HeroIcon(item.icon, solid: isSelected && item.hasSolid, size: iconSize)
-                .foregroundStyle(color)
+        VStack(spacing: 3) {
+            if item.isAsset {
+                Image(item.icon)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: iconSize, height: iconSize)
+            } else {
+                HeroIcon(item.icon, solid: isSelected && item.hasSolid, size: iconSize)
+            }
+            if !item.title.isEmpty {
+                Text(item.title)
+                    .font(.geist(.caption, .medium))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
         }
+        .foregroundStyle(color)
     }
 
     // MARK: - Background

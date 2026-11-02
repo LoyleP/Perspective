@@ -214,7 +214,8 @@ struct DiscoverView: View {
 
 // MARK: - Blind spot badge
 
-private struct BlindspotBadge: View {
+/// "Surtout à gauche"-style badge on a blind-spot story card.
+struct BlindspotBadge: View {
     let side: BlindspotSide
 
     var body: some View {

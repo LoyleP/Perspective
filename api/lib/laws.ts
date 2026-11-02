@@ -13,7 +13,7 @@ const STORY_WINDOW_DAYS = 45;
 const MAX_STORIES_PER_LAW = 6;
 /** Summed rarity (IDF) of the shared words: two words seen in under ~0.5 % of stories each. */
 const MIN_MATCH_WEIGHT = 10.5;
-const SUMMARIES_PER_SYNC = 8;
+const SUMMARIES_PER_SYNC = 5;
 
 async function tric(path: string, params: Record<string, string | number> = {}) {
   const url = new URL(path, API);
@@ -234,15 +234,27 @@ export function upcoming(steps: any[], title: string): string[] {
 
 // ── Summary ───────────────────────────────────────────────────────────────────
 
-async function summarize(title: string, expose: string | null): Promise<string | null> {
+/**
+ * Plain-language pieces for several laws in one Gemini call (free-tier quota): a title anyone can
+ * understand, why it matters to an ordinary reader, and a 2-sentence summary.
+ */
+async function explainLaws(laws: { uid: string; title: string; expose: string | null }[]) {
   const key = process.env.GEMINI_API_KEY;
-  if (!key) return null;
-  const prompt = `Tu expliques la loi à un lecteur qui ne connaît rien au droit. À partir du titre et de l'exposé des motifs ci-dessous, écris 2 phrases courtes et simples, en français, qui disent concrètement ce que ce texte changerait et pour qui. Pas de jargon juridique, pas d'opinion, pas de formule d'introduction, pas de guillemets.
+  if (!key || laws.length === 0) return {};
+  const block = laws
+    .map((l) => `### [${l.uid}] ${l.title}\n${(l.expose ?? "(exposé des motifs non disponible)").slice(0, 2500)}`)
+    .join("\n\n");
+  const prompt = `Tu expliques des textes de loi à des lecteurs qui ne connaissent rien au droit. Pour chaque texte ci-dessous (titre officiel et exposé des motifs), écris en français :
+- "plain_title" : un titre simple de 70 caractères maximum qui dit ce que le texte change concrètement, avec un verbe (ex. « Interdire les réseaux sociaux aux moins de 15 ans »). Pas de jargon (pas de « projet de loi », « relatif à », « portant »).
+- "why" : une phrase de 110 caractères maximum qui dit qui est concerné et comment, dans la vie de tous les jours.
+- "summary" : 2 phrases courtes et simples sur ce que le texte changerait et pour qui.
+Pas d'opinion, pas de guillemets, première lettre en majuscule, pas de point final dans le titre.
 
-Titre : ${title}
+Réponds UNIQUEMENT avec du JSON valide : [{ "uid": "...", "plain_title": "...", "why": "...", "summary": "..." }]
 
-Exposé des motifs :
-${(expose ?? "(non disponible)").slice(0, 6000)}`;
+Textes :
+
+${block}`;
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${key}`,
     {
@@ -250,17 +262,28 @@ ${(expose ?? "(non disponible)").slice(0, 6000)}`;
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.2, maxOutputTokens: 300 },
+        generationConfig: { temperature: 0.2, maxOutputTokens: 2500, responseMimeType: "application/json" },
       }),
     }
   );
   if (!res.ok) {
-    console.error("Gemini law summary error:", res.status);
-    return null;
+    console.error("Gemini law explain error:", res.status);
+    return {};
   }
   const data = await res.json();
-  const text = (data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "").replace(/\s+/g, " ").trim();
-  return text || null;
+  const raw = (data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "").replace(/```json|```/g, "").trim();
+  const out: Record<string, { plain_title: string; why: string; summary: string }> = {};
+  try {
+    for (const item of JSON.parse(raw)) {
+      const uid = String(item.uid ?? "").replace(/[\[\]\s]/g, "");
+      if (!laws.some((l) => l.uid === uid)) continue;
+      const clean = (v: unknown) => String(v ?? "").replace(/\s+/g, " ").trim();
+      out[uid] = { plain_title: clean(item.plain_title).replace(/[.\s]+$/, ""), why: clean(item.why), summary: clean(item.summary) };
+    }
+  } catch {
+    console.error("Failed to parse law explanations:", raw.slice(0, 300));
+  }
+  return out;
 }
 
 // ── Sync ──────────────────────────────────────────────────────────────────────
@@ -292,6 +315,7 @@ async function listDossiers(since: string) {
  * app) only look at dossiers with a recent act; a full run (daily) re-selects everything active.
  */
 export async function syncLaws({ full = false } = {}): Promise<{ skipped?: boolean; updated: number }> {
+  await pool.query("ALTER TABLE laws ADD COLUMN IF NOT EXISTS plain_title text, ADD COLUMN IF NOT EXISTS why_it_matters text");
   await pool.query("INSERT INTO laws_sync (id) VALUES (1) ON CONFLICT DO NOTHING");
   const { rows: claim } = await pool.query(
     `UPDATE laws_sync SET synced_at = now()
@@ -351,20 +375,26 @@ export async function syncLaws({ full = false } = {}): Promise<{ skipped?: boole
   // Members' bills are only listed while the news covers them.
   await pool.query("DELETE FROM laws WHERE kind = 'Proposition de loi' AND cardinality(story_ids) = 0");
 
-  // Plain-language summaries and short titles, a few per run (Gemini quota).
+  // Plain-language title, "why it matters" line and summary: one Gemini call for a few laws per run (quota).
   const { rows: missing } = await pool.query(
-    `SELECT uid, title, document_uid FROM laws WHERE summary IS NULL ORDER BY last_act_at DESC LIMIT $1`,
+    `SELECT uid, title, document_uid FROM laws WHERE plain_title IS NULL ORDER BY cardinality(story_ids) DESC, last_act_at DESC LIMIT $1`,
     [SUMMARIES_PER_SYNC]
   );
-  for (const law of missing) {
-    let doc = null;
-    try {
-      doc = law.document_uid ? await tric(`/documents/${law.document_uid}`) : null;
-    } catch {}
-    const summary = await summarize(law.title, doc?.exposeMotifsTexte ?? null);
+  const docs = await Promise.all(
+    missing.map((law) => (law.document_uid ? tric(`/documents/${law.document_uid}`).catch(() => null) : null))
+  );
+  const explained = await explainLaws(missing.map((law, i) => ({ uid: law.uid, title: law.title, expose: docs[i]?.exposeMotifsTexte ?? null })));
+  for (const [i, law] of missing.entries()) {
+    const e = explained[law.uid];
     await pool.query(
-      "UPDATE laws SET summary = COALESCE($2, summary), summary_at = CASE WHEN $2 IS NULL THEN summary_at ELSE now() END, short_title = COALESCE(short_title, $3) WHERE uid = $1",
-      [law.uid, summary, doc?.titrePrincipalCourt ?? null]
+      `UPDATE laws SET
+         plain_title = COALESCE(NULLIF($2, ''), plain_title),
+         why_it_matters = COALESCE(NULLIF($3, ''), why_it_matters),
+         summary = COALESCE(NULLIF($4, ''), summary),
+         summary_at = CASE WHEN $4 IS NULL OR $4 = '' THEN summary_at ELSE now() END,
+         short_title = COALESCE(short_title, $5)
+       WHERE uid = $1`,
+      [law.uid, e?.plain_title ?? null, e?.why ?? null, e?.summary ?? null, docs[i]?.titrePrincipalCourt ?? null]
     );
   }
 

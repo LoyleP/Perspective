@@ -61,6 +61,7 @@ struct LawDetailView: View {
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
                 Text(summary)
                     .font(.appBody)
+                    .lineSpacing(4)
                     .foregroundStyle(AppColors.Adaptive.textBody)
                     .fixedSize(horizontal: false, vertical: true)
             }

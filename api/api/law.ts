@@ -7,7 +7,7 @@ export async function GET(request: Request): Promise<Response> {
   if (!uid || !/^[A-Z0-9]{6,40}$/.test(uid)) return err("invalid uid", 400);
   try {
     const { rows } = await pool.query(
-      `SELECT uid, title, short_title, kind, status, state, accelerated, deposited_at, last_act_at,
+      `SELECT uid, title, short_title, plain_title, why_it_matters, kind, status, state, accelerated, deposited_at, last_act_at,
               steps, summary, story_ids, senat_url
          FROM laws WHERE uid = $1`,
       [uid]

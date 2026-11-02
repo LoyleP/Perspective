@@ -42,12 +42,12 @@ struct DesignTokensTests {
         typealias A = AppColors.Adaptive
         let light: [(Color, String)] = [
             (A.background, "FFFFFF"), (A.cardSurface, "F4F4F5"), (A.surfaceElevated, "E4E4E7"),
-            (A.textPrimary, "09090B"), (A.textSecondary, "18181B"), (A.textBody, "3F3F46"),
+            (A.textPrimary, "09090B"), (A.textSecondary, "09090B"), (A.textBody, "3F3F46"),
             (A.textTertiary, "3F3F46"), (A.textMeta, "52525B"), (A.placeholder, "E4E4E7")
         ]
         let dark: [(Color, String)] = [
             (A.background, "09090B"), (A.cardSurface, "18181B"), (A.surfaceElevated, "27272A"),
-            (A.textPrimary, "FAFAFA"), (A.textSecondary, "F4F4F5"), (A.textBody, "D4D4D8"),
+            (A.textPrimary, "FAFAFA"), (A.textSecondary, "FAFAFA"), (A.textBody, "D4D4D8"),
             (A.textTertiary, "D4D4D8"), (A.textMeta, "A1A1AA"), (A.placeholder, "27272A")
         ]
         for (color, expected) in light { #expect(hex(color, dark: false) == expected) }

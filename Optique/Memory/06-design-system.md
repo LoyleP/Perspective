@@ -13,7 +13,7 @@ Every grey is Tailwind CSS **Zinc**: 50 #FAFAFA · 100 #F4F4F5 · 200 #E4E4E7 ·
 | background | white | zinc-950 | Page |
 | cardSurface | zinc-100 | zinc-900 | Cards, grouped rows |
 | surfaceElevated | zinc-200 | zinc-800 | Chips, sheets, banners |
-| textPrimary / Secondary / Body / Tertiary / Meta | zinc-950 / 900 / 700 / 700 / 600 | zinc-50 / 100 / 300 / 300 / 400 | Text hierarchy |
+| textPrimary (= Secondary) / textBody (= Tertiary) / textMeta | zinc-950 / 700 / 600 | zinc-50 / 300 / 400 | Three text greys only |
 | placeholder | zinc-200 | zinc-800 | Skeletons |
 | divider / stroke | zinc-950 10 % / 8 % | zinc-50 12 % / 10 % | Lines, borders |
 | imageScrim | black 0 → 92 % gradient | same | Text over photos (always white text) |
