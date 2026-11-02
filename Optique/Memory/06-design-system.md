@@ -4,21 +4,24 @@ Direction (2026-10-29): **black or white, Geist, Regular/Medium only.** The UI i
 
 ## Colors (`UI/Theme/DesignTokens.swift`, `AdaptiveTokens.swift`)
 
+### Zinc scale (`AppColors.Zinc`)
+Every grey is Tailwind CSS **Zinc**: 50 #FAFAFA · 100 #F4F4F5 · 200 #E4E4E7 · 300 #D4D4D8 · 400 #A1A1AA · 500 #71717A · 600 #52525B · 700 #3F3F46 · 800 #27272A · 900 #18181B · 950 #09090B. `Zinc.z50…z950` are `Color`s; `Zinc.Hex.z50…` are the hex strings for theme-switching tokens. The lean (spectrum) colors are separate and unchanged.
+
 ### Semantic (`AppColors.Adaptive`, light / dark)
 | Token | Light | Dark | Use |
 |---|---|---|---|
-| background | #FFFFFF | #000000 | Page |
-| cardSurface | #F4F4F4 | #111111 | Cards, grouped rows |
-| surfaceElevated | #E9E9E9 | #1E1E1E | Chips, sheets, banners |
-| textPrimary / Secondary / Body / Tertiary / Meta | #000 / 1F1F1F / 3A3A3A / 5F5F5F / 707070 | #FFF / EDEDED / D2D2D2 / A3A3A3 / 8E8E8E | Text hierarchy |
-| placeholder | #E4E4E4 | #1C1C1C | Skeletons |
-| divider / stroke | black 10 % / 8 % | white 12 % / 10 % | Lines, borders |
+| background | white | zinc-950 | Page |
+| cardSurface | zinc-100 | zinc-900 | Cards, grouped rows |
+| surfaceElevated | zinc-200 | zinc-800 | Chips, sheets, banners |
+| textPrimary / Secondary / Body / Tertiary / Meta | zinc-950 / 900 / 700 / 700 / 600 | zinc-50 / 100 / 300 / 300 / 400 | Text hierarchy |
+| placeholder | zinc-200 | zinc-800 | Skeletons |
+| divider / stroke | zinc-950 10 % / 8 % | zinc-50 12 % / 10 % | Lines, borders |
 | imageScrim | black 0 → 92 % gradient | same | Text over photos (always white text) |
 
-`AppColors.Neutral` is a fixed grey scale kept only for building tokens.
+Text contrast is checked by `DesignTokensTests`: every text level is ≥ 4.5:1 (WCAG AA) on both the page and card surfaces, in both themes. In light mode the text steps start one darker than a straight 950 → 500 ladder because zinc-500 on a zinc-100 card is only 4.4:1.
 
 ### Brand (`AppColors.Brand`)
-No brand color. `accent` = ink (black on white / white on black), `accentSoft` = ink 10–14 %, `onInk` = inverse (text on ink fills such as primary buttons), `onImage` = white.
+No brand color. `accent` = ink (zinc-950 on white / zinc-50 on zinc-950), `accentSoft` = ink 10–14 %, `onInk` = inverse (text on ink fills such as primary buttons), `onImage` = white.
 
 ### Spectrum (`AppColors.Spectrum`, `PoliticalLean.spectrumColor`)
 5 positions (since 2026-10-29 centre-gauche is merged into gauche and centre-droite into droite): red → grey → blue, each with a light-theme and dark-theme value (≥ 3:1 on its background):

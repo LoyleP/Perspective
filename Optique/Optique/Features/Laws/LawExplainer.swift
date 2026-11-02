@@ -20,6 +20,61 @@ enum LawExplainer {
         return parts.joined(separator: " · ")
     }
 
+    private static func article(_ chamber: String) -> String { chamber == "SN" ? "le Sénat" : "l'Assemblée" }
+
+    /// The status in one plain sentence, e.g. "Le Sénat étudie le texte".
+    static func headline(for law: Law) -> String {
+        guard let step = law.current else { return "Texte déposé" }
+        let who = article(step.chamber)
+        let Who = who.prefix(1).uppercased() + who.dropFirst()
+        switch step.code {
+        case "PROM": return "Loi promulguée"
+        case "CC": return "Le Conseil constitutionnel vérifie le texte"
+        case "CMP": return "Députés et sénateurs cherchent un accord"
+        default: break
+        }
+        switch step.stage {
+        case "commission": return "\(Who) étudie le texte"
+        case "seance": return "Débat en cours à \(step.chamber == "SN" ? "au Sénat" : "l'Assemblée")".replacingOccurrences(of: "à au", with: "au")
+        case "vote":
+            let verb = step.isRejected ? "Rejeté" : (step.decision?.lowercased().hasPrefix("modif") == true ? "Modifié" : "Adopté")
+            return "\(verb) par \(who)"
+        default: return "Déposé \(step.chamber == "SN" ? "au Sénat" : "à l'Assemblée")"
+        }
+    }
+
+    /// What comes next, in plain words.
+    static func next(for law: Law) -> String? {
+        guard let step = law.current, !law.isPromulgated else { return nil }
+        switch step.code {
+        case "CMP": return "Les deux chambres revotent la version commune"
+        case "CC": return "Promulgation"
+        default: break
+        }
+        switch step.stage {
+        case "depot": return "Examen en commission"
+        case "commission": return "Débat dans l'hémicycle"
+        case "seance": return "Vote"
+        default:
+            guard let first = law.upcoming.first else { return nil }
+            if first.hasPrefix("1re lecture · ") {
+                return "Examen par \(first.contains("Sénat") ? "le Sénat" : "l'Assemblée")"
+            }
+            if first == "Adoption définitive" { return "Vote d'un texte identique dans les deux chambres" }
+            return first
+        }
+    }
+
+    /// The four stages of the simple bar, and how many are reached.
+    static let progressStages = ["Déposé", "Voté par une chambre", "Voté par les deux", "Loi"]
+
+    static func progress(of law: Law) -> Int {
+        if law.isPromulgated { return 4 }
+        let readings = law.steps.filter { $0.code.hasPrefix("AN") || $0.code.hasPrefix("SN") }
+        let chambersVoted = Set(readings.filter { $0.stage == "vote" }.map(\.chamber)).count
+        return min(1 + chambersVoted, 3)
+    }
+
     /// What is happening now, in one or two sentences.
     static func now(for law: Law) -> String {
         guard let step = law.current else { return "Le texte vient d'être déposé." }

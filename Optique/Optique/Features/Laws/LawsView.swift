@@ -41,6 +41,12 @@ struct LawsView: View {
                     header
                         .padding(.bottom, AppSpacing.m)
                     content
+                    if let checkedAt = viewModel.checkedAt {
+                        Text("Assemblée nationale et Sénat · vérifié \(checkedAt.relativeToNowFrench())")
+                            .font(.appCaption)
+                            .foregroundStyle(AppColors.Adaptive.textMeta)
+                            .padding(.top, AppSpacing.m)
+                    }
                 }
                 .padding(.horizontal, AppSpacing.m)
                 .padding(.bottom, AppSpacing.xxl)
@@ -68,15 +74,10 @@ struct LawsView: View {
                 .font(.appTitle)
                 .foregroundStyle(AppColors.Adaptive.textPrimary)
                 .accessibilityAddTraits(.isHeader)
-            Text(freshness)
-                .font(.appCaption)
+            Text("Les textes en cours de vote au Parlement, étape par étape.")
+                .font(.appBody)
                 .foregroundStyle(AppColors.Adaptive.textMeta)
         }
-    }
-
-    private var freshness: String {
-        guard let checkedAt = viewModel.checkedAt else { return "Assemblée nationale et Sénat" }
-        return "Assemblée et Sénat · vérifié \(checkedAt.relativeToNowFrench())"
     }
 
     @ViewBuilder
@@ -97,25 +98,59 @@ struct LawsView: View {
     }
 }
 
-/// List row: kind, title, compact path and where the text stands.
+/// Four-segment bar: Déposé, Voté par une chambre, Voté par les deux, Loi.
+struct LawProgressBar: View {
+    let law: Law
+    /// Names each stage under its segment (law page); rows keep the bare bar.
+    var showsLabels = false
+
+    var body: some View {
+        let reached = LawExplainer.progress(of: law)
+        HStack(alignment: .top, spacing: 4) {
+            ForEach(0..<4, id: \.self) { index in
+                VStack(alignment: .leading, spacing: 6) {
+                    Capsule()
+                        .fill(index < reached ? AppColors.Adaptive.textPrimary : AppColors.Adaptive.divider)
+                        .frame(height: 4)
+                    if showsLabels {
+                        Text(LawExplainer.progressStages[index])
+                            .font(.appCaption)
+                            .foregroundStyle(index == max(reached - 1, 0) ? AppColors.Adaptive.textPrimary : AppColors.Adaptive.textMeta)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .accessibilityElement()
+        .accessibilityLabel("Avancement : \(reached) étapes sur 4")
+    }
+}
+
+/// List row: the law's title, its status in a plain sentence, a simple progress bar and what's next.
 private struct LawRow: View {
     let law: Law
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.s) {
-            Text(law.kindLine)
-                .font(.appCaption)
-                .foregroundStyle(AppColors.Adaptive.textMeta)
             Text(law.displayTitle)
                 .font(.appBodyStrong)
                 .foregroundStyle(AppColors.Adaptive.textPrimary)
                 .lineLimit(3)
                 .multilineTextAlignment(.leading)
-            LawPathView(law: law, compact: true)
-            Text(LawExplainer.status(of: law))
-                .font(.appCaption)
+            Text(LawExplainer.headline(for: law))
+                .font(.appBody)
                 .foregroundStyle(AppColors.Adaptive.textMeta)
-                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+            LawProgressBar(law: law)
+                .padding(.top, 2)
+            if let next = LawExplainer.next(for: law) {
+                Text("Ensuite : \(next)")
+                    .font(.appCaption)
+                    .foregroundStyle(AppColors.Adaptive.textMeta)
+                    .lineLimit(2)
+            }
         }
         .padding(.vertical, AppSpacing.m)
         .contentShape(Rectangle())

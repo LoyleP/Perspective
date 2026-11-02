@@ -7,38 +7,38 @@ extension AppColors {
 
         // MARK: - Backgrounds
 
-        /// Page and feed background: white / black
-        static let background = Color(light: "FFFFFF", dark: "000000")
+        /// Page and feed background: white / zinc-950
+        static let background = Color(light: "FFFFFF", dark: AppColors.Zinc.Hex.z950)
         static let feedBackground = background
 
         /// Cards and grouped rows
-        static let cardSurface = Color(light: "F4F4F4", dark: "111111")
+        static let cardSurface = Color(light: AppColors.Zinc.Hex.z100, dark: AppColors.Zinc.Hex.z900)
         static let detailSurface = cardSurface
 
         /// Chips, sheets, banners — one step above cards
-        static let surfaceElevated = Color(light: "E9E9E9", dark: "1E1E1E")
+        static let surfaceElevated = Color(light: AppColors.Zinc.Hex.z200, dark: AppColors.Zinc.Hex.z800)
 
         // MARK: - Dividers
 
-        static let divider = Color(light: "1A000000", dark: "1FFFFFFF")
+        static let divider = Color(light: "1A09090B", dark: "1FFAFAFA")
 
         // MARK: - Text
 
         /// Titles and prominent text
-        static let textPrimary = Color(light: "000000", dark: "FFFFFF")
+        static let textPrimary = Color(light: AppColors.Zinc.Hex.z950, dark: AppColors.Zinc.Hex.z50)
         /// Card titles
-        static let textSecondary = Color(light: "1F1F1F", dark: "EDEDED")
+        static let textSecondary = Color(light: AppColors.Zinc.Hex.z900, dark: AppColors.Zinc.Hex.z100)
         /// Body and paragraph text
-        static let textBody = Color(light: "3A3A3A", dark: "D2D2D2")
+        static let textBody = Color(light: AppColors.Zinc.Hex.z700, dark: AppColors.Zinc.Hex.z300)
         /// Captions and section headers
-        static let textTertiary = Color(light: "5F5F5F", dark: "A3A3A3")
+        static let textTertiary = Color(light: AppColors.Zinc.Hex.z700, dark: AppColors.Zinc.Hex.z300)
         /// Source names, counts, metadata
-        static let textMeta = Color(light: "707070", dark: "8E8E8E")
+        static let textMeta = Color(light: AppColors.Zinc.Hex.z600, dark: AppColors.Zinc.Hex.z400)
 
         // MARK: - UI
 
         /// Loading skeletons and empty image areas
-        static let placeholder = Color(light: "E4E4E4", dark: "1C1C1C")
+        static let placeholder = Color(light: AppColors.Zinc.Hex.z200, dark: AppColors.Zinc.Hex.z800)
         /// Component borders
         static let stroke = AppColors.stroke
         /// Gradient under text laid over photos (photos are always dark-scrimmed, in both themes)

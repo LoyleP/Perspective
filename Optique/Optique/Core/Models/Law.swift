@@ -1,5 +1,37 @@
 import Foundation
 
+/// One parliamentary group's share of a vote.
+struct LawVoteGroup: Codable, Hashable {
+    let name: String
+    /// Stored position (1 extrême gauche, 2 gauche, 4 centre, 6 droite, 7 extrême droite); 0 = unaffiliated.
+    let lean: Int
+    let members: Int
+    let yes: Int
+    let no: Int
+    let abstained: Int
+
+    var absent: Int { max(members - yes - no - abstained, 0) }
+    var politicalLean: PoliticalLean? { PoliticalLean(rawValue: lean) }
+}
+
+/// The public vote that closed a reading: how many members voted yes, no, or abstained.
+struct LawVote: Codable, Hashable {
+    let chamber: String
+    let date: String?
+    let adopted: Bool
+    let yes: Int
+    let no: Int
+    let abstained: Int
+    let voters: Int
+    /// Seats in the chamber (577 at the Assemblée, 348 at the Sénat).
+    let seats: Int?
+    /// How each parliamentary group voted, far left to far right.
+    let groups: [LawVoteGroup]?
+
+    /// Members who did not take part.
+    var absent: Int { max((seats ?? voters) - voters, 0) }
+}
+
 /// One reading (or final stage) of a law's path through Parliament, e.g. "1re lecture" at the Sénat.
 struct LawStep: Codable, Hashable, Identifiable {
     var id: String { code }
@@ -16,6 +48,8 @@ struct LawStep: Codable, Hashable, Identifiable {
     let commissionAt: String?
     let debateAt: String?
     let decidedAt: String?
+    /// The closing public vote of this reading, when there was one.
+    let vote: LawVote?
     /// Official title and Légifrance link once promulgated.
     let lawTitle: String?
     let url: String?

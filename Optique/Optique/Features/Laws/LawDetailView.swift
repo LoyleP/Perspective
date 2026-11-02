@@ -41,76 +41,48 @@ struct LawDetailView: View {
                 .font(.appCaption)
                 .foregroundStyle(AppColors.Adaptive.textMeta)
             Text(shown.displayTitle)
-                .font(.appTitle)
-                .foregroundStyle(AppColors.Adaptive.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-            if shown.shortTitle != nil {
-                Text(shown.title.capitalizedFirst)
-                    .font(.appBody)
-                    .foregroundStyle(AppColors.Adaptive.textMeta)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .padding(.horizontal, AppSpacing.m)
-    }
-
-    private var summaryBlock: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.s) {
-            Text("En bref")
                 .font(.appHeading)
                 .foregroundStyle(AppColors.Adaptive.textPrimary)
-            Text(shown.summary ?? "Le résumé en langage clair est en préparation.")
-                .font(.appBody)
-                .foregroundStyle(shown.summary == nil ? AppColors.Adaptive.textMeta : AppColors.Adaptive.textBody)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.horizontal, AppSpacing.m)
     }
 
+    /// Plain-language summary, shown only once it exists.
+    @ViewBuilder
+    private var summaryBlock: some View {
+        if let summary = shown.summary {
+            VStack(alignment: .leading, spacing: AppSpacing.s) {
+                Text("En bref")
+                    .font(.appHeading)
+                    .foregroundStyle(AppColors.Adaptive.textPrimary)
+                Text(summary)
+                    .font(.appBody)
+                    .foregroundStyle(AppColors.Adaptive.textBody)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.horizontal, AppSpacing.m)
+        }
+    }
+
+    /// Parcours: where the law stands in a plain sentence with the four-stage bar, then one card per
+    /// stage (same carousel as the story page's position cards).
     private var pathBlock: some View {
         VStack(alignment: .leading, spacing: AppSpacing.m) {
             Text("Parcours")
                 .font(.appHeading)
                 .foregroundStyle(AppColors.Adaptive.textPrimary)
                 .padding(.horizontal, AppSpacing.m)
-            LawPathView(law: shown)
-            if let step = shown.current {
-                VStack(alignment: .leading, spacing: AppSpacing.st) {
-                    if !shown.isPromulgated, step.code.hasPrefix("AN") || step.code.hasPrefix("SN") {
-                        readingProgress(step)
-                    }
-                    Text(LawExplainer.now(for: shown))
-                        .font(.appBody)
-                        .foregroundStyle(AppColors.Adaptive.textBody)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .padding(AppSpacing.m)
-                .background(AppColors.Adaptive.cardSurface, in: RoundedRectangle(cornerRadius: AppRadius.xl))
-                .padding(.horizontal, AppSpacing.m)
-            }
-        }
-    }
 
-    /// Dépôt · Commission · Séance · Vote for the current reading, with the current moment lit.
-    private func readingProgress(_ step: LawStep) -> some View {
-        let index = LawExplainer.readingIndex(step)
-        return VStack(alignment: .leading, spacing: AppSpacing.s) {
-            Text("\(step.place) · \(step.label)")
-                .font(.appCaption)
-                .foregroundStyle(AppColors.Adaptive.textMeta)
-            HStack(spacing: 4) {
-                ForEach(Array(LawExplainer.readingStages.enumerated()), id: \.offset) { i, name in
-                    VStack(alignment: .leading, spacing: 6) {
-                        Capsule()
-                            .fill(i <= index ? AppColors.Adaptive.textPrimary : AppColors.Adaptive.divider)
-                            .frame(height: 4)
-                        Text(name)
-                            .font(.appCaption)
-                            .foregroundStyle(i == index ? AppColors.Adaptive.textPrimary : AppColors.Adaptive.textMeta)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
+            VStack(alignment: .leading, spacing: AppSpacing.st) {
+                Text(LawExplainer.headline(for: shown))
+                    .font(.appBodyStrong)
+                    .foregroundStyle(AppColors.Adaptive.textPrimary)
+                LawProgressBar(law: shown, showsLabels: true)
             }
+            .padding(.horizontal, AppSpacing.m)
+
+            LawStepsCarousel(law: shown)
         }
     }
 
@@ -135,20 +107,30 @@ struct LawDetailView: View {
     private var links: some View {
         VStack(alignment: .leading, spacing: AppSpacing.st) {
             if let url = shown.assembleeURL {
-                Button("Dossier sur le site de l'Assemblée") { openURL(url) }
+                link("Dossier sur le site de l'Assemblée", url)
             }
             if let senat = shown.senatUrl, let url = URL(string: senat) {
-                Button("Dossier sur le site du Sénat") { openURL(url) }
+                link("Dossier sur le site du Sénat", url)
             }
-            if let prom = shown.steps.first(where: { $0.code == "PROM" }), let link = prom.url, let url = URL(string: link) {
-                Button("Texte publié sur Légifrance") { openURL(url) }
+            if let prom = shown.steps.first(where: { $0.code == "PROM" }), let target = prom.url, let url = URL(string: target) {
+                link("Texte publié sur Légifrance", url)
             }
             Text("Données : Assemblée nationale et Sénat, via l'API Parlement de Tricoteuses.")
                 .font(.appCaption)
                 .foregroundStyle(AppColors.Adaptive.textMeta)
         }
-        .font(.appBodyStrong)
-        .tint(AppColors.Adaptive.textPrimary)
         .padding(.horizontal, AppSpacing.m)
+    }
+
+    private func link(_ title: String, _ url: URL) -> some View {
+        Button { openURL(url) } label: {
+            HStack(spacing: AppSpacing.s) {
+                HeroIcon("link", size: 18)
+                Text(title)
+                    .font(.appBody)
+            }
+            .foregroundStyle(AppColors.Adaptive.textPrimary)
+        }
+        .buttonStyle(.plain)
     }
 }

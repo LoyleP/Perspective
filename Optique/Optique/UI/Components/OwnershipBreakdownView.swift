@@ -15,7 +15,7 @@ struct OwnershipBreakdownView: View {
         Color(light: "0E9F8E", dark: "2DD4BF"),   // teal
         Color(light: "7C3AED", dark: "A78BFA"),   // violet
         Color(light: "DB2777", dark: "F472B6"),   // pink
-        Color(light: "9A9A9A", dark: "6E6E6E"),   // grey (Autres)
+        Color(light: AppColors.Zinc.Hex.z400, dark: AppColors.Zinc.Hex.z500),   // zinc grey (Autres)
     ]
 
     var body: some View {

@@ -112,8 +112,83 @@ function chamberOf(code: string, chambre: string | null): string {
 
 const day = (d: string | null) => (d ? d.slice(0, 10) : null);
 
+const SEATS: Record<string, number> = { AN: 577, SN: 348 };
+
+/**
+ * Where each parliamentary group sits on the app's five-position scale (1 extrême gauche, 2 gauche,
+ * 4 centre, 6 droite, 7 extrême droite; centre-droit counts as droite, centre-gauche as gauche, like the
+ * media positions). 0 = unaffiliated. Matched on the group's short name, then on its full name.
+ */
+function groupLean(abbr: string | null, name: string | null): number {
+  const key = `${abbr ?? ""} ${name ?? ""}`.toLowerCase();
+  const rules: [RegExp, number][] = [
+    [/insoumise|lfi|communiste républicain|crce/, 1],
+    [/gauche démocrate|gdr|socialiste|soc\b|\bser\b|écologiste|ecos|gest\b|rdse|radical/, 2],
+    [/ensemble pour la république|epr|démocrates|\bdem\b|rdpi|rassemblement des démocrates|liot|libertés, indépendants|union centriste|uci|centriste/, 4],
+    [/horizons|hor\b|droite républicaine|\bdr\b|les républicains|indépendants - république|les indépendants/, 6],
+    [/rassemblement national|\brn\b|union des droites|udr|union nationale pour les territoires/, 7],
+  ];
+  for (const [re, lean] of rules) if (re.test(key)) return lean;
+  return 0;
+}
+
+const organeCache = new Map<string, { abbr: string | null; name: string | null }>();
+async function organe(uid: string) {
+  if (!organeCache.has(uid)) {
+    const o = await tric(`/organes/${uid}`).catch(() => ({}));
+    organeCache.set(uid, { abbr: o.libelleAbrege ?? o.libelleAbrev ?? null, name: o.libelle ?? null });
+  }
+  return organeCache.get(uid)!;
+}
+
+/** How each group voted on a scrutin, ordered left to right. */
+async function fetchGroups(scrutinUid: string) {
+  const rows = await tric("/groupesVotants/json", { scrutinRefUid: scrutinUid, perPage: 40 }).catch(() => []);
+  const groups = await Promise.all(
+    rows.map(async (g: any) => {
+      const o = await organe(g.organeRefUid);
+      return {
+        name: o.abbr ?? o.name ?? "",
+        lean: groupLean(o.abbr, o.name),
+        members: g.nombreMembresGroupe ?? 0,
+        yes: g.pour ?? 0,
+        no: g.contre ?? 0,
+        abstained: g.abstentions ?? 0,
+      };
+    })
+  );
+  // Far left to far right; unaffiliated members last.
+  const order = (l: number) => (l === 0 ? 99 : l);
+  return groups.sort((a, b) => order(a.lean) - order(b.lean) || a.name.localeCompare(b.name));
+}
+
+/** Final public votes of a dossier, keyed by the step they close (e.g. "AN1-DEC-SCRUTIN"). */
+async function fetchVotes(uid: string): Promise<Record<string, any>> {
+  const rows = await tric("/scrutins/json", {
+    dossierRefUid: uid,
+    perPage: 100,
+    select: "uid,chambre,dateScrutin,code,codeEtape,typeObjet,pour,contre,abstentions,nombreVotants,nonVotants",
+  }).catch(() => []);
+  const out: Record<string, any> = {};
+  for (const r of rows) {
+    if (!r.codeEtape?.endsWith("-DEC-SCRUTIN") || ["amendement", "article"].includes(r.typeObjet)) continue;
+    out[r.codeEtape] = {
+      chamber: r.chambre,
+      date: day(r.dateScrutin),
+      adopted: r.code === "adopté",
+      yes: r.pour ?? 0,
+      no: r.contre ?? 0,
+      abstained: r.abstentions ?? 0,
+      voters: r.nombreVotants ?? (r.pour ?? 0) + (r.contre ?? 0) + (r.abstentions ?? 0),
+      seats: SEATS[r.chambre] ?? null,
+      groups: await fetchGroups(r.uid),
+    };
+  }
+  return out;
+}
+
 /** One step per reading (top-level act), with where it stands inside that reading. */
-export function buildSteps(actes: any[]) {
+export function buildSteps(actes: any[], votes: Record<string, any> = {}) {
   const byDate = (a: any, b: any) => (a.dateActe ?? "9999").localeCompare(b.dateActe ?? "9999");
   const tops = actes.filter((a) => !a.parentUid).sort(byDate);
   return tops.map((top) => {
@@ -137,6 +212,7 @@ export function buildSteps(actes: any[]) {
       commissionAt: day(commission?.dateActe ?? null),
       debateAt: day(debate?.dateActe ?? null),
       decidedAt: day(decisionActe?.dateActe ?? null),
+      vote: votes[`${code}-DEC-SCRUTIN`] ?? null,
       lawTitle: publication?.titreLoi ?? null,
       url: publication?.urlLegifrance ?? top.urlConclusionConseilConstitutionnel ?? null,
     };
@@ -237,8 +313,11 @@ export async function syncLaws({ full = false } = {}): Promise<{ skipped?: boole
     const storyIds = matchStories(d.titre, stories);
     const keep = d.typeInitiative === "Projet de loi" || storyIds.length > 0;
     if (!keep) continue;
-    const actes = await tric("/actesLegislatifs/json", { dossierRefUid: d.uid, perPage: 300 });
-    const steps = buildSteps(actes);
+    const [actes, votes] = await Promise.all([
+      tric("/actesLegislatifs/json", { dossierRefUid: d.uid, perPage: 300 }),
+      fetchVotes(d.uid),
+    ]);
+    const steps = buildSteps(actes, votes);
     const promulgated = steps.some((s) => s.code === "PROM");
     await pool.query(
       `INSERT INTO laws (uid, title, kind, status, state, accelerated, deposited_at, last_act_at, steps,

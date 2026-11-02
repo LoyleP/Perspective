@@ -10,11 +10,11 @@ struct SplashView: View {
 
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            AppColors.Zinc.z950.ignoresSafeArea()
 
             Image("AppLogo")
                 .resizable()
-                .foregroundStyle(.white)
+                .foregroundStyle(AppColors.Zinc.z50)
                 .scaledToFit()
                 .frame(width: 80, height: 80)
                 .scaleEffect(scale)

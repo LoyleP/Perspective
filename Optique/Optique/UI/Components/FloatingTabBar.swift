@@ -64,7 +64,7 @@ struct FloatingTabBar: View {
                 .background {
                     if isSelected {
                         Capsule()
-                            .fill(Color(light: "14000000", dark: "73000000"))
+                            .fill(Color(light: "1409090B", dark: "7309090B"))
                             .matchedGeometryEffect(id: "indicator", in: indicator)
                     }
                 }

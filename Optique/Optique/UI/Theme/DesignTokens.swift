@@ -6,19 +6,27 @@ import UIKit
 
 enum AppColors {
 
-    /// Fixed greys, used only to build the adaptive tokens below.
-    enum Neutral {
-        static let n50  = Color(hex: "F5F5F5")
-        static let n100 = Color(hex: "EAEAEA")
-        static let n200 = Color(hex: "D0D0D0")
-        static let n300 = Color(hex: "A0A0A0")
-        static let n400 = Color(hex: "8E8E8E")
-        static let n500 = Color(hex: "757575")
-        static let n600 = Color(hex: "6B6B6B")
-        static let n700 = Color(hex: "404040")
-        static let n800 = Color(hex: "262626")
-        static let n900 = Color(hex: "111111")
-        static let n950 = Color(hex: "000000")
+    /// Tailwind CSS Zinc scale (v3/v4 values). Every grey in the UI comes from here; semantic tokens
+    /// below pick steps for each theme. The lean (spectrum) colors are not part of it.
+    enum Zinc {
+        static let z50  = Color(hex: "FAFAFA")
+        static let z100 = Color(hex: "F4F4F5")
+        static let z200 = Color(hex: "E4E4E7")
+        static let z300 = Color(hex: "D4D4D8")
+        static let z400 = Color(hex: "A1A1AA")
+        static let z500 = Color(hex: "71717A")
+        static let z600 = Color(hex: "52525B")
+        static let z700 = Color(hex: "3F3F46")
+        static let z800 = Color(hex: "27272A")
+        static let z900 = Color(hex: "18181B")
+        static let z950 = Color(hex: "09090B")
+
+        /// Hex strings, for tokens that switch between themes (`Color(light:dark:)`).
+        enum Hex {
+            static let z50 = "FAFAFA", z100 = "F4F4F5", z200 = "E4E4E7", z300 = "D4D4D8", z400 = "A1A1AA"
+            static let z500 = "71717A", z600 = "52525B", z700 = "3F3F46", z800 = "27272A", z900 = "18181B"
+            static let z950 = "09090B"
+        }
     }
 
     /// 5-step diverging scale: red (left) → grey → blue (right). The only color in the app.
@@ -31,17 +39,17 @@ enum AppColors {
         static let eDroite      = Color(light: "2442B8", dark: "2D55D8")
     }
 
-    /// There is no brand color: emphasis is ink (black on white, white on black).
+    /// There is no brand color: emphasis is ink (zinc-950 on white, zinc-50 on zinc-950).
     /// `accent` is that ink, `onInk` the inverse for text on ink fills, `onImage` for text over photos.
     enum Brand {
-        static let accent     = Color(light: "000000", dark: "FFFFFF")
-        static let accentSoft = Color(light: "1A000000", dark: "24FFFFFF")
-        static let onInk      = Color(light: "FFFFFF", dark: "000000")
+        static let accent     = Color(light: Zinc.Hex.z950, dark: Zinc.Hex.z50)
+        static let accentSoft = Color(light: "1A09090B", dark: "24FAFAFA")
+        static let onInk      = Color(light: Zinc.Hex.z50, dark: Zinc.Hex.z950)
         static let onImage    = Color.white
     }
 
     // Global stroke
-    static let stroke = Color(light: "14000000", dark: "1AFFFFFF")
+    static let stroke = Color(light: "1409090B", dark: "1AFAFAFA")
 }
 
 // MARK: - Spacing

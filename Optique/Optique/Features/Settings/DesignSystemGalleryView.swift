@@ -15,6 +15,7 @@ struct DesignSystemGalleryView: View {
                 typography
                 chips
                 carousel
+                hemicycle
                 comments
                 if let story = stories.first {
                     spectrum(story)
@@ -118,6 +119,31 @@ struct DesignSystemGalleryView: View {
         VStack(alignment: .leading, spacing: AppSpacing.st) {
             SectionHeader(title: "Carrousel des positions", subtitle: "SideCarouselView · s'ouvre sur la majorité")
             SideCarouselView(story: Fixtures.stories[0], isSummaryUnavailable: false)
+        }
+    }
+
+    /// A law vote as a hemicycle (mock data; this file is DEBUG-only).
+    private var hemicycle: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.st) {
+            SectionHeader(title: "Vote d'une loi", subtitle: "SeatsHemicycle · sièges par groupe, couleur de position")
+            SeatsHemicycle(vote: LawVote(
+                chamber: "AN", date: "2026-06-23", adopted: true, yes: 289, no: 175, abstained: 12, voters: 476, seats: 577,
+                groups: [
+                    LawVoteGroup(name: "LFI-NFP", lean: 1, members: 71, yes: 60, no: 2, abstained: 0),
+                    LawVoteGroup(name: "GDR", lean: 2, members: 17, yes: 6, no: 6, abstained: 2),
+                    LawVoteGroup(name: "SOC", lean: 2, members: 68, yes: 41, no: 5, abstained: 19),
+                    LawVoteGroup(name: "EcoS", lean: 2, members: 38, yes: 27, no: 5, abstained: 4),
+                    LawVoteGroup(name: "EPR", lean: 4, members: 91, yes: 66, no: 5, abstained: 11),
+                    LawVoteGroup(name: "Dem", lean: 4, members: 37, yes: 25, no: 0, abstained: 11),
+                    LawVoteGroup(name: "HOR", lean: 6, members: 35, yes: 22, no: 0, abstained: 6),
+                    LawVoteGroup(name: "DR", lean: 6, members: 48, yes: 1, no: 34, abstained: 10),
+                    LawVoteGroup(name: "UDR", lean: 7, members: 17, yes: 0, no: 17, abstained: 0),
+                    LawVoteGroup(name: "RN", lean: 7, members: 122, yes: 0, no: 120, abstained: 0),
+                    LawVoteGroup(name: "NI", lean: 0, members: 10, yes: 2, no: 6, abstained: 1)
+                ]))
+            .padding(AppSpacing.st)
+            .frame(maxWidth: 340)
+            .cardSurface()
         }
     }
 
