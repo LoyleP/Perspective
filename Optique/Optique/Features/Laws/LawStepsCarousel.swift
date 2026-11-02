@@ -5,6 +5,8 @@ import SwiftUI
 /// dimmed, snapping to centre. It opens on the stage the law is at now.
 struct LawStepsCarousel: View {
     let law: Law
+    /// Index into `law.steps` of the card in the middle (nil on the cards still to come).
+    @Binding var selectedStep: Int?
 
     @State private var selected: String?
     @State private var width: CGFloat = 0
@@ -20,7 +22,9 @@ struct LawStepsCarousel: View {
     }
 
     private var items: [Item] {
-        var items = law.steps.enumerated().map { index, step in
+        // First card: the text being filed, so the "Déposé" part of the progress bar has a card too.
+        var items = [Item(id: "deposit", kind: .done, step: nil, place: law.kind ?? "Texte", label: "Dépôt")]
+        items += law.steps.enumerated().map { index, step in
             let isLast = index == law.steps.count - 1 && !law.isPromulgated
             return Item(id: "step\(index)", kind: isLast ? .current : .done, step: step, place: step.place, label: step.label)
         }
@@ -32,7 +36,7 @@ struct LawStepsCarousel: View {
         return items
     }
 
-    private var cardFraction: CGFloat { dynamicTypeSize.isAccessibilitySize ? 0.88 : 0.76 }
+    private var cardFraction: CGFloat { dynamicTypeSize.isAccessibilitySize ? 0.94 : 0.88 }
     private var cardWidth: CGFloat { max(width * cardFraction, 190) }
     private var sideMargin: CGFloat { max((width - cardWidth) / 2, AppSpacing.m) }
 
@@ -60,6 +64,15 @@ struct LawStepsCarousel: View {
                     .contentMargins(.horizontal, sideMargin, for: .scrollContent)
                     .scrollTargetBehavior(.viewAligned)
                     .scrollPosition(id: $selected, anchor: .center)
+                    .onChange(of: selected) { _, id in
+                        if id == "deposit" {
+                            selectedStep = -1
+                        } else if let id, id.hasPrefix("step"), let index = Int(id.dropFirst(4)) {
+                            selectedStep = index
+                        } else {
+                            selectedStep = nil
+                        }
+                    }
                     .onAppear {
                         let start = items.first { $0.kind == .current } ?? items.last { $0.kind == .done } ?? items.first
                         guard let start else { return }
@@ -107,7 +120,7 @@ struct LawStepsCarousel: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(AppSpacing.st)
+        .padding(AppSpacing.m)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(AppColors.Adaptive.cardSurface, in: RoundedRectangle(cornerRadius: AppRadius.xl))
         .overlay(RoundedRectangle(cornerRadius: AppRadius.xl).stroke(AppColors.stroke, lineWidth: 1))
@@ -120,6 +133,7 @@ struct LawStepsCarousel: View {
         case .current: return "En cours"
         case .upcoming: return "À venir"
         case .done:
+            if item.id == "deposit" { return LawDates.short(law.steps.first?.startedAt) ?? "" }
             if let step = item.step, step.code == "PROM" || step.code == "CC" { return LawDates.short(step.startedAt) ?? "" }
             return item.step?.decision?.capitalizedFirst ?? "Terminé"
         }
@@ -168,6 +182,10 @@ struct LawStepsCarousel: View {
     }
 
     private func explanation(_ item: Item) -> String {
+        if item.id == "deposit" {
+            let author = law.kind == "Projet de loi" ? "Le gouvernement dépose" : "Des parlementaires déposent"
+            return "\(author) le texte devant \(law.steps.first?.chamber == "SN" ? "le Sénat" : "l'Assemblée nationale") : c'est le point de départ. Il est ensuite envoyé en commission."
+        }
         if let step = item.step {
             switch step.code {
             case "CMP": return "Sept députés et sept sénateurs cherchent une version commune quand les deux chambres ne sont pas d'accord."

@@ -6,6 +6,8 @@ struct LawDetailView: View {
     let law: Law
     @State private var detail: Law?
     @State private var selectedStory: Story?
+    /// Step card in the middle of the carousel; the progress bar above follows it.
+    @State private var selectedStep: Int?
     @Environment(\.openURL) private var openURL
 
     private var shown: Law { detail ?? law }
@@ -78,11 +80,11 @@ struct LawDetailView: View {
                 Text(LawExplainer.headline(for: shown))
                     .font(.appBodyStrong)
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
-                LawProgressBar(law: shown, showsLabels: true)
+                LawProgressBar(law: shown, showsLabels: true, selectedStep: selectedStep)
             }
             .padding(.horizontal, AppSpacing.m)
 
-            LawStepsCarousel(law: shown)
+            LawStepsCarousel(law: shown, selectedStep: $selectedStep)
         }
     }
 

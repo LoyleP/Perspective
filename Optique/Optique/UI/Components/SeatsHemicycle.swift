@@ -1,62 +1,62 @@
 import SwiftUI
 
-/// A parliament hemicycle for one vote. Seats are dots on five concentric arcs, grouped by parliamentary
-/// group from the far left to the far right and coloured with the group's lean colour. Within a group,
-/// the members who voted yes are fully lit; no votes and abstentions (hollow) are dimmed, and members
-/// who did not vote are faintest. Without group data it falls back to a plain yes / no split.
+/// A parliament hemicycle for one vote, one dot per member (577 at the Assemblée, 348 at the Sénat).
+/// Dots sit on concentric arcs, grouped by parliamentary group from the far left to the far right and
+/// coloured with the group's lean colour. Within a group, the members who voted yes are fully lit; no
+/// votes and abstentions (hollow) are dimmed, and members who did not vote are faintest. Without group
+/// data it falls back to a plain yes / no split on 120 dots.
 struct SeatsHemicycle: View {
     let vote: LawVote
 
-    private static let seatCount = 120
-    private static let rows = 5
+    private static let fallbackSeatCount = 120
 
     private enum Kind { case yes, abstained, no, absent }
     private struct Seat { let color: Color; let kind: Kind }
 
     var body: some View {
+        let seats = Self.seats(for: vote)
+        let rows = Self.rows(for: seats.count)
         GeometryReader { geo in
-            let points = Self.seatPoints(in: geo.size)
-            let seats = Self.seats(for: vote)
-            let dot = Self.dotSize(in: geo.size)
+            let layout = Self.layout(count: seats.count, rows: rows, in: geo.size)
             Canvas { context, _ in
-                for (index, point) in points.enumerated() where index < seats.count {
+                for (index, point) in layout.points.enumerated() where index < seats.count {
                     let seat = seats[index]
+                    let dot = layout.dot
                     let rect = CGRect(x: point.x - dot / 2, y: point.y - dot / 2, width: dot, height: dot)
                     switch seat.kind {
                     case .yes:
                         context.fill(Path(ellipseIn: rect), with: .color(seat.color))
                     case .no:
-                        context.fill(Path(ellipseIn: rect), with: .color(seat.color.opacity(0.3)))
+                        context.fill(Path(ellipseIn: rect), with: .color(seat.color.opacity(0.38)))
                     case .abstained:
-                        context.stroke(Path(ellipseIn: rect.insetBy(dx: 0.7, dy: 0.7)),
-                                       with: .color(seat.color.opacity(0.45)), lineWidth: 1.3)
+                        context.stroke(Path(ellipseIn: rect.insetBy(dx: 0.5, dy: 0.5)),
+                                       with: .color(seat.color.opacity(0.55)), lineWidth: 1)
                     case .absent:
-                        context.fill(Path(ellipseIn: rect), with: .color(seat.color.opacity(0.1)))
+                        context.fill(Path(ellipseIn: rect), with: .color(seat.color.opacity(0.16)))
                     }
                 }
             }
         }
-        // Tall enough for the outer arc plus one dot of margin above it (no clipping at the top).
-        .aspectRatio(1.85, contentMode: .fit)
+        // Tall enough for the outer arc plus a margin above it (no clipping at the top).
+        .aspectRatio(1.9, contentMode: .fit)
         .accessibilityElement()
         .accessibilityLabel("\(vote.yes) pour, \(vote.no) contre, \(vote.abstained) abstentions")
     }
 
-    private static func dotSize(in size: CGSize) -> CGFloat {
-        let outer = size.width / 2
-        return outer * 0.5 / CGFloat(rows) * 0.74
-    }
+    private static func rows(for count: Int) -> Int { count > 400 ? 11 : count > 200 ? 8 : 5 }
 
-    /// Seat positions sorted from the far left of the arc to the far right.
-    private static func seatPoints(in size: CGSize) -> [CGPoint] {
-        let margin = dotSize(in: size) / 2 + 2
-        let outer = size.width / 2 - margin
-        let inner = outer * 0.5
+    /// Seat positions sorted from the far left of the arc to the far right, and the dot size that fits.
+    private static func layout(count: Int, rows: Int, in size: CGSize) -> (points: [CGPoint], dot: CGFloat) {
+        let outerEdge = size.width / 2
+        let provisionalDot = outerEdge * 0.5 / CGFloat(rows) * 0.8
+        let margin = provisionalDot / 2 + 2
+        let outer = outerEdge - margin
+        let inner = outer * 0.45
         let center = CGPoint(x: size.width / 2, y: size.height - margin)
         let radii = (0..<rows).map { inner + (outer - inner) * CGFloat($0) / CGFloat(rows - 1) }
         let radiusSum = radii.reduce(0, +)
-        var perRow = radii.map { Int((Double(seatCount) * Double($0 / radiusSum)).rounded()) }
-        perRow[perRow.count - 1] += seatCount - perRow.reduce(0, +)
+        var perRow = radii.map { Int((Double(count) * Double($0 / radiusSum)).rounded()) }
+        perRow[perRow.count - 1] += count - perRow.reduce(0, +)
 
         var points: [(angle: Double, row: Int, point: CGPoint)] = []
         for (row, radius) in radii.enumerated() {
@@ -67,7 +67,11 @@ struct SeatsHemicycle: View {
                                                    y: center.y - radius * CGFloat(sin(angle)))))
             }
         }
-        return points.sorted { $0.angle != $1.angle ? $0.angle > $1.angle : $0.row < $1.row }.map(\.point)
+        let rowGap = (outer - inner) / CGFloat(max(rows - 1, 1))
+        let arcGap = CGFloat.pi * outer / CGFloat(max(perRow.last ?? 1, 1))
+        let dot = min(rowGap, arcGap) * 0.82
+        let sorted = points.sorted { $0.angle != $1.angle ? $0.angle > $1.angle : $0.row < $1.row }.map(\.point)
+        return (sorted, dot)
     }
 
     private static func leanColor(_ lean: Int) -> Color {
@@ -95,21 +99,20 @@ struct SeatsHemicycle: View {
 
     private static func seats(for vote: LawVote) -> [Seat] {
         guard let groups = vote.groups, !groups.isEmpty else { return plainSeats(for: vote) }
-        // One block of seats per group, in the order the server sent them (far left to far right).
-        let blocks = allocate(groups.map(\.members), total: seatCount, minimum: false)
+        // One block per group (far left to far right), one seat per member.
         var out: [Seat] = []
-        for (group, size) in zip(groups, blocks) where size > 0 {
+        for group in groups where group.members > 0 {
             let color = leanColor(group.lean)
-            let parts = allocate([group.yes, group.abstained, group.no, group.absent], total: size, minimum: false)
-            let kinds: [Kind] = [.yes, .abstained, .no, .absent]
-            for (kind, count) in zip(kinds, parts) { out += Array(repeating: Seat(color: color, kind: kind), count: count) }
+            let absent = group.absent
+            let kinds: [(Kind, Int)] = [(.yes, group.yes), (.abstained, group.abstained), (.no, group.no), (.absent, absent)]
+            for (kind, count) in kinds { out += Array(repeating: Seat(color: color, kind: kind), count: count) }
         }
         return out
     }
 
     private static func plainSeats(for vote: LawVote) -> [Seat] {
         let ink = AppColors.Adaptive.textPrimary
-        let parts = allocate([vote.yes, vote.abstained, vote.no, vote.absent], total: seatCount, minimum: true)
+        let parts = allocate([vote.yes, vote.abstained, vote.no, vote.absent], total: fallbackSeatCount, minimum: true)
         let kinds: [Kind] = [.yes, .abstained, .no, .absent]
         return zip(kinds, parts).flatMap { Array(repeating: Seat(color: ink, kind: $0.0), count: $0.1) }
     }

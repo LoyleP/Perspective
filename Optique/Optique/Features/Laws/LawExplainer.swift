@@ -68,12 +68,50 @@ enum LawExplainer {
     /// The four stages of the simple bar, and how many are reached.
     static let progressStages = ["Déposé", "Voté par une chambre", "Voté par les deux", "Loi"]
 
-    static func progress(of law: Law) -> Int {
-        if law.isPromulgated { return 4 }
-        let readings = law.steps.filter { $0.code.hasPrefix("AN") || $0.code.hasPrefix("SN") }
-        let chambersVoted = Set(readings.filter { $0.stage == "vote" }.map(\.chamber)).count
-        return min(1 + chambersVoted, 3)
+    /// Where the law stands on the four-segment bar after each of its steps, in segment units (0…4).
+    /// Segment 1 ("Déposé") is full once a text exists; the first reading fills segment 2; every later
+    /// step before the Conseil constitutionnel / promulgation shares segment 3 equally (so a law with
+    /// several readings divides that segment into as many parts); the Conseil constitutionnel and
+    /// the promulgation share segment 4. The step in progress counts partially.
+    static func positions(of law: Law) -> [Double] {
+        let steps = law.steps
+        let isReading: (LawStep) -> Bool = { $0.code.hasPrefix("AN") || $0.code.hasPrefix("SN") }
+        let firstReading = steps.firstIndex(where: isReading)
+        let finals = steps.indices.filter { steps[$0].code == "CC" || steps[$0].code == "PROM" }
+        let middle = steps.indices.filter { $0 != firstReading && !finals.contains($0) }
+
+        /// How far through its own stage a step is (0…1).
+        func fraction(_ step: LawStep) -> Double {
+            if step.code == "CC" || step.code == "PROM" || step.code == "CMP" { return step.stage == "vote" || step.code == "PROM" ? 1 : 0.5 }
+            switch step.stage {
+            case "commission": return 0.25
+            case "seance": return 0.55
+            case "vote", "done": return 1
+            default: return 0
+            }
+        }
+
+        return steps.indices.map { index in
+            let step = steps[index]
+            if index == firstReading { return 1 + fraction(step) }
+            if let k = middle.firstIndex(of: index) {
+                let n = Double(middle.count)
+                return 2 + (Double(k) + fraction(step)) / n
+            }
+            // CC then PROM share the last segment.
+            let slots = Double(finals.count)
+            let k = Double(finals.firstIndex(of: index) ?? 0)
+            return 3 + (k + (step.code == "PROM" ? 1 : fraction(step))) / max(slots, 1)
+        }
     }
+
+    /// Position of the law as a whole (its latest step).
+    static func progressPosition(of law: Law) -> Double {
+        if law.isPromulgated { return 4 }
+        return positions(of: law).last ?? 1
+    }
+
+    static func progress(of law: Law) -> Int { Int(progressPosition(of: law)) }
 
     /// What is happening now, in one or two sentences.
     static func now(for law: Law) -> String {

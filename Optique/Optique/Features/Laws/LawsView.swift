@@ -98,24 +98,36 @@ struct LawsView: View {
     }
 }
 
-/// Four-segment bar: Déposé, Voté par une chambre, Voté par les deux, Loi.
+/// Four-segment bar: Déposé, Voté par une chambre, Voté par les deux, Loi. It shows where the law
+/// stands; with `selectedStep` set (the law page's carousel) it shows where the law stood at that step
+/// and keeps the law's real progress dimmed behind it.
 struct LawProgressBar: View {
     let law: Law
     /// Names each stage under its segment (law page); rows keep the bare bar.
     var showsLabels = false
+    /// Index into `law.steps` of the step being looked at, or nil for the law's current progress.
+    var selectedStep: Int? = nil
+
+    private var current: Double { LawExplainer.progressPosition(of: law) }
+
+    private var lit: Double {
+        guard let step = selectedStep else { return current }
+        if step < 0 { return min(1, current) }   // the filing card
+        let positions = LawExplainer.positions(of: law)
+        guard positions.indices.contains(step) else { return current }
+        return min(positions[step], current)
+    }
 
     var body: some View {
-        let reached = LawExplainer.progress(of: law)
         HStack(alignment: .top, spacing: 4) {
             ForEach(0..<4, id: \.self) { index in
                 VStack(alignment: .leading, spacing: 6) {
-                    Capsule()
-                        .fill(index < reached ? AppColors.Adaptive.textPrimary : AppColors.Adaptive.divider)
-                        .frame(height: 4)
+                    segment(index)
                     if showsLabels {
                         Text(LawExplainer.progressStages[index])
                             .font(.appCaption)
-                            .foregroundStyle(index == max(reached - 1, 0) ? AppColors.Adaptive.textPrimary : AppColors.Adaptive.textMeta)
+                            .foregroundStyle(index == min(Int(max(lit - 0.001, 0)), 3)
+                                             ? AppColors.Adaptive.textPrimary : AppColors.Adaptive.textMeta)
                             .lineLimit(2)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -123,8 +135,31 @@ struct LawProgressBar: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
+        .animation(.app, value: lit)
         .accessibilityElement()
-        .accessibilityLabel("Avancement : \(reached) étapes sur 4")
+        .accessibilityLabel("Avancement : \(Int(current)) étapes sur 4")
+    }
+
+    /// One segment: the track, the law's real progress dimmed, and the progress at the selected step on top.
+    private func segment(_ index: Int) -> some View {
+        let litFraction = min(max(lit - Double(index), 0), 1)
+        let realFraction = min(max(current - Double(index), 0), 1)
+        return Capsule()
+            .fill(AppColors.Adaptive.divider)
+            .frame(height: 4)
+            .overlay(alignment: .leading) {
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Capsule()
+                            .fill(AppColors.Adaptive.textPrimary.opacity(0.3))
+                            .frame(width: geo.size.width * realFraction)
+                        Capsule()
+                            .fill(AppColors.Adaptive.textPrimary)
+                            .frame(width: geo.size.width * litFraction)
+                    }
+                }
+            }
+            .frame(height: 4)
     }
 }
 
