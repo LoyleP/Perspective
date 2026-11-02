@@ -1,11 +1,12 @@
 // @ts-nocheck
 import { pool } from "./db.js";
+import { generate, parseJSON } from "./llm.js";
 
 // Story briefs, written ahead of time so a story never opens on an empty or loading summary:
 //   - dek: one plain sentence on what happened (shown under the title),
 //   - topic + political: a reliable topic and whether the political lens means anything for it,
 //   - spectrum_summary: what each political side's outlets say (same format as the on-demand endpoint).
-// Runs inside the refresh cron and from scripts/backfill-briefs.ts. Several stories per Gemini call.
+// Runs inside the refresh cron and from scripts/backfill-briefs.ts. Several stories per model call (Groq, Gemini fallback).
 
 const BATCH = 4;
 const MIN_SOURCES = 3;
@@ -38,28 +39,6 @@ export async function ensureBriefColumns() {
 }
 
 type Input = { id: string; title: string; grouped: Record<string, { title: string; summary: string | null }[]>; hasSpectrum: boolean };
-
-async function gemini(prompt: string, maxTokens: number): Promise<string | null> {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) return null;
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${key}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.2, maxOutputTokens: maxTokens, responseMimeType: "application/json" },
-      }),
-    }
-  );
-  if (!res.ok) {
-    console.error("Gemini brief error:", res.status, (await res.text()).slice(0, 300));
-    return null;
-  }
-  const data = await res.json();
-  return (data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "").replace(/```json|```/g, "").trim();
-}
 
 function promptFor(stories: Input[]): string {
   const blocks = stories
@@ -113,7 +92,7 @@ async function loadInputs(limit: number): Promise<Input[]> {
       if (a.story_id !== r.id || a.political_lean == null) continue;
       const bucket = leanBucket(a.political_lean);
       (grouped[bucket] ??= []);
-      if (grouped[bucket].length < 4) grouped[bucket].push({ title: a.title, summary: a.summary });
+      if (grouped[bucket].length < 3) grouped[bucket].push({ title: a.title, summary: a.summary });
     }
     return { id: r.id, title: r.title, grouped, hasSpectrum: r.has_spectrum };
   });
@@ -126,13 +105,10 @@ export async function writeBriefs(limit = 24): Promise<number> {
   let written = 0;
   for (let i = 0; i < inputs.length; i += BATCH) {
     const batch = inputs.slice(i, i + BATCH);
-    const raw = await gemini(promptFor(batch), 6000);
+    const raw = await generate(promptFor(batch), 6000);
     if (!raw) break; // quota or outage: the next run picks up where this one stopped
-    let items: any[];
-    try {
-      items = JSON.parse(raw);
-      if (!Array.isArray(items)) throw new Error("not an array");
-    } catch (e) {
+    const items = parseJSON(raw);
+    if (!Array.isArray(items)) {
       console.error("Brief JSON parse failed:", raw.slice(0, 300));
       continue;
     }

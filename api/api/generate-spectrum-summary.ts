@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { pool } from "../lib/db.js";
+import { generate } from "../lib/llm.js";
 
 const LEAN_LABELS: Record<string, string> = {
   extreme_gauche: "Extrême-gauche",
@@ -111,51 +112,14 @@ Articles par tendance politique :
 
 ${articlesBlock}`;
 
-  // Call Gemini 2.5 Flash-Lite.
-  const geminiKey = process.env.GEMINI_API_KEY;
-  if (!geminiKey) {
-    return new Response(JSON.stringify({ error: "Missing GEMINI_API_KEY" }), {
-      status: 500,
+  // Groq first, Gemini as a fallback (lib/llm.ts).
+  const rawText = await generate(prompt, 1000);
+  if (!rawText) {
+    return new Response(JSON.stringify({ error: "Model unavailable" }), {
+      status: 503,
       headers: { "Content-Type": "application/json" },
     });
   }
-
-  let geminiResponse: Response;
-  try {
-    geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${geminiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.2,
-            maxOutputTokens: 1000,
-          },
-        }),
-      }
-    );
-  } catch (e) {
-    console.error("Gemini fetch failed:", e);
-    return new Response(JSON.stringify({ error: "Gemini request failed" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-
-  if (!geminiResponse.ok) {
-    const errText = await geminiResponse.text();
-    console.error("Gemini error response:", errText);
-    return new Response(JSON.stringify({ error: "Gemini API error" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-
-  const geminiData = await geminiResponse.json();
-  const rawText: string =
-    geminiData?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
 
   // Strip markdown code fences Gemini sometimes adds despite instructions.
   const cleanedText = rawText

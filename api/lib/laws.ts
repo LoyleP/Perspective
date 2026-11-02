@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { pool } from "./db.js";
+import { generate, parseJSON } from "./llm.js";
 
 // Laws followed in the "Lois" tab. Source: Tricoteuses "API Parlement" (Assemblée nationale + Sénat
 // open data, cleaned; refreshed daily upstream). We keep every government bill in progress (minus
@@ -239,8 +240,7 @@ export function upcoming(steps: any[], title: string): string[] {
  * understand, why it matters to an ordinary reader, and a 2-sentence summary.
  */
 async function explainLaws(laws: { uid: string; title: string; expose: string | null }[]) {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key || laws.length === 0) return {};
+  if (laws.length === 0) return {};
   const block = laws
     .map((l) => `### [${l.uid}] ${l.title}\n${(l.expose ?? "(exposé des motifs non disponible)").slice(0, 2500)}`)
     .join("\n\n");
@@ -255,26 +255,10 @@ Réponds UNIQUEMENT avec du JSON valide : [{ "uid": "...", "plain_title": "...",
 Textes :
 
 ${block}`;
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${key}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.2, maxOutputTokens: 2500, responseMimeType: "application/json" },
-      }),
-    }
-  );
-  if (!res.ok) {
-    console.error("Gemini law explain error:", res.status);
-    return {};
-  }
-  const data = await res.json();
-  const raw = (data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "").replace(/```json|```/g, "").trim();
+  const raw = (await generate(prompt, 2500)) ?? "";
   const out: Record<string, { plain_title: string; why: string; summary: string }> = {};
   try {
-    for (const item of JSON.parse(raw)) {
+    for (const item of parseJSON(raw) ?? []) {
       const uid = String(item.uid ?? "").replace(/[\[\]\s]/g, "");
       if (!laws.some((l) => l.uid === uid)) continue;
       const clean = (v: unknown) => String(v ?? "").replace(/\s+/g, " ").trim();
