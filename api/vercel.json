@@ -1,7 +1,23 @@
 {
   "functions": {
-    "api/refresh-stories.ts": { "maxDuration": 300 },
-    "api/generate-spectrum-summary.ts": { "maxDuration": 60 }
+    "api/refresh-stories.ts": {
+      "maxDuration": 300
+    },
+    "api/generate-spectrum-summary.ts": {
+      "maxDuration": 60
+    },
+    "api/laws.ts": {
+      "maxDuration": 300
+    }
   },
-  "crons": [{ "path": "/api/refresh-stories", "schedule": "0 4 * * *" }]
+  "crons": [
+    {
+      "path": "/api/refresh-stories",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/laws?sync=full",
+      "schedule": "0 5 * * *"
+    }
+  ]
 }

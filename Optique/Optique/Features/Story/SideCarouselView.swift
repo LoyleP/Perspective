@@ -32,7 +32,7 @@ struct SideCarouselView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.m) {
-            header
+            pie
                 .padding(.horizontal, AppSpacing.m)
 
             // Built only once the width is known, so the side margins (and therefore the first
@@ -77,18 +77,32 @@ struct SideCarouselView: View {
         )
     }
 
-    // MARK: - Header
+    // MARK: - Dial
 
-    private var header: some View {
-        let count = story.sources.count
-        return VStack(alignment: .leading, spacing: 2) {
-            Text("Ce que disent les médias")
-                .font(.appHeading)
-                .foregroundStyle(AppColors.Adaptive.textPrimary)
-                .accessibilityAddTraits(.isHeader)
-            Text("\(coverage?.verdict ?? "Peu de sources") · \(count == 1 ? "1 source" : "\(count) sources")")
-                .font(.appCaption)
-                .foregroundStyle(AppColors.Adaptive.textMeta)
+    /// Positions that have coverage, left to right, with their article counts.
+    private var slices: [(lean: PoliticalLean, count: Int)] {
+        PoliticalLean.allCases.compactMap { lean in
+            let count = coverage?.countsByLean[lean] ?? 0
+            return count > 0 ? (lean, count) : nil
+        }
+    }
+
+    private func select(_ lean: PoliticalLean) {
+        withAnimation(.app) { selected = lean.id }
+    }
+
+    /// Dial of the coverage across the scale (all five positions, left to right). Tapping an arc
+    /// brings that position's card to the centre of the carousel and swings the needle to it.
+    @ViewBuilder
+    private var pie: some View {
+        if let coverage {
+            CoverageDial(
+                shares: PoliticalLean.allCases.map { ($0, coverage.share(of: $0)) },
+                selected: selected.flatMap { id in PoliticalLean.allCases.first { $0.id == id } },
+                onSelect: select
+            )
+            .frame(maxWidth: 340)
+            .frame(maxWidth: .infinity)
         }
     }
 

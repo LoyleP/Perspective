@@ -50,6 +50,7 @@ struct RootView: View {
                 })
                 .ignoresSafeArea(edges: [])
             tab(0) { NavigationStack { FeedView() } }
+            tab(3) { NavigationStack { LawsView(isActive: selectedTab == 3) } }
             tab(1) { NavigationStack { DiscoverView(searchText: $discoverSearchText) } }
             tab(2) { NavigationStack { AlertesView(isActive: selectedTab == 2) } }
         }
@@ -57,6 +58,7 @@ struct RootView: View {
             FloatingTabBar(
                 items: [
                     .init(id: 0, accessibilityLabel: "À la une", icon: "home", hasSolid: true),
+                    .init(id: 3, accessibilityLabel: "Lois", icon: "building-library"),
                     .init(id: 1, accessibilityLabel: "Explorer", icon: "magnifying-glass"),
                     .init(id: 2, accessibilityLabel: hasUnreadAlerts ? "Alertes, nouvelles alertes" : "Alertes",
                           icon: "bell", hasSolid: true, showsBadge: hasUnreadAlerts)

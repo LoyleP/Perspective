@@ -1,0 +1,294 @@
+// @ts-nocheck
+import { pool } from "./db.js";
+
+// Laws followed in the "Lois" tab. Source: Tricoteuses "API Parlement" (Assemblée nationale + Sénat
+// open data, cleaned; refreshed daily upstream). We keep every government bill in progress (minus
+// treaty ratifications) and the members' bills that match stories in the feed.
+
+const API = "https://parlement.tricoteuses.fr";
+const LEGISLATURE = 17;
+const FULL_WINDOW_DAYS = 120;      // a full sync looks at dossiers active in the last 4 months
+const MIN_SYNC_INTERVAL = "10 minutes";
+const STORY_WINDOW_DAYS = 45;
+const MAX_STORIES_PER_LAW = 6;
+/** Summed rarity (IDF) of the shared words: two words seen in under ~0.5 % of stories each. */
+const MIN_MATCH_WEIGHT = 10.5;
+const SUMMARIES_PER_SYNC = 8;
+
+async function tric(path: string, params: Record<string, string | number> = {}) {
+  const url = new URL(path, API);
+  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, String(v));
+  const res = await fetch(url, { signal: AbortSignal.timeout(20_000) });
+  if (!res.ok) throw new Error(`Tricoteuses ${res.status} for ${url.pathname}`);
+  const body = await res.json();
+  return body.data ?? body;
+}
+
+// ── Story matching ────────────────────────────────────────────────────────────
+
+const STOPWORDS = new Set([
+  "projet", "proposition", "relative", "relatif", "relatives", "relatifs", "visant", "portant",
+  "renforcer", "diverses", "dispositions", "mesures", "creer", "creation", "francaise", "francais",
+  "nationale", "national", "generale", "general", "publique", "public", "droit", "droits", "matiere",
+  "application", "article", "articles", "ordonnance", "mise", "place", "cadre", "ameliorer",
+  "amelioration", "lutte", "lutter", "contre", "pour", "dans", "avec", "sein", "leurs", "leur",
+  "afin", "certaines", "certains", "ainsi", "entre", "vers", "faire", "permettre", "garantir",
+  "assurer", "constitutionnelle", "organique", "republique", "france", "etat", "annee", "loi", "lois",
+  "parlement", "europeen", "europeenne", "directive", "transposition", "union", "produits", "commis",
+  "lors", "debat", "organisation", "organiser", "renforcement", "prevention", "exercice", "usage",
+]);
+
+function stems(text: string): Set<string> {
+  return new Set(
+    text
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .split(/[^a-z0-9]+/)
+      .filter((w) => w.length >= 4 && !STOPWORDS.has(w))
+      .map((w) => w.slice(0, 6))
+  );
+}
+
+/** Story titles about Parliament's work, the only ones a law can be linked to. */
+const PARLIAMENTARY = /\b(lois?|législ\w*|parlement\w*|assemblée|sénat\w*|députés?|amendements?|hémicycle|vot(e|é|ée|és|ent|er)|adopt\w*|projet de loi|proposition de loi|PLF|PLFSS|budget|49[.,]3|motion)\b/i;
+
+type StoryRef = { id: string; stems: Set<string>; at: number };
+
+async function recentStories(): Promise<{ stories: StoryRef[]; df: Map<string, number> }> {
+  const { rows } = await pool.query(
+    `SELECT s.id, s.title, s.last_updated_at
+       FROM stories s
+      WHERE s.last_updated_at > now() - make_interval(days => $1)
+        AND (SELECT count(*) FROM articles a WHERE a.story_id = s.id AND a.is_primary) >= 3`,
+    [STORY_WINDOW_DAYS]
+  );
+  // Word frequencies over every recent story, to tell distinctive words from common ones.
+  const df = new Map<string, number>();
+  const all = rows.map((r) => ({ id: r.id, title: r.title, stems: stems(r.title), at: new Date(r.last_updated_at).getTime() }));
+  for (const s of all) for (const w of s.stems) df.set(w, (df.get(w) ?? 0) + 1);
+  const stories = all.filter((s) => PARLIAMENTARY.test(s.title)).map(({ title, ...rest }) => rest);
+  return { stories, df: Object.assign(df, { total: all.length }) as any };
+}
+
+/**
+ * Stories about Parliament that share at least two words with the law's title, weighted by how rare
+ * each word is across the feed (inverse document frequency): "victimes" + "enfants" alone never link
+ * a law to a crime story, "casseur" + "payeur" do.
+ */
+function matchStories(title: string, corpus: Awaited<ReturnType<typeof recentStories>>): string[] {
+  const words = stems(title);
+  if (words.size === 0) return [];
+  const total = (corpus.df as any).total || 1;
+  const idf = (w: string) => Math.log(total / Math.max(corpus.df.get(w) ?? 1, 1));
+  return corpus.stories
+    .map((s) => {
+      const shared = [...words].filter((w) => s.stems.has(w));
+      return { s, score: shared.length, weight: shared.reduce((sum, w) => sum + idf(w), 0) };
+    })
+    .filter((x) => x.score >= Math.min(2, words.size) && x.weight >= MIN_MATCH_WEIGHT)
+    .sort((a, b) => b.weight - a.weight || b.s.at - a.s.at)
+    .slice(0, MAX_STORIES_PER_LAW)
+    .map((x) => x.s.id);
+}
+
+// ── Steps ─────────────────────────────────────────────────────────────────────
+
+const READINGS: Record<string, string> = {
+  AN1: "1re lecture", SN1: "1re lecture", AN2: "2e lecture", SN2: "2e lecture",
+  AN3: "3e lecture", SN3: "3e lecture", ANNLEC: "Nouvelle lecture", SNNLEC: "Nouvelle lecture",
+  ANLDEF: "Lecture définitive", ANLUNI: "Lecture unique", SNLUNI: "Lecture unique",
+  CMP: "Commission mixte paritaire", CC: "Conseil constitutionnel", PROM: "Promulgation",
+};
+
+function chamberOf(code: string, chambre: string | null): string {
+  if (code.startsWith("AN")) return "AN";
+  if (code.startsWith("SN")) return "SN";
+  if (code === "CMP") return "CMP";
+  if (code === "CC") return "CC";
+  if (code === "PROM") return "GVT";
+  return chambre ?? "AUTRE";
+}
+
+const day = (d: string | null) => (d ? d.slice(0, 10) : null);
+
+/** One step per reading (top-level act), with where it stands inside that reading. */
+export function buildSteps(actes: any[]) {
+  const byDate = (a: any, b: any) => (a.dateActe ?? "9999").localeCompare(b.dateActe ?? "9999");
+  const tops = actes.filter((a) => !a.parentUid).sort(byDate);
+  return tops.map((top) => {
+    const code = top.codeActe;
+    const kids = actes.filter((a) => a.codeActe.startsWith(code + "-")).sort(byDate);
+    const first = (suffix: string) => kids.find((a) => a.codeActe.includes(suffix) && a.dateActe);
+    const decisionActe = [...kids].reverse().find((a) => a.codeActe.endsWith("-DEC") || a.xsiType === "Decision_Type");
+    const commission = first("-COM");
+    const debate = first("-DEBATS");
+    const publication = kids.find((a) => a.codeActe === "PROM-PUB");
+    const decision =
+      decisionActe?.libelleStatutConclusion ?? decisionActe?.libelleDecision ?? (code === "CC" ? top.libelleDecision : null);
+    const stage = code === "PROM" ? "done" : decision ? "vote" : debate ? "seance" : commission ? "commission" : "depot";
+    return {
+      code,
+      chamber: chamberOf(code, top.chambre),
+      label: READINGS[code] ?? top.libelleCourtActe ?? top.nomCanonique ?? code,
+      startedAt: day(top.dateActe ?? kids[0]?.dateActe ?? null),
+      stage,
+      decision: decision ?? null,
+      commissionAt: day(commission?.dateActe ?? null),
+      debateAt: day(debate?.dateActe ?? null),
+      decidedAt: day(decisionActe?.dateActe ?? null),
+      lawTitle: publication?.titreLoi ?? null,
+      url: publication?.urlLegifrance ?? top.urlConclusionConseilConstitutionnel ?? null,
+    };
+  });
+}
+
+/** Generic steps still to come, so the path shows where the text is heading. */
+export function upcoming(steps: any[], title: string): string[] {
+  if (steps.some((s) => s.code === "PROM")) return [];
+  const finale = /constitutionnelle/i.test(title) ? "Congrès ou référendum" : "Promulgation";
+  if (steps.some((s) => s.code === "CC")) return [finale];
+  const chambers = new Set(steps.map((s) => s.chamber).filter((c) => c === "AN" || c === "SN"));
+  if (chambers.size <= 1) {
+    const other = chambers.has("SN") ? "Assemblée" : "Sénat";
+    return [`1re lecture · ${other}`, "Adoption définitive", finale];
+  }
+  return ["Adoption définitive", finale];
+}
+
+// ── Summary ───────────────────────────────────────────────────────────────────
+
+async function summarize(title: string, expose: string | null): Promise<string | null> {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) return null;
+  const prompt = `Tu expliques la loi à un lecteur qui ne connaît rien au droit. À partir du titre et de l'exposé des motifs ci-dessous, écris 2 phrases courtes et simples, en français, qui disent concrètement ce que ce texte changerait et pour qui. Pas de jargon juridique, pas d'opinion, pas de formule d'introduction, pas de guillemets.
+
+Titre : ${title}
+
+Exposé des motifs :
+${(expose ?? "(non disponible)").slice(0, 6000)}`;
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${key}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.2, maxOutputTokens: 300 },
+      }),
+    }
+  );
+  if (!res.ok) {
+    console.error("Gemini law summary error:", res.status);
+    return null;
+  }
+  const data = await res.json();
+  const text = (data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "").replace(/\s+/g, " ").trim();
+  return text || null;
+}
+
+// ── Sync ──────────────────────────────────────────────────────────────────────
+
+const isTreaty = (title: string) =>
+  /autorisant (la ratification|l['’]approbation|l['’]adhésion)|ratifiant l['’]ordonnance|ratification de l['’]ordonnance/i.test(title);
+
+async function listDossiers(since: string) {
+  const out: any[] = [];
+  for (let page = 1; page <= 20; page++) {
+    const batch = await tric("/dossiers/json", {
+      xsiType: "DossierLegislatif_Type",
+      legislature: LEGISLATURE,
+      typeInitiative: "Projet de loi,Proposition de loi",
+      "dateDernierActe.gte": since,
+      sort: "dateDernierActe.desc",
+      perPage: 100,
+      page,
+      select: "uid,titre,typeInitiative,statut,etat,procedureAcceleree,dateDepot,dateDernierActe,senatChemin,documentDeposeRefUid",
+    });
+    out.push(...batch);
+    if (batch.length < 100) break;
+  }
+  return out;
+}
+
+/**
+ * Brings the laws table up to date. Incremental runs (at most every 10 minutes, triggered by the
+ * app) only look at dossiers with a recent act; a full run (daily) re-selects everything active.
+ */
+export async function syncLaws({ full = false } = {}): Promise<{ skipped?: boolean; updated: number }> {
+  await pool.query("INSERT INTO laws_sync (id) VALUES (1) ON CONFLICT DO NOTHING");
+  const { rows: claim } = await pool.query(
+    `UPDATE laws_sync SET synced_at = now()
+      WHERE id = 1 AND (synced_at IS NULL OR synced_at < now() - $1::interval)
+      RETURNING full_at`,
+    [full ? "0 seconds" : MIN_SYNC_INTERVAL]
+  );
+  if (claim.length === 0) return { skipped: true, updated: 0 };
+  const lastFull = claim[0].full_at ? new Date(claim[0].full_at).getTime() : 0;
+  const doFull = full || Date.now() - lastFull > 24 * 3600 * 1000;
+  const sinceDays = doFull ? FULL_WINDOW_DAYS : 3;
+  const since = new Date(Date.now() - sinceDays * 86400 * 1000).toISOString().slice(0, 10);
+
+  const [dossiers, stories] = await Promise.all([listDossiers(since), recentStories()]);
+
+  let updated = 0;
+  for (const d of dossiers) {
+    if (isTreaty(d.titre)) continue;
+    const storyIds = matchStories(d.titre, stories);
+    const keep = d.typeInitiative === "Projet de loi" || storyIds.length > 0;
+    if (!keep) continue;
+    const actes = await tric("/actesLegislatifs/json", { dossierRefUid: d.uid, perPage: 300 });
+    const steps = buildSteps(actes);
+    const promulgated = steps.some((s) => s.code === "PROM");
+    await pool.query(
+      `INSERT INTO laws (uid, title, kind, status, state, accelerated, deposited_at, last_act_at, steps,
+                         story_ids, senat_url, document_uid, synced_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::uuid[], $11, $12, now())
+       ON CONFLICT (uid) DO UPDATE SET
+         title = EXCLUDED.title, kind = EXCLUDED.kind, status = EXCLUDED.status, state = EXCLUDED.state,
+         accelerated = EXCLUDED.accelerated, last_act_at = EXCLUDED.last_act_at, steps = EXCLUDED.steps,
+         story_ids = EXCLUDED.story_ids, senat_url = EXCLUDED.senat_url,
+         document_uid = EXCLUDED.document_uid, synced_at = now()`,
+      [
+        d.uid, d.titre, d.typeInitiative, d.statut, promulgated ? "Promulguée" : d.etat,
+        !!d.procedureAcceleree, d.dateDepot, d.dateDernierActe, JSON.stringify(steps),
+        storyIds, d.senatChemin, d.documentDeposeRefUid,
+      ]
+    );
+    updated++;
+  }
+
+  // Story links drift as the feed moves on: refresh them for every law, not just the changed ones.
+  const { rows: laws } = await pool.query("SELECT uid, title FROM laws");
+  for (const law of laws) {
+    await pool.query("UPDATE laws SET story_ids = $2::uuid[] WHERE uid = $1", [law.uid, matchStories(law.title, stories)]);
+  }
+
+  // The same text can have both an Assemblée and a Sénat dossier: keep the one with the longer history.
+  await pool.query(`DELETE FROM laws a USING laws b
+                     WHERE lower(a.title) = lower(b.title) AND a.uid <> b.uid
+                       AND (jsonb_array_length(a.steps), a.uid) < (jsonb_array_length(b.steps), b.uid)`);
+
+  // Members' bills are only listed while the news covers them.
+  await pool.query("DELETE FROM laws WHERE kind = 'Proposition de loi' AND cardinality(story_ids) = 0");
+
+  // Plain-language summaries and short titles, a few per run (Gemini quota).
+  const { rows: missing } = await pool.query(
+    `SELECT uid, title, document_uid FROM laws WHERE summary IS NULL ORDER BY last_act_at DESC LIMIT $1`,
+    [SUMMARIES_PER_SYNC]
+  );
+  for (const law of missing) {
+    let doc = null;
+    try {
+      doc = law.document_uid ? await tric(`/documents/${law.document_uid}`) : null;
+    } catch {}
+    const summary = await summarize(law.title, doc?.exposeMotifsTexte ?? null);
+    await pool.query(
+      "UPDATE laws SET summary = COALESCE($2, summary), summary_at = CASE WHEN $2 IS NULL THEN summary_at ELSE now() END, short_title = COALESCE(short_title, $3) WHERE uid = $1",
+      [law.uid, summary, doc?.titrePrincipalCourt ?? null]
+    );
+  }
+
+  if (doFull) await pool.query("UPDATE laws_sync SET full_at = now() WHERE id = 1");
+  return { updated };
+}

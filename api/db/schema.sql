@@ -78,3 +78,31 @@ CREATE TABLE IF NOT EXISTS source_logos (
   origin_url text,
   updated_at timestamptz NOT NULL DEFAULT now()
 );
+
+-- Laws followed in the "Lois" tab, synced from the Tricoteuses API Parlement (AN + Sénat).
+CREATE TABLE IF NOT EXISTS laws (
+  uid           text PRIMARY KEY,           -- Assemblée dossier uid, e.g. DLR5L17N54218
+  title         text NOT NULL,
+  short_title   text,
+  kind          text,                       -- "Projet de loi" | "Proposition de loi"
+  status        text,                       -- current stage label from the source
+  state         text,                       -- "En cours", "Promulguée", …
+  accelerated   boolean NOT NULL DEFAULT false,
+  deposited_at  timestamptz,
+  last_act_at   timestamptz,
+  steps         jsonb NOT NULL DEFAULT '[]',
+  summary       text,
+  summary_at    timestamptz,
+  story_ids     uuid[] NOT NULL DEFAULT '{}',
+  senat_url     text,
+  document_uid  text,
+  synced_at     timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS laws_last_act_idx ON laws (last_act_at DESC);
+
+-- One row: when the laws were last synced (claimed before syncing so runs don't overlap).
+CREATE TABLE IF NOT EXISTS laws_sync (
+  id         int PRIMARY KEY DEFAULT 1,
+  synced_at  timestamptz,
+  full_at    timestamptz
+);
