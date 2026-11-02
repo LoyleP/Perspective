@@ -36,8 +36,13 @@ struct LawStepsCarousel: View {
         return items
     }
 
-    private var cardFraction: CGFloat { dynamicTypeSize.isAccessibilitySize ? 0.94 : 0.88 }
+    private var cardFraction: CGFloat { dynamicTypeSize.isAccessibilitySize ? 0.88 : 0.8 }
     private var cardWidth: CGFloat { max(width * cardFraction, 190) }
+    /// Height of a reading card that shows a hemicycle: header, label, strip, hemicycle (aspect 1.9), tally.
+    private var fullCardHeight: CGFloat {
+        let inner = cardWidth - 2 * AppSpacing.m
+        return AppSpacing.m * 2 + 150 + inner / 1.9 + 44
+    }
     private var sideMargin: CGFloat { max((width - cardWidth) / 2, AppSpacing.m) }
 
     var body: some View {
@@ -45,7 +50,7 @@ struct LawStepsCarousel: View {
             if width > 0 {
                 ScrollViewReader { proxy in
                     ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(alignment: .top, spacing: AppSpacing.st) {
+                        HStack(alignment: .top, spacing: AppSpacing.s) {
                             ForEach(items) { item in
                                 card(item)
                                     .frame(width: cardWidth)
@@ -97,76 +102,111 @@ struct LawStepsCarousel: View {
 
     private func card(_ item: Item) -> some View {
         VStack(alignment: .leading, spacing: AppSpacing.st) {
-            Text(item.place)
-                .font(.appBodyStrong)
-                .foregroundStyle(AppColors.Adaptive.textPrimary)
+            HStack(alignment: .firstTextBaseline) {
+                Text(item.place)
+                    .font(.geist(.body, .medium))
+                    .foregroundStyle(AppColors.Adaptive.textPrimary)
+                Spacer(minLength: AppSpacing.s)
+                if let status = status(item) { StatusTag(text: status.text, icon: status.icon, tone: status.tone) }
+            }
 
             HStack(alignment: .firstTextBaseline, spacing: AppSpacing.s) {
                 Text(item.label)
-                    .font(.appTitle)
+                    .font(.geist(.title, .medium))
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
-                Text(badge(item))
-                    .font(.appCaption)
-                    .foregroundStyle(AppColors.Adaptive.textMeta)
+                if let date = dateBeside(item) {
+                    Text(date)
+                        .font(.appCaption)
+                        .foregroundStyle(AppColors.Adaptive.textMeta)
+                }
             }
 
             if let step = item.step, step.code.hasPrefix("AN") || step.code.hasPrefix("SN") {
-                readingLines(step)
-                if let vote = step.vote { voteBlock(vote) }
+                readingStrip(step)
+                // The vote slot: the hemicycle once there was a public vote, a short note until then.
+                if let vote = step.vote {
+                    voteBlock(vote)
+                } else {
+                    step.stage == "vote"
+                        ? iconNote(icon: "hand-raised", text: "Vote à main levée, sans décompte par député.", muted: false)
+                        : iconNote(icon: "calendar", text: "Le vote n'a pas encore eu lieu.", muted: true)
+                }
             } else {
-                Text(explanation(item))
-                    .font(.appBody)
-                    .foregroundStyle(item.kind == .upcoming ? AppColors.Adaptive.textMeta : AppColors.Adaptive.textBody)
-                    .fixedSize(horizontal: false, vertical: true)
+                iconNote(item)
             }
         }
         .padding(AppSpacing.m)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        // Every card has the height of one with a full hemicycle (also when none of them has one),
+        // and stretches to the tallest in the row.
+        .frame(minHeight: fullCardHeight)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(AppColors.Adaptive.cardSurface, in: RoundedRectangle(cornerRadius: AppRadius.xl))
         .overlay(RoundedRectangle(cornerRadius: AppRadius.xl).stroke(AppColors.stroke, lineWidth: 1))
         .opacity(item.kind == .upcoming ? 0.7 : 1)
         .accessibilityElement(children: .combine)
     }
 
-    private func badge(_ item: Item) -> String {
-        switch item.kind {
-        case .current: return "En cours"
-        case .upcoming: return "À venir"
-        case .done:
-            if item.id == "deposit" { return LawDates.short(law.steps.first?.startedAt) ?? "" }
-            if let step = item.step, step.code == "PROM" || step.code == "CC" { return LawDates.short(step.startedAt) ?? "" }
-            return item.step?.decision?.capitalizedFirst ?? "Terminé"
-        }
-    }
-
-    /// Dépôt · Commission · Séance · Vote of one reading, with a bullet filled once reached.
-    private func readingLines(_ step: LawStep) -> some View {
-        let lines: [(String, String?, Bool)] = [
-            ("Dépôt", LawDates.short(step.startedAt), true),
-            ("Commission", LawDates.short(step.commissionAt), step.commissionAt != nil),
-            ("Séance publique", LawDates.short(step.debateAt), step.debateAt != nil),
-            ("Vote", [step.decision?.capitalizedFirst, LawDates.short(step.decidedAt)].compactMap { $0 }.joined(separator: " · "),
-             step.decision != nil)
-        ]
-        return VStack(alignment: .leading, spacing: AppSpacing.s) {
-            ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
-                HStack(alignment: .center, spacing: AppSpacing.s) {
-                    Circle()
-                        .fill(line.2 ? AppColors.Adaptive.textPrimary : AppColors.Adaptive.divider)
-                        .frame(width: 5, height: 5)
-                        .accessibilityHidden(true)
-                    Text(line.0)
-                        .font(.appBody)
-                        .foregroundStyle(line.2 ? AppColors.Adaptive.textBody : AppColors.Adaptive.textMeta)
-                    Spacer(minLength: 0)
-                    if let detail = line.1, !detail.isEmpty {
-                        Text(detail)
-                            .font(.appCaption)
-                            .foregroundStyle(AppColors.Adaptive.textMeta)
-                    }
-                }
+    /// Status tag in the card's top right corner, like a to-do list.
+    private func status(_ item: Item) -> (text: String, icon: String, tone: StatusTag.Tone)? {
+        if item.id == "deposit" { return nil }
+        if item.kind == .upcoming { return ("À venir", "calendar", .neutral) }
+        if let step = item.step {
+            if step.code == "PROM" { return ("Promulguée", "check-badge", .success) }
+            if let decision = step.decision?.lowercased() {
+                if decision.hasPrefix("adopt") { return ("Adopté", "check-circle", .success) }
+                if decision.hasPrefix("rejet") { return ("Rejeté", "x-circle", .danger) }
+                if decision.hasPrefix("modif") { return ("Modifié", "pencil", .info) }
+                return (decision.capitalizedFirst, "check-circle", .neutral)
             }
         }
+        return item.kind == .current ? ("En cours", "clock", .progress) : ("Terminé", "check-circle", .neutral)
+    }
+
+    /// Dates shown next to the big label on the cards that have no vote (filing, Conseil constitutionnel, promulgation).
+    private func dateBeside(_ item: Item) -> String? {
+        if item.id == "deposit" { return LawDates.short(law.steps.first?.startedAt) }
+        if let step = item.step, step.code == "PROM" || step.code == "CC" { return LawDates.short(step.startedAt) }
+        return nil
+    }
+
+    /// Dépôt · Commission · Séance · Vote of one reading, as four bar segments like the progress bar above
+    /// the cards: lit up to the stage reached, each labelled with its name and date, text aligned left.
+    private func readingStrip(_ step: LawStep) -> some View {
+        let moments: [(String, String?, Bool)] = [
+            ("Dépôt", step.startedAt, true),
+            ("Comm.", step.commissionAt, step.commissionAt != nil),
+            ("Séance", step.debateAt, step.debateAt != nil),
+            ("Vote", step.decidedAt, step.decision != nil)
+        ]
+        return HStack(alignment: .top, spacing: 4) {
+            ForEach(Array(moments.enumerated()), id: \.offset) { _, moment in
+                VStack(alignment: .leading, spacing: 6) {
+                    Capsule()
+                        .fill(moment.2 ? AppColors.Adaptive.textPrimary : AppColors.Adaptive.divider)
+                        .frame(height: 4)
+                    Text(moment.0)
+                        .font(.appCaption)
+                        .foregroundStyle(moment.2 ? AppColors.Adaptive.textPrimary : AppColors.Adaptive.textMeta)
+                        .lineLimit(1)
+                    Text(LawDates.shortDay(moment.1) ?? " ")
+                        .font(.appCaption)
+                        .foregroundStyle(AppColors.Adaptive.textMeta)
+                        .lineLimit(1)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    /// Text filling the card's lower slot, aligned left.
+    private func slotText(_ text: String, muted: Bool = false) -> some View {
+        Text(text)
+            .font(.appBody)
+            .foregroundStyle(muted ? AppColors.Adaptive.textMeta : AppColors.Adaptive.textBody)
+            .multilineTextAlignment(.leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     /// The closing vote as a hemicycle: yes seats lit, the rest dimmed, with the tally under it.
@@ -181,24 +221,74 @@ struct LawStepsCarousel: View {
         .padding(.top, AppSpacing.s)
     }
 
-    private func explanation(_ item: Item) -> String {
-        if item.id == "deposit" {
-            let author = law.kind == "Projet de loi" ? "Le gouvernement dépose" : "Des parlementaires déposent"
-            return "\(author) le texte devant \(law.steps.first?.chamber == "SN" ? "le Sénat" : "l'Assemblée nationale") : c'est le point de départ. Il est ensuite envoyé en commission."
+    /// Short line for the stages that have no reading strip, with an icon above it, centred in the card's free space.
+    private func iconNote(_ item: Item) -> some View {
+        let note = noteContent(item)
+        return iconNote(icon: note.icon, text: note.text, muted: item.kind == .upcoming)
+    }
+
+    private func iconNote(icon: String, text: String, muted: Bool) -> some View {
+        VStack(spacing: AppSpacing.st) {
+            HeroIcon(icon, size: 36)
+                .foregroundStyle(muted ? AppColors.Adaptive.textMeta : AppColors.Adaptive.textBody)
+            Text(text)
+                .font(.appBody)
+                .foregroundStyle(muted ? AppColors.Adaptive.textMeta : AppColors.Adaptive.textBody)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func noteContent(_ item: Item) -> (icon: String, text: String) {
+        if item.id == "deposit" { return ("document-text", "Le texte est déposé, puis envoyé en commission.") }
         if let step = item.step {
             switch step.code {
-            case "CMP": return "Sept députés et sept sénateurs cherchent une version commune quand les deux chambres ne sont pas d'accord."
-            case "CC": return "Le Conseil constitutionnel a vérifié que la loi respecte la Constitution."
-            case "PROM": return "La loi est promulguée et publiée au Journal officiel : elle s'applique."
+            case "CMP": return ("arrow-path", "Députés et sénateurs cherchent un accord.")
+            case "CC": return ("scale", "Le Conseil constitutionnel a vérifié le texte.")
+            case "PROM": return ("check-badge", "La loi est publiée au Journal officiel.")
             default: break
             }
         }
         switch item.label {
-        case "Adoption définitive": return "Les deux chambres doivent voter un texte identique."
-        case "Promulgation": return "Le président promulgue la loi, qui est publiée au Journal officiel."
-        case "Congrès ou référendum": return "Une révision de la Constitution doit être validée par le Congrès ou par référendum."
-        default: return "Le texte sera examiné en commission, débattu puis voté dans \(item.place == "Sénat" ? "le Sénat" : "l'Assemblée")."
+        case "Adoption définitive": return ("check-circle", "Les deux chambres votent le même texte.")
+        case "Promulgation": return ("check-badge", "Le président promulgue la loi.")
+        case "Congrès ou référendum": return ("building-library", "Le Congrès ou le peuple valide la révision.")
+        default: return ("building-library", "Examen par \(item.place == "Sénat" ? "le Sénat" : "l'Assemblée").")
         }
+    }
+}
+
+/// Coloured status pill (to-do list style): green adopted, red rejected, amber in progress, blue amended.
+private struct StatusTag: View {
+    enum Tone { case success, danger, progress, info, neutral }
+
+    let text: String
+    /// Heroicon shown to the left of the text.
+    let icon: String
+    let tone: Tone
+
+    private var color: Color {
+        switch tone {
+        case .success: return Color(light: "15803D", dark: "4ADE80")
+        case .danger: return Color(light: "B91C1C", dark: "F87171")
+        case .progress: return Color(light: "B45309", dark: "FBBF24")
+        case .info: return Color(light: "1D4ED8", dark: "60A5FA")
+        case .neutral: return AppColors.Adaptive.textMeta
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 5) {
+            HeroIcon(icon, size: 14)
+            Text(text)
+                .font(.appCaption)
+        }
+        .foregroundStyle(color)
+        .lineLimit(1)
+        .padding(.leading, 8)
+        .padding(.trailing, 10)
+        .padding(.vertical, 3)
+        .background(color.opacity(0.16), in: Capsule())
     }
 }

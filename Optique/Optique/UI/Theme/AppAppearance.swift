@@ -10,11 +10,11 @@ enum AppAppearance {
         let nav = UINavigationBarAppearance()
         nav.configureWithTransparentBackground()
         nav.largeTitleTextAttributes = [
-            .font: UIFont.geist(.title, .medium),
+            .font: UIFont.geist(.title, .semibold),
             .foregroundColor: UIColor.label
         ]
         nav.titleTextAttributes = [
-            .font: UIFont.geist(.body, .medium),
+            .font: UIFont.geist(.body, .semibold),
             .foregroundColor: UIColor.label
         ]
         let navButton = UIBarButtonItemAppearance()

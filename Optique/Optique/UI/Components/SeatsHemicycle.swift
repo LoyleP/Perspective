@@ -4,7 +4,7 @@ import SwiftUI
 /// Dots sit on concentric arcs, grouped by parliamentary group from the far left to the far right and
 /// coloured with the group's lean colour. Within a group, the members who voted yes are fully lit; no
 /// votes and abstentions (hollow) are dimmed, and members who did not vote are faintest. Without group
-/// data it falls back to a plain yes / no split on 120 dots.
+/// data it falls back to a plain yes / no split, still one dot per seat.
 struct SeatsHemicycle: View {
     let vote: LawVote
 
@@ -112,7 +112,9 @@ struct SeatsHemicycle: View {
 
     private static func plainSeats(for vote: LawVote) -> [Seat] {
         let ink = AppColors.Adaptive.textPrimary
-        let parts = allocate([vote.yes, vote.abstained, vote.no, vote.absent], total: fallbackSeatCount, minimum: true)
+        // One dot per seat of the chamber when known, so a pending vote has the same shape as a real one.
+        let total = vote.seats ?? fallbackSeatCount
+        let parts = allocate([vote.yes, vote.abstained, vote.no, vote.absent], total: total, minimum: true)
         let kinds: [Kind] = [.yes, .abstained, .no, .absent]
         return zip(kinds, parts).flatMap { Array(repeating: Seat(color: ink, kind: $0.0), count: $0.1) }
     }

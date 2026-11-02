@@ -16,7 +16,7 @@ struct StoryRow: View {
                         .foregroundStyle(AppColors.Adaptive.textMeta)
                 }
                 Text(story.title)
-                    .font(.appBodyStrong)
+                    .font(.geist(.body, .medium))
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
                     .lineLimit(3)
                     .multilineTextAlignment(.leading)

@@ -1,22 +1,38 @@
 import SwiftUI
 
-// Geist throughout, Regular and Medium only, in exactly four sizes (see `AppTextSize`).
-// Sizes follow Dynamic Type via the text style each size is relative to. Hierarchy comes from size and Regular/Medium, never from bold.
+// Geist throughout: Regular for reading text, Medium for captions, SemiBold for titles (see `AppTextSize`).
+// Sizes follow Dynamic Type via the text style each size is relative to. Hierarchy comes from size and weight, never from bold.
 extension Font {
 
     enum GeistWeight {
         case regular
         case medium
+        case semibold
 
-        var fontName: String { self == .medium ? "Geist-Medium" : "Geist-Regular" }
+        var fontName: String {
+            switch self {
+            case .regular: "Geist-Regular"
+            case .medium: "Geist-Medium"
+            case .semibold: "Geist-SemiBold"
+            }
+        }
+
+        var systemWeight: UIFont.Weight {
+            switch self {
+            case .regular: .regular
+            case .medium: .medium
+            case .semibold: .semibold
+            }
+        }
     }
 
-    /// The only four type sizes in the app. Every font goes through one of these, so a fifth
-    /// size cannot be introduced without changing this enum (and the design system with it).
+    /// The only type sizes in the app. Every font goes through one of these, so a new size
+    /// cannot be introduced without changing this enum (and the design system with it).
     enum AppTextSize: CGFloat {
         case title = 28     // screen and story headlines, big numbers
         case heading = 20   // section titles, card titles
-        case body = 16      // reading text, row titles, tab titles' parent size
+        case body = 16      // row titles and emphasis
+        case reading = 14   // paragraphs, bullet points, comments, descriptions
         case caption = 13   // metadata, chips, labels, topic tabs
 
         var textStyle: Font.TextStyle {
@@ -24,6 +40,7 @@ extension Font {
             case .title: .title
             case .heading: .title3
             case .body: .body
+            case .reading: .callout
             case .caption: .footnote
             }
         }
@@ -32,6 +49,7 @@ extension Font {
             case .title: .title1
             case .heading: .title3
             case .body: .body
+            case .reading: .callout
             case .caption: .footnote
             }
         }
@@ -41,14 +59,14 @@ extension Font {
         .custom(weight.fontName, size: size.rawValue, relativeTo: size.textStyle)
     }
 
-    /// Headlines, big numbers — 28 medium
-    static var appTitle: Font { .geist(.title, .medium) }
-    /// Section and card titles — 20 medium
-    static var appHeading: Font { .geist(.heading, .medium) }
-    /// Row titles and emphasis — 16 medium
-    static var appBodyStrong: Font { .geist(.body, .medium) }
-    /// Reading text, dek — 16 regular
-    static var appBody: Font { .geist(.body, .regular) }
+    /// Headlines, big numbers — 28 semibold
+    static var appTitle: Font { .geist(.title, .semibold) }
+    /// Section and card titles — 20 semibold
+    static var appHeading: Font { .geist(.heading, .semibold) }
+    /// Row titles and emphasis — 16 semibold
+    static var appBodyStrong: Font { .geist(.body, .semibold) }
+    /// Paragraphs, bullet points, comments, deks — 14 regular
+    static var appBody: Font { .geist(.reading, .regular) }
     /// Metadata, chips, labels, overlines — 13 medium
     static var appCaption: Font { .geist(.caption, .medium) }
 }
@@ -56,7 +74,7 @@ extension Font {
 extension UIFont {
     /// UIKit twin of `Font.geist`, for navigation bars and other UIKit-backed controls.
     static func geist(_ size: Font.AppTextSize, _ weight: Font.GeistWeight = .regular) -> UIFont {
-        let base = UIFont(name: weight.fontName, size: size.rawValue) ?? .systemFont(ofSize: size.rawValue, weight: weight == .medium ? .medium : .regular)
+        let base = UIFont(name: weight.fontName, size: size.rawValue) ?? .systemFont(ofSize: size.rawValue, weight: weight.systemWeight)
         return UIFontMetrics(forTextStyle: size.uiTextStyle).scaledFont(for: base)
     }
 }

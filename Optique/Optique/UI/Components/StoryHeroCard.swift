@@ -34,7 +34,7 @@ struct StoryHeroCard: View {
                 Spacer(minLength: 0)
             }
             Text(story.title)
-                .font(size == .large ? .appTitle : .appHeading)
+                .font(size == .large ? .geist(.title, .medium) : .geist(.heading, .medium))
                 .foregroundStyle(AppColors.Adaptive.textPrimary)
                 .lineLimit(3)
                 .multilineTextAlignment(.leading)

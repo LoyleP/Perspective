@@ -158,7 +158,7 @@ private struct AlertRow: View {
                 .frame(width: 44, alignment: .leading)
             VStack(alignment: .leading, spacing: 6) {
                 Text(notification.title)
-                    .font(.appBodyStrong)
+                    .font(.geist(.body, .medium))
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
                     .lineLimit(3)
                     .multilineTextAlignment(.leading)

@@ -121,12 +121,12 @@ struct SideCarouselView: View {
         } label: {
         VStack(alignment: .leading, spacing: AppSpacing.st) {
             Text(lean.label)
-                .font(.appBodyStrong)
+                .font(.geist(.body, .medium))
                 .foregroundStyle(AppColors.Adaptive.textPrimary)
 
             HStack(alignment: .firstTextBaseline, spacing: AppSpacing.s) {
                 Text(share, format: .percent.precision(.fractionLength(0)))
-                    .font(.appTitle)
+                    .font(.geist(.title, .medium))
                     .monospacedDigit()
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
                 Text(count == 1 ? "1 source" : "\(count) sources")

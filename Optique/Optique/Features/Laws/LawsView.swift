@@ -29,6 +29,7 @@ final class LawsViewModel {
 struct LawsView: View {
     @State private var viewModel = LawsViewModel()
     @State private var selected: Law?
+    @State private var filter: LawFilter = .all
     var isActive = true
 
     private static let refreshInterval: Duration = .seconds(300)
@@ -36,10 +37,9 @@ struct LawsView: View {
     var body: some View {
         VStack(spacing: 0) {
             AppHeader()
+            LawTabs(selection: $filter)
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
-                    header
-                        .padding(.bottom, AppSpacing.m)
                     content
                     if let checkedAt = viewModel.checkedAt {
                         Text("Assemblée nationale et Sénat · vérifié \(checkedAt.relativeToNowFrench())")
@@ -68,17 +68,7 @@ struct LawsView: View {
         }
     }
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Lois")
-                .font(.appTitle)
-                .foregroundStyle(AppColors.Adaptive.textPrimary)
-                .accessibilityAddTraits(.isHeader)
-            Text("Les textes en cours de vote au Parlement, étape par étape.")
-                .font(.appBody)
-                .foregroundStyle(AppColors.Adaptive.textMeta)
-        }
-    }
+    private var visibleLaws: [Law] { viewModel.laws.filter(filter.includes) }
 
     @ViewBuilder
     private var content: some View {
@@ -86,10 +76,10 @@ struct LawsView: View {
             SkeletonLines(count: 6)
         } else if let error = viewModel.error {
             ContentUnavailableView("Lois indisponibles", hero: "building-library", description: Text(error.localizedDescription))
-        } else if viewModel.laws.isEmpty {
-            ContentUnavailableView("Aucun texte en cours", hero: "building-library", description: Text("Revenez plus tard."))
+        } else if visibleLaws.isEmpty {
+            ContentUnavailableView("Aucun texte", hero: "building-library", description: Text("Aucun texte ne correspond à ce filtre pour le moment."))
         } else {
-            ForEach(viewModel.laws) { law in
+            ForEach(visibleLaws) { law in
                 Button { selected = law } label: { LawRow(law: law) }
                     .buttonStyle(.plain)
                 Divider().overlay(AppColors.Adaptive.divider)
@@ -170,7 +160,7 @@ private struct LawRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.s) {
             Text(law.displayTitle)
-                .font(.appBodyStrong)
+                .font(.geist(.body, .medium))
                 .foregroundStyle(AppColors.Adaptive.textPrimary)
                 .lineLimit(3)
                 .multilineTextAlignment(.leading)
@@ -190,5 +180,70 @@ private struct LawRow: View {
         .padding(.vertical, AppSpacing.m)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
+    }
+}
+
+/// What the Lois tabs filter on.
+enum LawFilter: String, CaseIterable, Identifiable {
+    case all = "Tous les textes"
+    case assemblee = "À l'Assemblée"
+    case senat = "Au Sénat"
+    case government = "Projets de loi"
+    case members = "Propositions"
+
+    var id: String { rawValue }
+
+    func includes(_ law: Law) -> Bool {
+        switch self {
+        case .all: return true
+        case .assemblee: return law.current?.chamber == "AN"
+        case .senat: return law.current?.chamber == "SN"
+        case .government: return law.kind == "Projet de loi"
+        case .members: return law.kind == "Proposition de loi"
+        }
+    }
+}
+
+/// Sub-tabs under the header, same look and motion as the home page's topic tabs (a line under the
+/// selected tab that slides and resizes), with filters made for laws.
+struct LawTabs: View {
+    @Binding var selection: LawFilter
+    @Namespace private var indicator
+
+    var body: some View {
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 0) {
+                    ForEach(LawFilter.allCases) { filter in
+                        let isSelected = filter == selection
+                        Button {
+                            withAnimation(.app) { selection = filter }
+                        } label: {
+                            Text(filter.rawValue)
+                                .font(.appCaption)
+                                .foregroundStyle(isSelected ? AppColors.Adaptive.textPrimary : AppColors.Adaptive.textMeta)
+                                .padding(.horizontal, AppSpacing.st)
+                                .frame(minHeight: 44)
+                                .overlay(alignment: .bottom) {
+                                    if isSelected {
+                                        Rectangle()
+                                            .fill(AppColors.Adaptive.textPrimary)
+                                            .frame(height: 2)
+                                            .matchedGeometryEffect(id: "indicator", in: indicator)
+                                    }
+                                }
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityAddTraits(isSelected ? .isSelected : [])
+                        .id(filter)
+                    }
+                }
+                .padding(.horizontal, AppSpacing.s)
+            }
+            .onChange(of: selection) { _, new in
+                withAnimation(.app) { proxy.scrollTo(new, anchor: .center) }
+            }
+        }
     }
 }
