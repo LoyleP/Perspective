@@ -5,6 +5,16 @@ import { pool } from "./db.js";
 const MAX_TITLE_CHARS = 90;
 const BATCH = 15;
 
+/** Normalises spacing, strips quotes / trailing punctuation and capitalises the first letter. */
+export function cleanTitle(raw: string): string {
+  const t = raw
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/^["«»“”'\s]+|["«»“”'\s]+$/g, "")
+    .replace(/[.…\s]+$/, "");
+  return t ? t.charAt(0).toLocaleUpperCase("fr-FR") + t.slice(1) : t;
+}
+
 /** Asks Gemini for one neutral French headline per story, from the story's own article headlines. */
 async function rewriteBatch(stories: { id: string; headlines: string[] }[]): Promise<Record<string, string>> {
   const key = process.env.GEMINI_API_KEY;
@@ -14,7 +24,11 @@ async function rewriteBatch(stories: { id: string; headlines: string[] }[]): Pro
     .map((s) => `[${s.id}]\n${s.headlines.map((h) => `- ${h}`).join("\n")}`)
     .join("\n\n");
 
-  const prompt = `Tu es rédacteur en chef d'une application d'actualité française. Pour chaque sujet ci-dessous, écris UN titre neutre et factuel, en français, qui résume l'événement à partir des titres d'articles fournis. Règles : ${MAX_TITLE_CHARS} caractères maximum, une seule phrase, pas de point final, pas de guillemets, pas de nom de média, pas de formulation putaclic ni d'opinion, pas de majuscules inutiles. Réponds toujours en français, quelle que soit la langue des articles.
+  const prompt = `Tu es rédacteur en chef d'une application d'actualité française. Pour chaque sujet ci-dessous, écris UN titre clair, neutre et factuel, en français, à partir des titres d'articles fournis (qui peuvent être en anglais, en minuscules ou mal formulés : ne les recopie pas, reformule).
+
+Structure obligatoire : une seule phrase complète « qui + fait quoi (+ où / quand / combien) », avec un sujet et un verbe conjugué, par exemple « Le Sénat adopte le texte sur la sécurité » ou « Lula réélu président du Brésil au second tour ». Le titre doit se comprendre seul, sans avoir lu l'article.
+
+Règles de forme : ${MAX_TITLE_CHARS} caractères maximum, la première lettre en majuscule, majuscules uniquement pour les noms propres (pas de MAJUSCULES, pas de Title Case à l'anglaise), pas de point final, pas de guillemets ni de deux-points, pas de « ... », pas de nom de média, pas de formulation putaclic, pas d'opinion, pas de question. Écris toujours en français, quelle que soit la langue des articles. Si les titres divergent, retiens le fait commun à la majorité d'entre eux.
 
 Réponds UNIQUEMENT avec du JSON valide, sans markdown ni backticks, au format :
 [{ "id": "...", "title": "..." }]
@@ -46,7 +60,7 @@ ${block}`;
     for (const item of JSON.parse(raw)) {
       const id = String(item.id ?? "").replace(/[\[\]\s]/g, "");
       if (!known.has(id)) continue;
-      const title = String(item.title ?? "").trim().replace(/[.\s]+$/, "");
+      const title = cleanTitle(String(item.title ?? ""));
       if (title && title.length <= MAX_TITLE_CHARS) out[id] = title;
     }
     return out;
