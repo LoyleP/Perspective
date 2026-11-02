@@ -31,12 +31,7 @@ struct FeedView: View {
         .background(AppColors.Adaptive.background.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
         .navigationDestination(for: Story.self) { story in
-            if #available(iOS 18.0, *) {
-                StoryDetailView(story: story)
-                    .navigationTransition(.zoom(sourceID: story.id, in: transition))
-            } else {
-                StoryDetailView(story: story)
-            }
+            StoryDetailView(story: story)
         }
         // Notification tapped: open its story on top of the feed.
         .navigationDestination(item: $deepLinkStory) { story in
@@ -209,6 +204,11 @@ private struct EssentialRow: View {
                 .frame(width: 22, alignment: .leading)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: AppSpacing.s) {
+                    Text(story.timeLine)
+                        .font(.appCaption)
+                        .foregroundStyle(AppColors.Adaptive.textMeta)
+                }
                 Text(story.title)
                     .font(.appBodyStrong)
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
@@ -221,17 +221,14 @@ private struct EssentialRow: View {
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
                 }
-                HStack(spacing: AppSpacing.s) {
-                    if let coverage = story.computedCoverage {
-                        SpectrumBar(coverage: coverage)
-                            .frame(width: 56)
+                if let coverage = story.computedCoverage {
+                    HStack(spacing: AppSpacing.s) {
+                        LeanTags(coverage: coverage)
+                        SourceStack(sources: story.sources, size: 18, ringColor: AppColors.Adaptive.background)
                     }
-                    Text(story.metaLine)
-                        .font(.appCaption)
-                        .foregroundStyle(AppColors.Adaptive.textMeta)
                 }
             }
-            Spacer(minLength: 0)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.vertical, AppSpacing.st)
         .contentShape(Rectangle())

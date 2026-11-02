@@ -17,8 +17,8 @@ struct StoryHeroCard: View {
             Color.clear
                 .aspectRatio(size == .large ? 4.0 / 3.0 : 16.0 / 9.0, contentMode: .fit)
                 .overlay { RemoteImage(url: story.leadImageURL, tint: tint) }
-                .clipShape(RoundedRectangle(cornerRadius: AppRadius.xl))
-                .overlay(RoundedRectangle(cornerRadius: AppRadius.xl).stroke(AppColors.stroke, lineWidth: 1))
+                .clipShape(RoundedRectangle(cornerRadius: AppRadius.l))
+                .overlay(RoundedRectangle(cornerRadius: AppRadius.l).stroke(AppColors.stroke, lineWidth: 1))
                 .accessibilityHidden(true)
             content
         }
@@ -27,21 +27,22 @@ struct StoryHeroCard: View {
 
     private var content: some View {
         VStack(alignment: .leading, spacing: AppSpacing.s) {
-            Text(story.metaLine)
-                .font(.appCaption)
-                .foregroundStyle(AppColors.Adaptive.textMeta)
+            HStack(spacing: AppSpacing.s) {
+                Text(story.timeLine)
+                    .font(.appCaption)
+                    .foregroundStyle(AppColors.Adaptive.textMeta)
+                Spacer(minLength: 0)
+            }
             Text(story.title)
                 .font(size == .large ? .appTitle : .appHeading)
                 .foregroundStyle(AppColors.Adaptive.textPrimary)
                 .lineLimit(3)
                 .multilineTextAlignment(.leading)
-            HStack(spacing: AppSpacing.st) {
-                SourceStack(sources: story.sources, size: 22, ringColor: AppColors.Adaptive.background)
-                if let coverage = story.computedCoverage {
-                    SpectrumBar(coverage: coverage)
-                        .frame(maxWidth: 140)
+            if let coverage = story.computedCoverage {
+                HStack(spacing: AppSpacing.s) {
+                    LeanTags(coverage: coverage)
+                    SourceStack(sources: story.sources, size: 22, ringColor: AppColors.Adaptive.background)
                 }
-                Spacer(minLength: 0)
             }
         }
     }

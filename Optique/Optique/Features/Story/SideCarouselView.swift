@@ -11,6 +11,16 @@ struct SideCarouselView: View {
     var onSelectSide: (PoliticalLean) -> Void = { _ in }
 
     @State private var selected: PoliticalLean.ID?
+
+    init(story: Story, isSummaryUnavailable: Bool, onSelectSide: @escaping (PoliticalLean) -> Void = { _ in }) {
+        self.story = story
+        self.isSummaryUnavailable = isSummaryUnavailable
+        self.onSelectSide = onSelectSide
+        let top = story.computedCoverage.flatMap { coverage in
+            PoliticalLean.allCases.max { coverage.share(of: $0) < coverage.share(of: $1) }
+        }
+        _selected = State(initialValue: (top ?? .centre).id)
+    }
     @State private var width: CGFloat = 0
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
@@ -28,6 +38,7 @@ struct SideCarouselView: View {
             // Built only once the width is known, so the side margins (and therefore the first
             // centered card) are right from the first frame.
             if width > 0 {
+                ScrollViewReader { proxy in
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(alignment: .top, spacing: AppSpacing.st) {
                         ForEach(PoliticalLean.allCases) { lean in
@@ -48,7 +59,11 @@ struct SideCarouselView: View {
                 .contentMargins(.horizontal, sideMargin, for: .scrollContent)
                 .scrollTargetBehavior(.viewAligned)
                 .scrollPosition(id: $selected, anchor: .center)
-                .defaultScrollAnchor(.center)
+                .onAppear {
+                    guard let id = selected else { return }
+                    DispatchQueue.main.async { proxy.scrollTo(id, anchor: .center) }
+                }
+                }
             } else {
                 Color.clear.frame(height: 200)
             }
@@ -60,9 +75,6 @@ struct SideCarouselView: View {
                     .onChange(of: geo.size.width) { _, new in width = new }
             }
         )
-        .onAppear {
-            if selected == nil { selected = PoliticalLean.centre.id }
-        }
     }
 
     // MARK: - Header
@@ -124,7 +136,8 @@ struct SideCarouselView: View {
         }
         .padding(AppSpacing.st)
         .frame(maxWidth: .infinity, alignment: .leading)
-                .overlay(RoundedRectangle(cornerRadius: AppRadius.xl).stroke(AppColors.stroke, lineWidth: 1))
+                .background(AppColors.Adaptive.cardSurface, in: RoundedRectangle(cornerRadius: AppRadius.xl))
+        .overlay(RoundedRectangle(cornerRadius: AppRadius.xl).stroke(AppColors.stroke, lineWidth: 1))
         .opacity(isEmpty ? 0.55 : 1)
         .contentShape(RoundedRectangle(cornerRadius: AppRadius.xl))
         }
@@ -145,7 +158,7 @@ struct SideCarouselView: View {
                             .alignmentGuide(.firstTextBaseline) { $0[.bottom] - 1 }
                             .accessibilityHidden(true)
                         Text(bullet)
-                            .font(.appCaption)
+                            .font(.appBody)
                             .foregroundStyle(AppColors.Adaptive.textBody)
                             .multilineTextAlignment(.leading)
                             .fixedSize(horizontal: false, vertical: true)

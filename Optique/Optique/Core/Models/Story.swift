@@ -194,6 +194,9 @@ struct Story: Codable, Identifiable, Hashable {
 // MARK: - Presentation helpers
 
 extension Story {
+    /// "il y a 2 h" (cards: the source logos already show who covers it)
+    var timeLine: String { lastUpdatedAt.relativeToNowFrench() }
+
     /// "8 sources · il y a 2 h"
     var metaLine: String {
         let count = sources.count == 1 ? "1 source" : "\(sources.count) sources"

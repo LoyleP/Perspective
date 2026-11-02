@@ -267,6 +267,16 @@ extension CoverageStats {
         if abs(gap) < 0.15 { return "Couverture équilibrée" }
         return gap > 0 ? "Penche à gauche" : "Penche à droite"
     }
+
+    /// Short label shown left of the spectrum bar on story cards.
+    var cardLabel: String {
+        guard totalCount >= 3 else { return "Peu de sources" }
+        if leftShare == 0 && rightShare > 0 { return "Couverture à droite" }
+        if rightShare == 0 && leftShare > 0 { return "Couverture à gauche" }
+        let gap = leftShare - rightShare
+        if abs(gap) < 0.15 { return "Couverture équilibrée" }
+        return gap > 0 ? "Couverture à gauche" : "Couverture à droite"
+    }
 }
 
 // MARK: - Blind spots

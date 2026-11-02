@@ -10,6 +10,11 @@ struct StoryRow: View {
         let showsImage = story.leadImageURL != nil && !dynamicTypeSize.isAccessibilitySize
         SquareTrailingLayout(spacing: AppSpacing.m) {
             VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: AppSpacing.s) {
+                    Text(story.timeLine)
+                        .font(.appCaption)
+                        .foregroundStyle(AppColors.Adaptive.textMeta)
+                }
                 Text(story.title)
                     .font(.appBodyStrong)
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
@@ -22,19 +27,11 @@ struct StoryRow: View {
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
                 }
-                Text(story.metaLine)
-                    .font(.appCaption)
-                    .foregroundStyle(AppColors.Adaptive.textMeta)
                 if let coverage = story.computedCoverage {
                     HStack(spacing: AppSpacing.s) {
-                        SpectrumBar(coverage: coverage)
-                            .frame(width: 72)
-                        Text(coverage.verdict)
-                            .font(.appCaption)
-                            .foregroundStyle(AppColors.Adaptive.textMeta)
-                            .lineLimit(1)
+                        LeanTags(coverage: coverage)
+                        SourceStack(sources: story.sources, size: 18, ringColor: AppColors.Adaptive.background)
                     }
-                    .padding(.top, 2)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)

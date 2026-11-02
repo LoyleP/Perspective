@@ -86,6 +86,7 @@ private struct DebugMenuView: View {
     @Environment(SessionState.self) private var session
     @Environment(BookmarkStore.self) private var bookmarks
     @Environment(ReadingHistoryStore.self) private var history
+    @Environment(\.commentStore) private var commentStore
 
     @AppStorage(Fixtures.fixturesKey) private var useFixtures = false
     @AppStorage(Fixtures.stateKey) private var forcedState = "normal"
@@ -315,6 +316,17 @@ private struct DebugMenuView: View {
             Button("Effacer les enregistrés") {
                 for story in bookmarks.stories { bookmarks.toggle(story) }
                 done("Enregistrés effacés.")
+            }
+            Button("Importer des commentaires de test") {
+                Task {
+                    let stories = (try? await StoryRepository.shared.fetchFeed(topic: nil, limit: 30, offset: 0)) ?? []
+                    for story in stories { commentStore.seedMockIfNeeded(for: story.id) }
+                    done("Commentaires de test ajoutés à \(stories.count) sujets.")
+                }
+            }
+            Button("Effacer les commentaires") {
+                commentStore.clearAll()
+                done("Commentaires effacés.")
             }
             Button("Effacer les thèmes préférés") {
                 UserDefaults.standard.removeObject(forKey: "preferredTopics")

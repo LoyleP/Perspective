@@ -13,7 +13,8 @@ struct StoryDetailView: View {
     @State private var showPaywallSheet = false
     /// Side whose articles are shown in the sheet (opened by tapping a card).
     @State private var sheetSide: PoliticalLean?
-    @State private var showComments = false
+    /// Set to open the comments sheet; carries whether to start with the keyboard up.
+    @State private var commentsRequest: CommentsRequest?
 
     init(story: Story) {
         _viewModel = State(initialValue: StoryDetailViewModel(story: story))
@@ -66,6 +67,9 @@ struct StoryDetailView: View {
             .padding(.bottom, AppSpacing.xxl)
         }
         .shrinksTabBarOnScroll()
+        // The nav bar would swallow taps meant for the area outside the comments panel.
+        .toolbar(commentsRequest == nil ? .automatic : .hidden, for: .navigationBar)
+        .background(SwipeBackDisabler(isDisabled: commentsRequest != nil))
         .ignoresSafeArea(edges: .top)
         .background(AppColors.Adaptive.background.ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
@@ -97,8 +101,15 @@ struct StoryDetailView: View {
         .sheet(isPresented: $showPaywallSheet) {
             PaywallView()
         }
-        .sheet(isPresented: $showComments) {
-            CommentsSheet(story: story)
+        .overlay {
+            // The panel runs its own entry and exit (backdrop included); this only mounts it.
+            if let request = commentsRequest {
+                CommentsSheet(story: story, startsTyping: request.typing) {
+                    commentsRequest = nil
+                }
+                .id(request.id)
+                .transition(.identity)
+            }
         }
         .sheet(item: $sheetSide) { side in
             SideArticlesSheet(side: side, articles: articles(for: side))
@@ -118,12 +129,14 @@ struct StoryDetailView: View {
 
     // MARK: - Discussion
 
-    /// Entry to the comments sheet: title with the count, then a field-like button.
+    /// The first three comments, a "Voir plus" that opens the sheet, and a field-like button to write one.
     private var discussion: some View {
         let count = comments.count(for: story.id)
+        let all = comments.topLevel(for: story.id)
+        let shown = Array(all.prefix(3))
         return VStack(alignment: .leading, spacing: AppSpacing.st) {
             HStack(alignment: .firstTextBaseline, spacing: AppSpacing.s) {
-                Text("Discussion")
+                Text("Commentaires")
                     .font(.appHeading)
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
                     .accessibilityAddTraits(.isHeader)
@@ -134,7 +147,22 @@ struct StoryDetailView: View {
                         .foregroundStyle(AppColors.Adaptive.textMeta)
                 }
             }
-            Button { showComments = true } label: {
+
+            ForEach(shown) { comment in
+                commentPreview(comment)
+            }
+
+            if count > shown.count {
+                Button { openComments(typing: false) } label: {
+                    Text("Voir plus")
+                        .font(.appCaption)
+                        .foregroundStyle(AppColors.Adaptive.textMeta)
+                }
+                .buttonStyle(.plain)
+                .padding(.vertical, AppSpacing.xs)
+            }
+
+            Button { openComments(typing: true) } label: {
                 HStack(spacing: AppSpacing.st) {
                     Image("ProfilePlaceholder")
                         .resizable()
@@ -153,8 +181,50 @@ struct StoryDetailView: View {
                 .contentShape(Capsule())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Ouvrir la discussion")
+            .accessibilityLabel("Ajouter un commentaire")
         }
+    }
+
+    private func openComments(typing: Bool) {
+        commentsRequest = CommentsRequest(typing: typing)
+    }
+
+    private func commentPreview(_ comment: Comment) -> some View {
+        let replyCount = comments.replies(to: comment.id).count
+        return HStack(alignment: .top, spacing: AppSpacing.st) {
+            CommentAvatar(author: comment.author, size: 36)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: AppSpacing.s) {
+                    Text(comment.author)
+                        .font(.appCaption)
+                        .foregroundStyle(AppColors.Adaptive.textPrimary)
+                    Text(comment.createdAt.relativeToNowFrench())
+                        .font(.appCaption)
+                        .foregroundStyle(AppColors.Adaptive.textMeta)
+                }
+                Text(comment.text)
+                    .font(.appBody)
+                    .foregroundStyle(AppColors.Adaptive.textPrimary)
+                    .lineLimit(3)
+                    .multilineTextAlignment(.leading)
+                if replyCount > 0 {
+                    Text(replyCount == 1 ? "1 réponse" : "\(replyCount) réponses")
+                        .font(.appCaption)
+                        .foregroundStyle(AppColors.Adaptive.textMeta)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            if comment.likes > 0 {
+                VStack(spacing: 2) {
+                    HeroIcon("heart", solid: comment.likedByMe, size: 18)
+                    Text("\(comment.likes)").font(.appCaption).monospacedDigit()
+                }
+                .foregroundStyle(AppColors.Adaptive.textMeta)
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture { openComments(typing: false) }
+        .accessibilityElement(children: .combine)
     }
 
     // MARK: - Header
@@ -223,3 +293,82 @@ struct StoryDetailView: View {
         .environment(ReadingHistoryStore())
 }
 #endif
+
+private struct CommentsRequest: Identifiable {
+    let id = UUID()
+    let typing: Bool
+}
+
+/// Swiping right goes back to the previous page, except while the comments panel is open (its
+/// drag-to-close could otherwise also trigger it and close the story). Uses a plain view that finds its navigation controller through the
+/// responder chain (a background view controller is not part of that hierarchy in SwiftUI).
+private struct SwipeBackDisabler: UIViewRepresentable {
+    let isDisabled: Bool
+
+    func makeUIView(context: Context) -> Probe { Probe() }
+    func updateUIView(_ view: Probe, context: Context) {
+        view.isDisabled = isDisabled
+        view.apply()
+    }
+
+    final class Probe: UIView {
+        private weak var navigation: UINavigationController?
+        var isDisabled = false
+
+        override init(frame: CGRect) {
+            super.init(frame: frame)
+            isUserInteractionEnabled = false
+        }
+        required init?(coder: NSCoder) { fatalError() }
+
+        private func findNavigationController() -> UINavigationController? {
+            var responder: UIResponder? = self
+            while let current = responder {
+                if let controller = current as? UIViewController {
+                    if let nav = controller.navigationController { return nav }
+                }
+                responder = current.next
+            }
+            return nil
+        }
+
+        func apply() {
+            if navigation == nil { navigation = findNavigationController() }
+            setSwipeBack(enabled: !isDisabled)
+        }
+
+        /// Every swipe-back recognizer: the edge one, iOS 26's full-width one, and the parallax
+        /// transition pans UIKit puts on the navigation controller's view.
+        private func swipeBackRecognizers() -> [UIGestureRecognizer] {
+            guard let navigation else { return [] }
+            var recognizers = (navigation.view.gestureRecognizers ?? []).filter {
+                String(describing: type(of: $0)).contains("ParallaxTransitionPan")
+            }
+            if let edge = navigation.interactivePopGestureRecognizer { recognizers.append(edge) }
+            if #available(iOS 26.0, *), let content = navigation.interactiveContentPopGestureRecognizer {
+                recognizers.append(content)
+            }
+            return recognizers
+        }
+
+        private func setSwipeBack(enabled: Bool) {
+            for recognizer in swipeBackRecognizers() { recognizer.isEnabled = enabled }
+        }
+
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            if window != nil {
+                apply()
+            } else {
+                setSwipeBack(enabled: true)
+                navigation = nil
+            }
+        }
+
+        // SwiftUI can switch the gesture back on during layout passes; keep it off.
+        override func layoutSubviews() {
+            super.layoutSubviews()
+            if window != nil { apply() }
+        }
+    }
+}

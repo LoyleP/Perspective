@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// "Fil de l'histoire": every article on the story as a thread, newest first. Outlet logos
+/// "Évolution": every article on the story as a thread, newest first. Outlet logos
 /// form a left column joined by a thin vertical line; each post shows outlet, side, time and
 /// headline. Tapping a post opens the article reader.
 struct StoryThreadSection: View {
@@ -16,7 +16,7 @@ struct StoryThreadSection: View {
     var body: some View {
         let posts = Array(sorted.prefix(visibleCount))
         return VStack(alignment: .leading, spacing: AppSpacing.m) {
-            SectionHeader(title: "Fil de l'histoire", subtitle: subtitle)
+            SectionHeader(title: "Évolution", subtitle: subtitle)
 
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(posts.enumerated()), id: \.element.id) { index, article in

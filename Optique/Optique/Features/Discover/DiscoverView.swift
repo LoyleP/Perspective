@@ -37,12 +37,7 @@ struct DiscoverView: View {
         }
         .refreshable { await viewModel.refresh() }
         .navigationDestination(for: Story.self) { story in
-            if #available(iOS 18.0, *) {
-                StoryDetailView(story: story)
-                    .navigationTransition(.zoom(sourceID: story.id, in: transition))
-            } else {
-                StoryDetailView(story: story)
-            }
+            StoryDetailView(story: story)
         }
         .navigationDestination(for: StoryTopic.self) { topic in
             TopicStoriesView(topic: topic)
