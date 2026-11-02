@@ -63,6 +63,8 @@ extension View {
 
 struct DebugScreenHost: View {
     let screen: String
+    /// Leaves the launcher for the real app (set when opened with `--screen`).
+    var onHome: (() -> Void)? = nil
 
     @State private var session = SessionState()
     @State private var bookmarks = BookmarkStore()
@@ -95,7 +97,7 @@ struct DebugScreenHost: View {
         case "settings": NavigationStack { SettingsView() }
         case "onboarding": OnboardingView()
         case "paywall": PaywallView()
-        case "gallery": NavigationStack { DesignSystemGalleryView() }
+        case "gallery": NavigationStack { DesignSystemGalleryView(onHome: onHome) }
         default:
             ContentUnavailableView("Écran inconnu : \(screen)", systemImage: "questionmark.square.dashed")
         }

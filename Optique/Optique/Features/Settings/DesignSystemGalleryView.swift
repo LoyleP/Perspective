@@ -4,6 +4,9 @@ import SwiftUI
 /// Debug-only catalogue of design tokens and shared components, rendered with live feed data.
 struct DesignSystemGalleryView: View {
     @State private var stories: [Story] = []
+    @State private var showsComments = false
+    /// Shown as a leading "Accueil" button when the gallery was launched on its own.
+    var onHome: (() -> Void)? = nil
 
     var body: some View {
         ScrollView {
@@ -11,6 +14,8 @@ struct DesignSystemGalleryView: View {
                 colors
                 typography
                 chips
+                carousel
+                comments
                 if let story = stories.first {
                     spectrum(story)
                     VStack(alignment: .leading, spacing: AppSpacing.m) {
@@ -22,13 +27,26 @@ struct DesignSystemGalleryView: View {
                         }
                     }
                 }
+                tagVariants
                 loading
                 buttons
             }
             .padding(AppSpacing.m)
         }
         .background(AppColors.Adaptive.background)
+        .overlay {
+            if showsComments {
+                CommentsSheet(story: Fixtures.stories[0], startsTyping: false) { showsComments = false }
+            }
+        }
         .navigationTitle("Design system")
+        .toolbar {
+            if let onHome {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button(action: onHome) { Label("Accueil", hero: "home") }
+                }
+            }
+        }
         .task {
             stories = (try? await StoryRepository.shared.fetchFeed(limit: 6)) ?? [PreviewData.story]
         }
@@ -82,13 +100,32 @@ struct DesignSystemGalleryView: View {
 
     private var chips: some View {
         VStack(alignment: .leading, spacing: AppSpacing.st) {
-            SectionHeader(title: "Positions")
+            SectionHeader(title: "Tags de position", subtitle: "LeanTags · teinte OKLCH par position")
             FlowRow {
-                ForEach(PoliticalLean.allCases) { lean in
-                    LeanTagView(lean: lean, style: .rounded)
-                }
-                LeanTagView(lean: .centre, value: 0.38)
+                LeanTagPill(lean: .extremeGauche, text: "Couverture à l'extrême gauche")
+                LeanTagPill(lean: .gauche, text: "Couverture à gauche")
+                LeanTagPill(lean: .centre, text: "Couverture au centre", lighter: true)
+                LeanTagPill(lean: .droite, text: "Couverture à droite")
+                LeanTagPill(lean: .extremeDroite, text: "Couverture à l'extrême droite")
+                LeanTagPill(lean: .centre, text: "Couverture équilibrée")
+                LeanTagPill(lean: .centre, text: "Peu de sources")
             }
+        }
+    }
+
+    /// The story page's per-position carousel, on a mock story.
+    private var carousel: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.st) {
+            SectionHeader(title: "Carrousel des positions", subtitle: "SideCarouselView · s'ouvre sur la majorité")
+            SideCarouselView(story: Fixtures.stories[0], isSummaryUnavailable: false)
+        }
+    }
+
+    private var comments: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.st) {
+            SectionHeader(title: "Commentaires", subtitle: "CommentsSheet · saisie et liste")
+            Button("Ouvrir la feuille de commentaires") { showsComments = true }
+                .buttonStyle(.optiqueSecondary)
         }
     }
 
@@ -102,6 +139,18 @@ struct DesignSystemGalleryView: View {
                     .cardSurface()
             }
             SourceStack(sources: story.sources)
+        }
+    }
+
+    /// Every tag the cards can show, from mock stories (this file is DEBUG-only).
+    private var tagVariants: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.m) {
+            SectionHeader(title: "Tags de couverture", subtitle: "Données fictives, debug uniquement")
+            ForEach(Fixtures.tagVariants) { story in
+                StoryRow(story: story)
+                Divider().overlay(AppColors.Adaptive.divider)
+            }
+            StoryHeroCard(story: Fixtures.tagVariants[1], size: .medium)
         }
     }
 

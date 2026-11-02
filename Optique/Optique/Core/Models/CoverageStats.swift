@@ -257,26 +257,25 @@ extension CoverageStats {
         }
     }
 
-    /// One-line reading of the coverage, shown next to the spectrum.
-    var verdict: String {
-        guard totalCount > 0 else { return "Pas encore de sources" }
-        guard totalCount >= 3 else { return "Peu de sources" }
-        if leftShare == 0 && rightShare > 0 { return "Couverte uniquement à droite" }
-        if rightShare == 0 && leftShare > 0 { return "Couverte uniquement à gauche" }
-        let gap = leftShare - rightShare
-        if abs(gap) < 0.15 { return "Couverture équilibrée" }
-        return gap > 0 ? "Penche à gauche" : "Penche à droite"
+    /// Where the coverage leans, or "Équilibré" when no position is clearly ahead of the next
+    /// one. The single source for every label (cards, tags, story page header).
+    var leanVerdict: (lean: PoliticalLean, text: String) {
+        let clearLead = 0.10
+        guard totalCount >= 3 else { return (.centre, "Peu de sources") }
+        let ranked = PoliticalLean.allCases.sorted { share(of: $0) > share(of: $1) }
+        guard let first = ranked.first else { return (.centre, "Couverture équilibrée") }
+        let gap = share(of: first) - (ranked.dropFirst().first.map { share(of: $0) } ?? 0)
+        guard gap >= clearLead else { return (.centre, "Couverture équilibrée") }
+        switch first {
+        case .extremeGauche: return (first, "Couverture à l'extrême gauche")
+        case .gauche: return (first, "Couverture à gauche")
+        case .centre: return (first, "Couverture au centre")
+        case .droite: return (first, "Couverture à droite")
+        case .extremeDroite: return (first, "Couverture à l'extrême droite")
+        }
     }
 
-    /// Short label shown left of the spectrum bar on story cards.
-    var cardLabel: String {
-        guard totalCount >= 3 else { return "Peu de sources" }
-        if leftShare == 0 && rightShare > 0 { return "Couverture à droite" }
-        if rightShare == 0 && leftShare > 0 { return "Couverture à gauche" }
-        let gap = leftShare - rightShare
-        if abs(gap) < 0.15 { return "Couverture équilibrée" }
-        return gap > 0 ? "Couverture à gauche" : "Couverture à droite"
-    }
+    var verdict: String { leanVerdict.text }
 }
 
 // MARK: - Blind spots

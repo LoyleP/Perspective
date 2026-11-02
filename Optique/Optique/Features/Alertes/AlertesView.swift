@@ -168,8 +168,7 @@ private struct AlertRow: View {
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
                 if let coverage = notification.coverage {
-                    SpectrumBar(coverage: coverage)
-                        .frame(width: 72)
+                    LeanTags(coverage: coverage)
                 }
             }
         }

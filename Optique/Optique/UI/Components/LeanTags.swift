@@ -4,71 +4,88 @@ import SwiftUI
 struct LeanTags: View {
     let coverage: CoverageStats
 
-    /// A position leads when it is at least this far (share points) ahead of the next one.
-    private let clearLead = 0.10
-
-    private var verdict: (lean: PoliticalLean, text: String) {
-        let ranked = PoliticalLean.allCases.sorted { coverage.share(of: $0) > coverage.share(of: $1) }
-        guard let first = ranked.first else { return (.centre, "Équilibré") }
-        let gap = coverage.share(of: first) - (ranked.dropFirst().first.map { coverage.share(of: $0) } ?? 0)
-        guard gap >= clearLead else { return (.centre, "Équilibré") }
-        switch first {
-        case .extremeGauche: return (first, "Extrême gauche")
-        case .gauche: return (first, "Penche à gauche")
-        case .centre: return (first, "Penche au centre")
-        case .droite: return (first, "Penche à droite")
-        case .extremeDroite: return (first, "Extrême droite")
-        }
-    }
+    private var verdict: (lean: PoliticalLean, text: String) { coverage.leanVerdict }
 
     var body: some View {
         let v = verdict
-        Text(v.text)
-            .font(.appCaption)
-            .foregroundStyle(v.lean.tagText)
-            .lineLimit(1)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 2)
-            .background(v.lean.tagBackground, in: Capsule())
+        // The gray centre is lighter than the gray used for balanced / too few sources.
+        LeanTagPill(lean: v.lean, text: v.text, lighter: v.lean == .centre && v.text == "Couverture au centre")
     }
 }
 
-private extension PoliticalLean {
-    /// Tag background: the position's hue at 20 % lightness in dark mode, 80 % in light mode.
-    var tagBackground: Color { withLightness(dark: 0.2, light: 0.8) }
+/// The tag itself: a pill tinted with the position's hue.
+struct LeanTagPill: View {
+    let lean: PoliticalLean
+    let text: String
+    /// Raises the background lightness (used to set "au centre" apart from the neutral grays).
+    var lighter = false
 
-    /// Tag text: the inverse, 90 % lightness in dark mode, 10 % in light mode.
-    var tagText: Color { withLightness(dark: 0.9, light: 0.1) }
+    var body: some View {
+        Text(text)
+            .font(.appCaption)
+            .foregroundStyle(lean.tagText)
+            .lineLimit(1)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 2)
+            .background(lean.tagBackground(lighter: lighter), in: Capsule())
+    }
+}
 
-    private func withLightness(dark: CGFloat, light: CGFloat) -> Color {
+extension PoliticalLean {
+    /// Pale tint (OKLCH L 0.936, C 0.032) of the position's hue, e.g. oklch(0.936 0.032 17.717) for red.
+    fileprivate static let paleL = 0.936, deepL = 0.30, tintChroma = 0.032
+
+    /// Dark mode: pale text on a deep (L 0.30) background of the same hue. Light mode: inverted.
+    var tagText: Color { oklch(dark: Self.paleL, light: Self.deepL) }
+    /// The two extremes sit slightly darker than the other positions.
+    func tagBackground(lighter: Bool = false) -> Color {
+        let extreme = self == .extremeGauche || self == .extremeDroite
+        if lighter { return oklch(dark: Self.deepL + 0.14, light: 0.975) }
+        return oklch(dark: extreme ? Self.deepL - 0.07 : Self.deepL, light: extreme ? 0.88 : Self.paleL)
+    }
+
+    /// Hand-picked tints: (pale lightness, hue in degrees) for the right, oklch(0.932 0.032 255.585).
+    fileprivate var tint: (paleL: Double, hue: Double)? {
+        switch self {
+        case .droite, .extremeDroite: return (0.932, 255.585)
+        default: return nil
+        }
+    }
+
+    fileprivate func oklch(dark: Double, light: Double) -> Color {
+        // The pale value is swapped for the hand-picked one when there is one.
+        let pale = tint?.paleL ?? Self.paleL
+        let dark = dark == Self.paleL ? pale : dark
+        let light = light == Self.paleL ? pale : light
+        let fixedHue = tint.map { $0.hue * .pi / 180 }
         let base = UIColor(spectrumColor)
         return Color(UIColor { traits in
             var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
             base.resolvedColor(with: traits).getRed(&r, green: &g, blue: &b, alpha: &a)
-            let maxC = max(r, g, b), minC = min(r, g, b), d = maxC - minC
-            var h: CGFloat = 0, sat: CGFloat = 0
-            let l = (maxC + minC) / 2
-            if d > 0 {
-                sat = d / (1 - abs(2 * l - 1))
-                if maxC == r { h = ((g - b) / d).truncatingRemainder(dividingBy: 6) }
-                else if maxC == g { h = (b - r) / d + 2 }
-                else { h = (r - g) / d + 4 }
-                h = (h < 0 ? h + 6 : h) / 6
+            func lin(_ c: CGFloat) -> Double { let v = Double(c); return v <= 0.04045 ? v / 12.92 : pow((v + 0.055) / 1.055, 2.4) }
+            let (lr, lg, lb) = (lin(r), lin(g), lin(b))
+            let l = cbrt(0.4122214708 * lr + 0.5363325363 * lg + 0.0514459929 * lb)
+            let m = cbrt(0.2119034982 * lr + 0.6806995451 * lg + 0.1073969566 * lb)
+            let s = cbrt(0.0883024619 * lr + 0.2817188376 * lg + 0.6299787005 * lb)
+            let okA = 1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s
+            let okB = 0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s
+            let chroma = (okA * okA + okB * okB).squareRoot()
+            let hue = fixedHue ?? atan2(okB, okA)
+            // Neutral positions (the gray centre) stay neutral.
+            let c = (chroma < 0.02 && fixedHue == nil) ? 0 : Self.tintChroma
+            let L = traits.userInterfaceStyle == .dark ? dark : light
+            let a2 = c * cos(hue), b2 = c * sin(hue)
+            let l3 = pow(L + 0.3963377774 * a2 + 0.2158037573 * b2, 3)
+            let m3 = pow(L - 0.1055613458 * a2 - 0.0638541728 * b2, 3)
+            let s3 = pow(L - 0.0894841775 * a2 - 1.2914855480 * b2, 3)
+            let lr2 = 4.0767416621 * l3 - 3.3077115913 * m3 + 0.2309699292 * s3
+            let lg2 = -1.2684380046 * l3 + 2.6097574011 * m3 - 0.3413193965 * s3
+            let lb2 = -0.0041960863 * l3 - 0.7034186147 * m3 + 1.7076147010 * s3
+            func gam(_ v: Double) -> CGFloat {
+                let x = min(max(v, 0), 1)
+                return CGFloat(x <= 0.0031308 ? 12.92 * x : 1.055 * pow(x, 1 / 2.4) - 0.055)
             }
-            let nl = traits.userInterfaceStyle == .dark ? dark : light
-            let c = (1 - abs(2 * nl - 1)) * sat
-            let x = c * (1 - abs((h * 6).truncatingRemainder(dividingBy: 2) - 1))
-            let m = nl - c / 2
-            let (r1, g1, b1): (CGFloat, CGFloat, CGFloat)
-            switch Int(h * 6) {
-            case 0: (r1, g1, b1) = (c, x, 0)
-            case 1: (r1, g1, b1) = (x, c, 0)
-            case 2: (r1, g1, b1) = (0, c, x)
-            case 3: (r1, g1, b1) = (0, x, c)
-            case 4: (r1, g1, b1) = (x, 0, c)
-            default: (r1, g1, b1) = (c, 0, x)
-            }
-            return UIColor(red: r1 + m, green: g1 + m, blue: b1 + m, alpha: 1)
+            return UIColor(red: gam(lr2), green: gam(lg2), blue: gam(lb2), alpha: 1)
         })
     }
 }

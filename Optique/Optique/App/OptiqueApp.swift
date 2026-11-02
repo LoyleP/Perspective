@@ -28,6 +28,10 @@ struct OptiqueApp: App {
     }
 
     @State private var showSplash = true
+    #if DEBUG
+    /// Screen opened with `--screen`; cleared by the gallery's home button to reach the real app.
+    @State private var debugScreen = DebugRoute.screen
+    #endif
 
     private var skipsSplash: Bool {
         #if DEBUG
@@ -40,8 +44,8 @@ struct OptiqueApp: App {
     @ViewBuilder
     private var rootContent: some View {
         #if DEBUG
-        if let screen = DebugRoute.screen {
-            DebugScreenHost(screen: screen)
+        if let screen = debugScreen {
+            DebugScreenHost(screen: screen, onHome: { debugScreen = nil })
         } else {
             RootView()
                 .font(.appBody)

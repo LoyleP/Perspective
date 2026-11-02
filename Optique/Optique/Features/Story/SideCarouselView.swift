@@ -106,11 +106,6 @@ struct SideCarouselView: View {
             onSelectSide(lean)
         } label: {
         VStack(alignment: .leading, spacing: AppSpacing.st) {
-            Capsule()
-                .fill(lean.spectrumColor)
-                .frame(width: 36, height: 4)
-                .accessibilityHidden(true)
-
             Text(lean.label)
                 .font(.appBodyStrong)
                 .foregroundStyle(AppColors.Adaptive.textPrimary)
@@ -153,7 +148,7 @@ struct SideCarouselView: View {
                 ForEach(Self.bullets(perspective), id: \.self) { bullet in
                     HStack(alignment: .firstTextBaseline, spacing: AppSpacing.s) {
                         Circle()
-                            .fill(lean.spectrumColor)
+                            .fill(AppColors.Adaptive.textMeta)
                             .frame(width: 5, height: 5)
                             .alignmentGuide(.firstTextBaseline) { $0[.bottom] - 1 }
                             .accessibilityHidden(true)

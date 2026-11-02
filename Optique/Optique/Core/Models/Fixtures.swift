@@ -75,7 +75,14 @@ enum Fixtures {
         source("BFM TV", lean: 6, owner: "Altice / Patrick Drahi", type: .billionaire),
         source("Le Parisien", lean: 6, owner: "LVMH / Bernard Arnault", type: .billionaire),
         source("Le Figaro", lean: 6, owner: "Dassault", type: .privateConglomerate),
-        source("Valeurs Actuelles", lean: 7, type: .privateOwned)
+        source("Valeurs Actuelles", lean: 7, type: .privateOwned),
+        // Extra sources so the gallery's tag variants have enough of each position.
+        source("Révolution Permanente", lean: 1, type: .independent),
+        source("Ouest-France", lean: 4, type: .nonprofit),
+        source("La Croix", lean: 4, type: .nonprofit),
+        source("CNews", lean: 7, owner: "Vincent Bolloré", type: .billionaire),
+        source("Boulevard Voltaire", lean: 7, type: .independent),
+        source("Causeur", lean: 7, type: .independent)
     ]
 
     // MARK: Stories
@@ -152,6 +159,19 @@ enum Fixtures {
               leans: [2, 3, 4, 5, 5], hoursAgo: 14, tags: ["environnement"]),
         story("Un seul média en parle",
               leans: [4], hoursAgo: 20, tags: ["societe"])
+    ]
+
+    // MARK: Gallery variants
+
+    /// One story per tag the cards can show, for the debug design-system gallery only.
+    static let tagVariants: [Story] = [
+        story("Extrême gauche en tête", leans: [1, 1, 1, 2], hoursAgo: 1),
+        story("Gauche en tête", leans: [2, 2, 2, 4, 6], hoursAgo: 2),
+        story("Centre en tête", leans: [4, 4, 4, 2, 6], hoursAgo: 3),
+        story("Droite en tête", leans: [6, 6, 6, 4, 2], hoursAgo: 4),
+        story("Extrême droite en tête", leans: [7, 7, 7, 6], hoursAgo: 5),
+        story("Couverture équilibrée entre les positions", leans: [2, 4, 6], hoursAgo: 6),
+        story("Peu de sources", leans: [2, 6], hoursAgo: 7)
     ]
 
     // MARK: Notifications

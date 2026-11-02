@@ -1,4 +1,6 @@
+import CryptoKit
 import Foundation
+import OSLog
 
 final class APIClient: Sendable {
 
@@ -14,9 +16,28 @@ final class APIClient: Sendable {
         if !query.isEmpty {
             components.queryItems = query.sorted { $0.key < $1.key }.map { URLQueryItem(name: $0.key, value: $0.value) }
         }
-        let (data, response) = try await session.data(from: components.url!)
-        try Self.validate(response)
-        return try Self.makeDecoder().decode(T.self, from: data)
+        let url = components.url!
+        do {
+            let (data, response) = try await session.data(from: url)
+            try Self.validate(response, url: url)
+            let value = try Self.makeDecoder().decode(T.self, from: data)
+            ResponseCache.store(data, for: url)
+            return value
+        } catch {
+            // An API outage (bad deploy, 5xx, offline) falls back to the last good response for this
+            // exact request, so screens keep their content instead of showing an error.
+            if !Self.isCancellation(error),
+               let cached = ResponseCache.data(for: url),
+               let value = try? Self.makeDecoder().decode(T.self, from: cached) {
+                Log.repository.error("GET \(url.path) failed (\(error)); serving cached response")
+                return value
+            }
+            throw error
+        }
+    }
+
+    private static func isCancellation(_ error: Error) -> Bool {
+        error is CancellationError || (error as? URLError)?.code == .cancelled
     }
 
     func post(_ path: String, body: [String: String]) async throws {
@@ -25,11 +46,13 @@ final class APIClient: Sendable {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         let (_, response) = try await session.data(for: request)
-        try Self.validate(response)
+        try Self.validate(response, url: request.url)
     }
 
-    private static func validate(_ response: URLResponse) throws {
+    private static func validate(_ response: URLResponse, url: URL?) throws {
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+            Log.repository.error("HTTP \(status) for \(url?.path ?? "?")")
             throw URLError(.badServerResponse)
         }
     }
@@ -63,5 +86,28 @@ final class APIClient: Sendable {
             )
         }
         return decoder
+    }
+}
+
+/// Last successful response body per request URL, on disk in Caches (the system may purge it).
+private enum ResponseCache {
+    private static let directory: URL = {
+        let dir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("api-responses", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
+    }()
+
+    private static func file(for url: URL) -> URL {
+        let hash = SHA256.hash(data: Data(url.absoluteString.utf8)).map { String(format: "%02x", $0) }.joined()
+        return directory.appendingPathComponent(hash)
+    }
+
+    static func store(_ data: Data, for url: URL) {
+        try? data.write(to: file(for: url), options: .atomic)
+    }
+
+    static func data(for url: URL) -> Data? {
+        try? Data(contentsOf: file(for: url))
     }
 }

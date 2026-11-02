@@ -116,7 +116,7 @@ struct Story: Codable, Identifiable, Hashable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(UUID.self, forKey: .id)
-        title = try container.decode(String.self, forKey: .title)
+        title = Self.cleanedTitle(try container.decode(String.self, forKey: .title))
         summary = try container.decodeIfPresent(String.self, forKey: .summary)
         firstPublishedAt = try container.decode(Date.self, forKey: .firstPublishedAt)
         lastUpdatedAt = try container.decode(Date.self, forKey: .lastUpdatedAt)
@@ -151,7 +151,7 @@ struct Story: Codable, Identifiable, Hashable {
         summaryGeneratedAt: Date?
     ) {
         self.id = id
-        self.title = title
+        self.title = Self.cleanedTitle(title)
         self.summary = summary
         self.firstPublishedAt = firstPublishedAt
         self.lastUpdatedAt = lastUpdatedAt
@@ -167,6 +167,13 @@ struct Story: Codable, Identifiable, Hashable {
     }
 
     var sourceCount: Int { articles.count }
+
+    /// Titles not rewritten yet can come in lowercase: always start with a capital.
+    private static func cleanedTitle(_ raw: String) -> String {
+        let t = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let first = t.first else { return t }
+        return first.uppercased() + t.dropFirst()
+    }
 
     // Coverage derived from the analyzed articles' source leans. Preferred over
     // the joined `coverage` (story_coverage_view), which can be stale and skew

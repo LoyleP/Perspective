@@ -1,6 +1,6 @@
 # Design System
 
-Direction (2026-10-29): **black or white, Geist, Regular/Medium only.** The UI is monochrome (black, white, greys) and follows the system light/dark theme; the only color is the 7-position political spectrum. A debug gallery lives in Réglages → Développeur → Design system.
+Direction (2026-10-29): **black or white, Geist, Regular/Medium only.** The UI is monochrome (black, white, greys) and follows the system light/dark theme; the only color is the 7-position political spectrum. A debug gallery lives in Réglages → Développeur → Design system (or `--screen gallery`); its "Tags de couverture" section renders every tag variant from `Fixtures.tagVariants` (mock data, `#if DEBUG` only).
 
 ## Colors (`UI/Theme/DesignTokens.swift`, `AdaptiveTokens.swift`)
 
@@ -23,7 +23,7 @@ No brand color. `accent` = ink (black on white / white on black), `accentSoft` =
 ### Spectrum (`AppColors.Spectrum`, `PoliticalLean.spectrumColor`)
 5 positions (since 2026-10-29 centre-gauche is merged into gauche and centre-droite into droite): red → grey → blue, each with a light-theme and dark-theme value (≥ 3:1 on its background):
 EG #A81F26 / #C2272D · G #D9383F / #EF5A5F · C #86868C / #B5B5BA · D #3A6FE0 / #4F86F7 · ED #2442B8 / #2D55D8.
-`tagTextColor` is adaptive (≥ 4.5:1 on a solid fill). `code` = EG/G/C/D/ED. `PoliticalLean` raw values stay on the stored 1–7 scale (1, 2, 4, 6, 7); `PoliticalLean.from(_:)` folds a stored 3 into gauche and 5 into droite, and `CoverageStats.countsByLean` / `share(of:)` fold the matching counts.
+`tagTextColor` is adaptive (≥ 4.5:1 on a solid fill; kept for solid-fill chips such as the gallery swatches). `code` = EG/G/C/D/ED. `PoliticalLean` raw values stay on the stored 1–7 scale (1, 2, 4, 6, 7); `PoliticalLean.from(_:)` folds a stored 3 into gauche and 5 into droite, and `CoverageStats.countsByLean` / `share(of:)` fold the matching counts.
 
 ## Typography (`UI/Theme/Typography.swift`)
 **Geist** (variable font, named instances `Geist-Regular`, `Geist-Medium`) everywhere. Weights are capped at Medium: hierarchy comes from size and Regular vs Medium. All tokens use `Font.custom(_, size:, relativeTo:)` so they follow Dynamic Type.
@@ -38,12 +38,14 @@ All icons are **Heroicons 2.2.0** (MIT, heroicons.com), outline 24 px with a few
 Unchanged: `AppSpacing` 4-pt grid (xs 4 … xxxl 64), `AppRadius` (xs 4 … xl 20, pill).
 
 ## Components (`UI/Components`)
-- **SideCarouselView** (Features/Story) — horizontal carousel of one card per political side; `scrollTransition` scales/dims off-center cards, `viewAligned` snapping with symmetric content margins, `scrollPosition(id:anchor: .center)` tracks the centered card.
-- **SpectrumBar** — `.compact` (proportional line, `barHeight`) and `.detailed` (verdict, logos stacked per position, 7-step axis, left/centre/right shares; wraps at large text sizes). Single VoiceOver label with the shares and verdict.
-- **StoryHeroCard** — photo card (text over photos is always white on the scrim, in both themes), `.large` 4:5 / `.medium` 3:2; text under the photo at accessibility text sizes.
-- **StoryRow** — compact row: small meta (10), headline (15), spectrum line + verdict (11); trailing photo is a square as tall as the text (SquareTrailingLayout, 64–120 pt), hidden at accessibility text sizes.ne meta, headline, spectrum line + verdict, scaled thumbnail (hidden at accessibility sizes).
+- **LeanTags** (`UI/Components/LeanTags.swift`) — the single coverage tag on every story card (hero, `StoryRow`, "L'essentiel" row, Alertes row). Text comes from `CoverageStats.leanVerdict` (one source of truth, also used by the story page header): "Couverture à gauche / au centre / à droite / à l'extrême gauche / à l'extrême droite", "Couverture équilibrée" when no position is ≥ 10 points ahead of the next, "Peu de sources" under 3 sources. Colors are OKLCH tints of the position's hue, chroma 0.032: dark mode = text L 0.936 on a background at L 0.30, light mode = inverted. The right (droite and extrême droite) uses the hand-picked `oklch(0.932 0.032 255.585)`; the gray centre stays neutral. Pill padding 7 × 2, `appCaption`.
+- **SideCarouselView** (Features/Story) — horizontal carousel of one card per political side, no color accents (neutral bullets, no colored line). It opens on the position with the highest share (`selected` is initialised in `init`, then re-applied with `ScrollViewReader.scrollTo` on appear). `scrollTransition` scales/dims off-center cards, `viewAligned` snapping, `scrollPosition(id:anchor: .center)`.
+- **SpectrumBar** — `.compact` (proportional line, `barHeight`) and `.detailed` (verdict, logos stacked per position, 7-step axis, left/centre/right shares; wraps at large text sizes). Single VoiceOver label with the shares and verdict. Cards no longer show it (replaced by `LeanTags`); it remains on the detailed spectrum, profile and onboarding.
+- **StoryHeroCard** — photo on top (4:3 `.large` / 16:9 `.medium`), then: relative time line, headline (≤ 3 lines), then `LeanTags` + `SourceStack` side by side. Text never sits over the photo.
+- **StoryRow** — compact row: time line, headline (≤ 3 lines), optional dek, then `LeanTags` + `SourceStack`; trailing photo is a square as tall as the text (`SquareTrailingLayout`, 64–120 pt), hidden at accessibility text sizes.
+- **CommentsSheet** (Features/Story) — custom bottom panel (no system sheet, so it can be flush with the screen edges; corner radius 44, grabber only). Keyboard model follows Instagram: content respects the keyboard safe area while the background ignores it and runs behind the keyboard. Opened from "Ajouter un commentaire" (`startsTyping`) it is compact (top comment + composer + emoji row) and its visibility is driven by the keyboard inset, so it rises and drops on the keyboard's own curve (a cold first keyboard stalls before that pass, off screen). Opened from the posted comments it hugs its list (medium detent cap), and pulling the grabber or scrolling up snaps it to full height; dragging down returns to medium, then closes. Exit mirrors entry; the backdrop is instant (no fades).
 - **SourceAvatarView / SourceStack** — logo (from `/api/logo`) or initial on lean color; overlapping stack with "+N".
-- **LeanTagView** — chip with color dot, optional share.
+- **LeanTagView** — chip with color dot, optional share (gallery/legacy; cards use `LeanTags`).
 - **SectionHeader**, **RemoteImage** (fading AsyncImage with tinted placeholder), **Shimmer / SkeletonLines** (static with Reduce Motion), **OptiqueButtonStyle** (`.optiquePrimary` light capsule, `.optiqueSecondary` elevated), **CardPressStyle**, **TopicPickerGrid** (1 column at accessibility sizes), **PaywallBannerView**, **OwnershipBreakdownView**.
 
 ## Accessibility checks done (2026-10-28)
