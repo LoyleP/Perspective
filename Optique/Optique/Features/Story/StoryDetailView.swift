@@ -27,13 +27,14 @@ struct StoryDetailView: View {
             VStack(alignment: .leading, spacing: 0) {
                 header
 
-                if let summary = story.summary, !summary.isEmpty {
+                // What happened, in one sentence, right under the headline.
+                if let summary = story.standfirst {
                     Text(summary)
                         .font(.appBody)
                         .foregroundStyle(AppColors.Adaptive.textBody)
                         .lineSpacing(4)
                         .padding(.horizontal, AppSpacing.m)
-                        .padding(.top, AppSpacing.l)
+                        .padding(.top, AppSpacing.st)
                 }
 
                 if story.computedCoverage != nil {
@@ -41,14 +42,11 @@ struct StoryDetailView: View {
                         story: story,
                         isSummaryUnavailable: viewModel.summaryUnavailable
                     ) { side in
+                        Analytics.track(.sideArticlesOpen, ["story": story.id.uuidString, "side": side.label])
                         sheetSide = side
                     }
                     .padding(.top, AppSpacing.l)
                 }
-
-                discussion
-                    .padding(.horizontal, AppSpacing.m)
-                    .padding(.top, AppSpacing.xl)
 
                 StoryThreadSection(articles: story.articles)
                     .padding(.horizontal, AppSpacing.m)
@@ -62,6 +60,12 @@ struct StoryDetailView: View {
                         OwnershipBreakdownView(articles: sourced)
                     }
                     .padding(.top, AppSpacing.xl)
+                }
+
+                if AppConfig.commentsEnabled {
+                    discussion
+                        .padding(.horizontal, AppSpacing.m)
+                        .padding(.top, AppSpacing.xl)
                 }
             }
             .padding(.bottom, AppSpacing.xxl)
@@ -116,6 +120,7 @@ struct StoryDetailView: View {
         }
         .onAppear {
             session.recordStoryOpen()
+            Analytics.track(.storyOpen, ["story": story.id.uuidString, "has_summary": story.spectrumSummary == nil ? "0" : "1"])
             readingHistory.recordOpen(story)
             if session.shouldShowPaywall {
                 withAnimation(.app) {
@@ -236,7 +241,7 @@ struct StoryDetailView: View {
             // overflow can't widen the layout.
             Color.clear
                 .frame(maxWidth: .infinity)
-                .frame(height: story.leadImageURL == nil ? 120 : 320)
+                .frame(height: story.leadImageURL == nil ? 120 : 220)
                 .overlay { RemoteImage(url: story.leadImageURL, tint: leadTint) }
                 .clipped()
                 .visualEffect { effect, proxy in

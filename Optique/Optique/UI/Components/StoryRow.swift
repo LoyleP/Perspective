@@ -18,20 +18,21 @@ struct StoryRow: View {
                 Text(story.title)
                     .font(.geist(.body, .medium))
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
-                    .lineLimit(3)
+                    .lineLimit(2)
                     .multilineTextAlignment(.leading)
-                if let dek = story.summary, !dek.isEmpty, !dynamicTypeSize.isAccessibilitySize {
+                if let dek = story.standfirst, !dynamicTypeSize.isAccessibilitySize {
                     Text(dek)
                         .font(.appBody)
                         .foregroundStyle(AppColors.Adaptive.textMeta)
-                        .lineLimit(2)
+                        .lineLimit(1)
                         .multilineTextAlignment(.leading)
                 }
-                if let coverage = story.computedCoverage {
-                    HStack(spacing: AppSpacing.s) {
+                HStack(spacing: AppSpacing.s) {
+                    // The coverage tag only where the left/right lens means something.
+                    if let coverage = story.computedCoverage, story.hasPoliticalAngle {
                         LeanTags(coverage: coverage)
-                        SourceStack(sources: story.sources, size: 18, ringColor: AppColors.Adaptive.background)
                     }
+                    SourceStack(sources: story.sources, size: 18, ringColor: AppColors.Adaptive.background)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)

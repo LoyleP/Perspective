@@ -8,14 +8,14 @@ struct StoryHeroCard: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     enum Size {
-        case large   // 4:3, lead story
+        case large   // 16:9, lead story (big headline)
         case medium  // 16:9, feature breaks in the feed
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.st) {
             Color.clear
-                .aspectRatio(size == .large ? 4.0 / 3.0 : 16.0 / 9.0, contentMode: .fit)
+                .aspectRatio(16.0 / 9.0, contentMode: .fit)
                 .overlay { RemoteImage(url: story.leadImageURL, tint: tint) }
                 .clipShape(RoundedRectangle(cornerRadius: AppRadius.l))
                 .overlay(RoundedRectangle(cornerRadius: AppRadius.l).stroke(AppColors.stroke, lineWidth: 1))
@@ -38,11 +38,19 @@ struct StoryHeroCard: View {
                 .foregroundStyle(AppColors.Adaptive.textPrimary)
                 .lineLimit(3)
                 .multilineTextAlignment(.leading)
-            if let coverage = story.computedCoverage {
-                HStack(spacing: AppSpacing.s) {
+            if let standfirst = story.standfirst {
+                Text(standfirst)
+                    .font(.appBody)
+                    .foregroundStyle(AppColors.Adaptive.textBody)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+            }
+            HStack(spacing: AppSpacing.s) {
+                // The coverage tag only where the left/right lens means something.
+                if let coverage = story.computedCoverage, story.hasPoliticalAngle {
                     LeanTags(coverage: coverage)
-                    SourceStack(sources: story.sources, size: 22, ringColor: AppColors.Adaptive.background)
                 }
+                SourceStack(sources: story.sources, size: 22, ringColor: AppColors.Adaptive.background)
             }
         }
     }

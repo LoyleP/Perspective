@@ -218,7 +218,7 @@ struct CoverageStats: Codable, Hashable {
 
         // 2. No single position exceeds 40% — considered balanced
         if buckets.allSatisfy({ $0.value < 0.40 }) {
-            return "Couverture équilibrée"
+            return "Relayé par tous les bords"
         }
 
         return ""
@@ -263,15 +263,15 @@ extension CoverageStats {
         let clearLead = 0.10
         guard totalCount >= 3 else { return (.centre, "Peu de sources") }
         let ranked = PoliticalLean.allCases.sorted { share(of: $0) > share(of: $1) }
-        guard let first = ranked.first else { return (.centre, "Couverture équilibrée") }
+        guard let first = ranked.first else { return (.centre, "Relayé par tous les bords") }
         let gap = share(of: first) - (ranked.dropFirst().first.map { share(of: $0) } ?? 0)
-        guard gap >= clearLead else { return (.centre, "Couverture équilibrée") }
+        guard gap >= clearLead else { return (.centre, "Relayé par tous les bords") }
         switch first {
-        case .extremeGauche: return (first, "Couverture à l'extrême gauche")
-        case .gauche: return (first, "Couverture à gauche")
-        case .centre: return (first, "Couverture au centre")
-        case .droite: return (first, "Couverture à droite")
-        case .extremeDroite: return (first, "Couverture à l'extrême droite")
+        case .extremeGauche: return (first, "Surtout relayé à l'extrême gauche")
+        case .gauche: return (first, "Surtout relayé à gauche")
+        case .centre: return (first, "Surtout relayé au centre")
+        case .droite: return (first, "Surtout relayé à droite")
+        case .extremeDroite: return (first, "Surtout relayé à l'extrême droite")
         }
     }
 

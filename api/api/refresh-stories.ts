@@ -2,6 +2,7 @@
 import { pool } from "../lib/db.js";
 import { topicTags } from "../lib/topics.js";
 import { rewriteStoryTitles } from "../lib/titles.js";
+import { writeBriefs } from "../lib/briefs.js";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -765,6 +766,11 @@ async function handle(req: Request): Promise<Response> {
     let titlesRewritten = 0;
     try { titlesRewritten = await rewriteStoryTitles(); } catch (e) { console.error("title rewrite failed:", e); }
 
+    // Phase 4: briefs (one-line dek, reliable topic, per-side summaries) for every feed story,
+    // so no story opens on an empty or loading summary.
+    let briefsWritten = 0;
+    try { briefsWritten = await writeBriefs(); } catch (e) { console.error("briefs failed:", e); }
+
     return new Response(
       JSON.stringify({
         ok: true,
@@ -774,6 +780,7 @@ async function handle(req: Request): Promise<Response> {
         },
         cluster: clusterResult,
         titles_rewritten: titlesRewritten,
+        briefs_written: briefsWritten,
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );

@@ -29,6 +29,7 @@ struct LawDetailView: View {
         .navigationDestination(item: $selectedStory) { story in
             StoryDetailView(story: story)
         }
+        .onAppear { Analytics.track(.lawOpen, ["law": law.uid]) }
         .task {
             while !Task.isCancelled {
                 if let fresh = try? await LawRepository.shared.fetchLaw(uid: law.uid) { detail = fresh }

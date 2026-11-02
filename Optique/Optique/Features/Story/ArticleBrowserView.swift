@@ -107,7 +107,10 @@ struct ArticleBrowserView: View {
         .toolbarBackground(.visible, for: .bottomBar)
         .toolbarBackground(AppColors.Adaptive.background, for: .bottomBar)
         // The reader has its own bottom bar: hide the floating tab bar while it is open.
-        .onAppear { tabBar.isHidden = true }
+        .onAppear {
+            tabBar.isHidden = true
+            Analytics.track(.articleOpen, ["source": initialArticle.source?.name ?? "?"])
+        }
         .onDisappear { tabBar.isHidden = false }
     }
 

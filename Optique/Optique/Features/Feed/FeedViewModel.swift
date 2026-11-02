@@ -11,7 +11,8 @@ final class FeedViewModel {
     /// Topic tab selected under the header; `.tout` is the unfiltered feed.
     private(set) var topic: StoryTopic = .tout
 
-    private let cacheDuration: TimeInterval = 48 * 60 * 60
+    /// News moves fast: refetch when the feed is older than this (the server refreshes hourly).
+    private let cacheDuration: TimeInterval = 5 * 60
     private var lastFetchedAt: Date?
     private let repository: any StoryRepositoryProtocol
 
@@ -28,21 +29,31 @@ final class FeedViewModel {
     private(set) var essentials: [Story] = []
     /// Everything not already shown as the hero or in "L'essentiel", newest first.
     private(set) var feedStories: [Story] = []
+    /// On "À la une": stories where the political lens says nothing (sport, faits divers…), kept
+    /// out of the top of the feed and grouped at the end. Empty on topic tabs.
+    private(set) var lighterStories: [Story] = []
 
     private func rebuild() {
         stories = allStories
             .filter { $0.articles.count >= 2 }
             .sorted { $0.lastUpdatedAt > $1.lastUpdatedAt }
-        let hero = stories.first(where: { $0.isFeatured }) ?? stories.first
+        // On the main tab, the lens only leads where it means something.
+        let splits = topic == .tout
+        let lead = splits ? stories.filter(\.hasPoliticalAngle) : stories
+        lighterStories = splits ? stories.filter { !$0.hasPoliticalAngle } : []
+        // Hero: today's most covered story with a political angle (featured first), not just the latest.
+        let recent = lead.filter { $0.lastUpdatedAt > Date().addingTimeInterval(-24 * 3600) }
+        let hero = lead.first(where: \.isFeatured)
+            ?? (recent.isEmpty ? lead : recent).max { $0.sources.count < $1.sources.count }
         cetteSemanineHero = hero
         essentials = Array(
-            stories
+            lead
                 .filter { $0.id != hero?.id }
                 .sorted { $0.sources.count > $1.sources.count }
                 .prefix(5)
         )
         let used = Set(([hero?.id].compactMap { $0 }) + essentials.map(\.id))
-        feedStories = stories.filter { !used.contains($0.id) }
+        feedStories = lead.filter { !used.contains($0.id) }
     }
 
     // MARK: - Load
@@ -82,7 +93,14 @@ final class FeedViewModel {
         await load()
     }
 
+    /// Back from the background: reload if the feed is stale.
+    func refreshIfStale() async {
+        guard let lastFetchedAt, Date().timeIntervalSince(lastFetchedAt) > cacheDuration else { return }
+        await refresh()
+    }
+
     func refresh() async {
+        Analytics.track(.feedRefresh)
         lastFetchedAt = nil
         isLoading = false
         await load()

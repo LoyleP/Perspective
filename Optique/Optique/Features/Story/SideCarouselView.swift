@@ -59,6 +59,9 @@ struct SideCarouselView: View {
                 .contentMargins(.horizontal, sideMargin, for: .scrollContent)
                 .scrollTargetBehavior(.viewAligned)
                 .scrollPosition(id: $selected, anchor: .center)
+                .onChange(of: selected) { _, id in
+                    if let id { Analytics.track(.sideCardSwipe, ["story": story.id.uuidString, "side": String(id)]) }
+                }
                 .onAppear {
                     guard let id = selected else { return }
                     DispatchQueue.main.async { proxy.scrollTo(id, anchor: .center) }
@@ -141,10 +144,19 @@ struct SideCarouselView: View {
             } else {
                 SourceStack(sources: sources, limit: 3, size: 24, ringColor: AppColors.Adaptive.cardSurface)
                 summaryBlock(perspective: perspective, lean: lean)
+                Spacer(minLength: 0)
+                // Straight to the articles, instead of guessing that the card is tappable.
+                HStack(spacing: 6) {
+                    Text(count == 1 ? "Lire l'article" : "Lire les \(count) articles")
+                        .font(.appCaption)
+                    HeroIcon("chevron-right", size: 14)
+                }
+                .foregroundStyle(AppColors.Adaptive.textPrimary)
+                .padding(.top, AppSpacing.xs)
             }
         }
         .padding(AppSpacing.st)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .background(AppColors.Adaptive.cardSurface, in: RoundedRectangle(cornerRadius: AppRadius.xl))
         .overlay(RoundedRectangle(cornerRadius: AppRadius.xl).stroke(AppColors.stroke, lineWidth: 1))
         .opacity(isEmpty ? 0.55 : 1)
@@ -174,16 +186,45 @@ struct SideCarouselView: View {
                     }
                 }
             }
-        } else if isSummaryUnavailable || story.spectrumSummary != nil {
-            Text("Résumé indisponible.")
-                .font(.appBody)
-                .foregroundStyle(AppColors.Adaptive.textMeta)
         } else {
-            SkeletonLines(count: 4, lineHeight: 12)
+            // No written summary yet (or it failed): show what this side's outlets actually titled,
+            // so the card is never empty or stuck loading.
+            VStack(alignment: .leading, spacing: AppSpacing.s) {
+                Text("Leurs titres")
+                    .font(.appCaption)
+                    .foregroundStyle(AppColors.Adaptive.textMeta)
+                ForEach(headlines(for: lean), id: \.self) { title in
+                    HStack(alignment: .firstTextBaseline, spacing: AppSpacing.s) {
+                        Circle()
+                            .fill(AppColors.Adaptive.textMeta)
+                            .frame(width: 5, height: 5)
+                            .alignmentGuide(.firstTextBaseline) { $0[.bottom] - 1 }
+                            .accessibilityHidden(true)
+                        Text(title)
+                            .font(.appBody)
+                            .foregroundStyle(AppColors.Adaptive.textBody)
+                            .lineLimit(3)
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
         }
     }
 
     // MARK: - Helpers
+
+    /// Up to three distinct headlines from this side's outlets, newest first.
+    private func headlines(for lean: PoliticalLean) -> [String] {
+        var seen = Set<String>()
+        return story.articles
+            .filter { PoliticalLean.from($0.source?.politicalLean ?? 4) == lean }
+            .sorted { $0.publishedAt > $1.publishedAt }
+            .map(\.title)
+            .filter { seen.insert($0.lowercased()).inserted }
+            .prefix(3)
+            .map { $0 }
+    }
 
     private static func bullets(_ perspective: SpectrumPerspective) -> [String] {
         perspective.summary

@@ -11,6 +11,7 @@ struct FeedView: View {
     /// True from the tab tap until the new topic has loaded: shows the loader immediately.
     @State private var isSwitching = false
     private let notificationManager = NotificationManager.shared
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         VStack(spacing: 0) {
@@ -50,6 +51,10 @@ struct FeedView: View {
             }
         }
         .task { await viewModel.load() }
+        // News goes stale fast: coming back to the app reloads a feed older than a few minutes.
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { Task { await viewModel.refreshIfStale() } }
+        }
     }
 
     // MARK: - State routing
@@ -120,6 +125,19 @@ struct FeedView: View {
                 .buttonStyle(.optiqueSecondary)
                 .frame(maxWidth: .infinity)
                 .padding(.top, AppSpacing.l)
+        }
+
+        if !viewModel.lighterStories.isEmpty {
+            SectionHeader(title: "Sport, culture et faits divers", subtitle: "Des sujets sans enjeu politique")
+                .padding(.top, AppSpacing.xl)
+                .padding(.bottom, AppSpacing.xs)
+            ForEach(viewModel.lighterStories.prefix(8)) { story in
+                storyLink(story) {
+                    StoryRow(story: story)
+                        .zoomSource(id: story.id, in: transition)
+                }
+                Divider().overlay(AppColors.Adaptive.divider)
+            }
         }
     }
 
@@ -212,20 +230,21 @@ private struct EssentialRow: View {
                 Text(story.title)
                     .font(.geist(.body, .medium))
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
-                    .lineLimit(3)
+                    .lineLimit(2)
                     .multilineTextAlignment(.leading)
-                if let dek = story.summary, !dek.isEmpty {
+                if let dek = story.standfirst {
                     Text(dek)
                         .font(.appBody)
                         .foregroundStyle(AppColors.Adaptive.textMeta)
-                        .lineLimit(2)
+                        .lineLimit(1)
                         .multilineTextAlignment(.leading)
                 }
-                if let coverage = story.computedCoverage {
-                    HStack(spacing: AppSpacing.s) {
+                HStack(spacing: AppSpacing.s) {
+                    // The coverage tag only where the left/right lens means something.
+                    if let coverage = story.computedCoverage, story.hasPoliticalAngle {
                         LeanTags(coverage: coverage)
-                        SourceStack(sources: story.sources, size: 18, ringColor: AppColors.Adaptive.background)
                     }
+                    SourceStack(sources: story.sources, size: 18, ringColor: AppColors.Adaptive.background)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)

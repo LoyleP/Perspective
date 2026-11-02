@@ -106,3 +106,9 @@ CREATE TABLE IF NOT EXISTS laws_sync (
   synced_at  timestamptz,
   full_at    timestamptz
 );
+
+-- Story briefs written by the refresh cron (lib/briefs.ts).
+ALTER TABLE stories ADD COLUMN IF NOT EXISTS dek text;
+ALTER TABLE stories ADD COLUMN IF NOT EXISTS topic text;
+ALTER TABLE stories ADD COLUMN IF NOT EXISTS is_political boolean;
+ALTER TABLE stories ADD COLUMN IF NOT EXISTS brief_at timestamptz;

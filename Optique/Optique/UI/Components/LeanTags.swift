@@ -9,7 +9,7 @@ struct LeanTags: View {
     var body: some View {
         let v = verdict
         // The gray centre is lighter than the gray used for balanced / too few sources.
-        LeanTagPill(lean: v.lean, text: v.text, lighter: v.lean == .centre && v.text == "Couverture au centre")
+        LeanTagPill(lean: v.lean, text: v.text, lighter: v.lean == .centre && v.text == "Surtout relayé au centre")
     }
 }
 

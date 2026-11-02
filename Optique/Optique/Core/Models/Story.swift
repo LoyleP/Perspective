@@ -92,6 +92,12 @@ struct Story: Codable, Identifiable, Hashable {
     let spectrumSummary: SpectrumSummary?
     let summaryGeneratedAt: Date?
 
+    /// One plain sentence on what happened, written ahead of time by the refresh (nil until then).
+    let dek: String?
+    /// Topic and whether the political lens means anything for this story (nil = not classified yet).
+    let topic: String?
+    let isPolitical: Bool?
+
     // Derived once at init: views read these in `body` on every scroll/tab update.
     let computedCoverage: CoverageStats?
     let sources: [Source]
@@ -111,6 +117,9 @@ struct Story: Codable, Identifiable, Hashable {
         case coverage          = "story_coverage_view"
         case spectrumSummary   = "spectrum_summary"
         case summaryGeneratedAt = "summary_generated_at"
+        case dek
+        case topic
+        case isPolitical = "is_political"
     }
 
     init(from decoder: Decoder) throws {
@@ -132,6 +141,9 @@ struct Story: Codable, Identifiable, Hashable {
         coverage = try container.decodeIfPresent(CoverageStats.self, forKey: .coverage)
         spectrumSummary = try container.decodeIfPresent(SpectrumSummary.self, forKey: .spectrumSummary)
         summaryGeneratedAt = try container.decodeIfPresent(Date.self, forKey: .summaryGeneratedAt)
+        dek = try container.decodeIfPresent(String.self, forKey: .dek).flatMap { $0.isEmpty ? nil : Self.cleanedTitle($0) }
+        topic = try container.decodeIfPresent(String.self, forKey: .topic)
+        isPolitical = try container.decodeIfPresent(Bool.self, forKey: .isPolitical)
         (computedCoverage, sources, leadImageURL) = Self.derive(id: id, articles: articles, coverage: coverage)
     }
 
@@ -148,7 +160,10 @@ struct Story: Codable, Identifiable, Hashable {
         articles: [Article],
         coverage: CoverageStats?,
         spectrumSummary: SpectrumSummary?,
-        summaryGeneratedAt: Date?
+        summaryGeneratedAt: Date?,
+        dek: String? = nil,
+        topic: String? = nil,
+        isPolitical: Bool? = nil
     ) {
         self.id = id
         self.title = Self.cleanedTitle(title)
@@ -163,10 +178,23 @@ struct Story: Codable, Identifiable, Hashable {
         self.coverage = coverage
         self.spectrumSummary = spectrumSummary
         self.summaryGeneratedAt = summaryGeneratedAt
+        self.dek = dek
+        self.topic = topic
+        self.isPolitical = isPolitical
         (computedCoverage, self.sources, leadImageURL) = Self.derive(id: id, articles: articles, coverage: coverage)
     }
 
     var sourceCount: Int { articles.count }
+
+    /// The line under the title: the written dek, else the story's own summary.
+    var standfirst: String? { dek ?? summary.flatMap { $0.isEmpty ? nil : $0 } }
+
+    /// Whether the left/right lens says something about this story (sport, faits divers… don't).
+    /// Unclassified stories fall back to their topic tags.
+    var hasPoliticalAngle: Bool {
+        if let isPolitical { return isPolitical }
+        return !topicTags.contains("sport") && !topicTags.contains("culture")
+    }
 
     /// Titles not rewritten yet can come in lowercase: always start with a capital.
     private static func cleanedTitle(_ raw: String) -> String {

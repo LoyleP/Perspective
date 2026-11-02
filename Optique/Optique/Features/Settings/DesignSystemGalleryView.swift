@@ -103,12 +103,12 @@ struct DesignSystemGalleryView: View {
         VStack(alignment: .leading, spacing: AppSpacing.st) {
             SectionHeader(title: "Tags de position", subtitle: "LeanTags · teinte OKLCH par position")
             FlowRow {
-                LeanTagPill(lean: .extremeGauche, text: "Couverture à l'extrême gauche")
-                LeanTagPill(lean: .gauche, text: "Couverture à gauche")
-                LeanTagPill(lean: .centre, text: "Couverture au centre", lighter: true)
-                LeanTagPill(lean: .droite, text: "Couverture à droite")
-                LeanTagPill(lean: .extremeDroite, text: "Couverture à l'extrême droite")
-                LeanTagPill(lean: .centre, text: "Couverture équilibrée")
+                LeanTagPill(lean: .extremeGauche, text: "Surtout relayé à l'extrême gauche")
+                LeanTagPill(lean: .gauche, text: "Surtout relayé à gauche")
+                LeanTagPill(lean: .centre, text: "Surtout relayé au centre", lighter: true)
+                LeanTagPill(lean: .droite, text: "Surtout relayé à droite")
+                LeanTagPill(lean: .extremeDroite, text: "Surtout relayé à l'extrême droite")
+                LeanTagPill(lean: .centre, text: "Relayé par tous les bords")
                 LeanTagPill(lean: .centre, text: "Peu de sources")
             }
         }
