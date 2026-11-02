@@ -255,7 +255,7 @@ Réponds UNIQUEMENT avec du JSON valide : [{ "uid": "...", "plain_title": "...",
 Textes :
 
 ${block}`;
-  const raw = (await generate(prompt, 2500)) ?? "";
+  const raw = (await generate(prompt, 4000)) ?? "";
   const out: Record<string, { plain_title: string; why: string; summary: string }> = {};
   try {
     for (const item of parseJSON(raw) ?? []) {

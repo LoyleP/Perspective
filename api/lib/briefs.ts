@@ -6,9 +6,9 @@ import { generate, parseJSON } from "./llm.js";
 //   - dek: one plain sentence on what happened (shown under the title),
 //   - topic + political: a reliable topic and whether the political lens means anything for it,
 //   - spectrum_summary: what each political side's outlets say (same format as the on-demand endpoint).
-// Runs inside the refresh cron and from scripts/backfill-briefs.ts. Several stories per model call (Groq, Gemini fallback).
+// Runs inside the refresh cron and from scripts/backfill-briefs.ts. Several stories per model call (Gemini).
 
-const BATCH = 2;   // keeps each request under Groq's free tokens-per-minute limit
+const BATCH = 8;   // many stories per request: the free Gemini tier allows only ~20 requests a day
 const MIN_SOURCES = 3;
 const WINDOW_HOURS = 72;
 const TOPICS = ["politique", "economie", "societe", "international", "environnement", "justice", "culture", "sport"];
@@ -105,7 +105,7 @@ export async function writeBriefs(limit = 24): Promise<number> {
   let written = 0;
   for (let i = 0; i < inputs.length; i += BATCH) {
     const batch = inputs.slice(i, i + BATCH);
-    const raw = await generate(promptFor(batch), 6000);
+    const raw = await generate(promptFor(batch), 12000);
     if (!raw) break; // quota or outage: the next run picks up where this one stopped
     const items = parseJSON(raw);
     if (!Array.isArray(items)) {

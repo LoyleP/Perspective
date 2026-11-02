@@ -20,7 +20,7 @@ final class StoryDetailViewModel {
     /// Asks the API to generate the per-position summary (it returns once the summary
     /// is stored), then reloads the story to pick it up.
     func triggerSummaryGeneration() async {
-        guard story.spectrumSummary == nil else { return }
+        guard story.spectrumSummary == nil, AppConfig.generatesSummariesOnOpen else { return }
         summaryUnavailable = false
         #if DEBUG
         if Fixtures.isActive {

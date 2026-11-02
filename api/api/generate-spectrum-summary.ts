@@ -112,7 +112,7 @@ Articles par tendance politique :
 
 ${articlesBlock}`;
 
-  // Groq first, Gemini as a fallback (lib/llm.ts).
+  // Gemini via lib/llm.ts.
   const rawText = await generate(prompt, 1000);
   if (!rawText) {
     return new Response(JSON.stringify({ error: "Model unavailable" }), {
