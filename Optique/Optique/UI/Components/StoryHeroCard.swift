@@ -8,14 +8,13 @@ struct StoryHeroCard: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     enum Size {
-        case large   // 16:9, lead story (big headline)
+        case large   // 340 pt tall, lead story (big headline)
         case medium  // 16:9, feature breaks in the feed
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.st) {
-            Color.clear
-                .aspectRatio(16.0 / 9.0, contentMode: .fit)
+            cover
                 .overlay { RemoteImage(url: story.leadImageURL, tint: tint) }
                 .clipShape(RoundedRectangle(cornerRadius: AppRadius.l))
                 .overlay(RoundedRectangle(cornerRadius: AppRadius.l).stroke(AppColors.stroke, lineWidth: 1))
@@ -23,6 +22,20 @@ struct StoryHeroCard: View {
             content
         }
         .accessibilityElement(children: .combine)
+    }
+
+    /// The lead story's cover is as tall as the photo at the top of its own page (340 pt); the
+    /// others are 16:9.
+    @ViewBuilder
+    private var cover: some View {
+        if size == .large {
+            Color.clear
+                .frame(maxWidth: .infinity)
+                .frame(height: 340)
+        } else {
+            Color.clear
+                .aspectRatio(16.0 / 9.0, contentMode: .fit)
+        }
     }
 
     private var content: some View {
@@ -34,7 +47,7 @@ struct StoryHeroCard: View {
                 Spacer(minLength: 0)
             }
             Text(story.title)
-                .font(size == .large ? .geist(.title, .medium) : .geist(.heading, .medium))
+                .font(size == .large ? .appTitle : .geist(.heading, .medium))
                 .foregroundStyle(AppColors.Adaptive.textPrimary)
                 .lineLimit(3)
                 .multilineTextAlignment(.leading)

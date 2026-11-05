@@ -128,6 +128,13 @@ final class NotificationManager: NSObject {
         return latest?.first?.sentAt
     }
 
+    func cachedNotifications() async -> [PushNotification]? {
+        #if DEBUG
+        if Fixtures.isActive { return nil }
+        #endif
+        return await APIClient.shared.cached("notifications", query: ["limit": "50"])
+    }
+
     func fetchNotifications() async throws -> [PushNotification] {
         #if DEBUG
         if Fixtures.isActive { return try await Fixtures.apply(Fixtures.notifications) }

@@ -314,6 +314,9 @@ struct CommentsSheet: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(comment.likedByMe ? "Retirer le j'aime" : "J'aime")
+            .sensoryFeedback(trigger: comment.likedByMe) { _, liked in
+                liked ? .impact(weight: .light) : nil
+            }
         }
     }
 
@@ -386,7 +389,7 @@ struct CommentsSheet: View {
                         .onSubmit(send)
                     if !text.trimmingCharacters(in: .whitespaces).isEmpty {
                         Button(action: send) {
-                            HeroIcon("arrow-up", size: 16)
+                            NavIcon("arrow.up", size: 15)
                                 .foregroundStyle(AppColors.Brand.onInk)
                                 .frame(width: 32, height: 32)
                                 .background(AppColors.Brand.accent, in: Circle())
@@ -435,5 +438,6 @@ struct CommentsSheet: View {
         if let parent = replyingTo { expanded.insert(parent.id) }
         text = ""
         replyingTo = nil
+        Haptics.success()
     }
 }

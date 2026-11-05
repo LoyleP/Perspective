@@ -30,11 +30,15 @@ struct StoryThreadSection: View {
             }
 
             if sorted.count > visibleCount {
-                Button("Voir plus") {
+                Button {
                     withAnimation(.app) { visibleCount += pageSize }
+                } label: {
+                    HStack(spacing: AppSpacing.s) {
+                        HeroIcon("plus", size: 16)
+                        Text("Voir plus")
+                    }
                 }
-                .buttonStyle(.optiqueSecondary)
-                .frame(maxWidth: .infinity)
+                .buttonStyle(.grayCTA)
             }
         }
         .navigationDestination(item: $selectedArticle) { article in
@@ -75,21 +79,17 @@ struct StoryThreadSection: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
                     Text(article.source?.name ?? "Source")
-                        .font(.appBody)
+                        .font(.geist(.body, .medium))
                         .foregroundStyle(AppColors.Adaptive.textPrimary)
                         .lineLimit(1)
+                    if let lean = article.source?.lean {
+                        LeanTagPill(lean: lean, text: lean.shortLabel)
+                    }
                     Text(article.publishedAt.relativeToNowFrench())
                         .font(.appCaption)
                         .foregroundStyle(AppColors.Adaptive.textMeta)
                         .lineLimit(1)
-                    Spacer(minLength: AppSpacing.s)
-                    if let lean = article.source?.lean {
-                        Circle().fill(lean.spectrumColor).frame(width: 7, height: 7)
-                        Text(lean.shortLabel)
-                            .font(.appCaption)
-                            .foregroundStyle(AppColors.Adaptive.textMeta)
-                            .lineLimit(1)
-                    }
+                    Spacer(minLength: 0)
                 }
                 Text(article.title)
                     .font(.appBody)
@@ -98,6 +98,12 @@ struct StoryThreadSection: View {
                     .multilineTextAlignment(.leading)
             }
             .padding(.bottom, AppSpacing.l)
+
+            // Opens the article in the in-app browser.
+            HeroIcon("chevron-right", size: 22)
+                .foregroundStyle(AppColors.Adaptive.textMeta)
+                .frame(maxHeight: .infinity)
+                .padding(.bottom, AppSpacing.l)
         }
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)

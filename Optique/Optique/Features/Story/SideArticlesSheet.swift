@@ -24,12 +24,16 @@ struct SideArticlesSheet: View {
                 }
                 .padding(.horizontal, AppSpacing.m)
             }
-            .background(AppColors.Adaptive.background)
+            .background(AppColors.Adaptive.cardSurface)
             .navigationTitle(side.label)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("OK") { dismiss() }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button { dismiss() } label: {
+                        NavIcon("xmark")
+                            .foregroundStyle(AppColors.Adaptive.textPrimary)
+                    }
+                    .accessibilityLabel("Fermer")
                 }
             }
             .navigationDestination(item: $selectedArticle) { article in
@@ -47,6 +51,7 @@ struct SideArticlesSheet: View {
         }
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
+        .presentationBackground(AppColors.Adaptive.cardSurface)
     }
 }
 

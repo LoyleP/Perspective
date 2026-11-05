@@ -66,10 +66,21 @@ struct DebugScreenHost: View {
     /// Leaves the launcher for the real app (set when opened with `--screen`).
     var onHome: (() -> Void)? = nil
 
-    @State private var session = SessionState()
+    @State private var session: SessionState
     @State private var bookmarks = BookmarkStore()
     @State private var history = ReadingHistoryStore()
     @State private var searchText = ""
+
+    init(screen: String, onHome: (() -> Void)? = nil) {
+        self.screen = screen
+        self.onHome = onHome
+        // `--free` shows the free account, `--limit` also uses up its free topics.
+        let session = SessionState()
+        let args = CommandLine.arguments
+        if args.contains("--free") || args.contains("--limit") { session.testPremium = false }
+        if args.contains("--limit") { session.fillCounter() }
+        _session = State(initialValue: session)
+    }
 
     private var story: Story {
         Fixtures.stories[min(DebugRoute.storyIndex, Fixtures.stories.count - 1)]
@@ -96,7 +107,7 @@ struct DebugScreenHost: View {
         case "alerts": NavigationStack { AlertesView() }
         case "settings": NavigationStack { SettingsView() }
         case "onboarding": OnboardingView()
-        case "paywall": PaywallView()
+        case "paywall": PaywallView(onClose: onHome)
         case "gallery": NavigationStack { DesignSystemGalleryView(onHome: onHome) }
         default:
             ContentUnavailableView("Écran inconnu : \(screen)", systemImage: "questionmark.square.dashed")

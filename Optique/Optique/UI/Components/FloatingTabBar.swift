@@ -18,6 +18,8 @@ struct FloatingTabBar: View {
 
     let items: [Item]
     @Binding var selection: Int
+    /// Called on every tap, including a tap on the tab already shown (to pop to its root).
+    var onTap: ((Int) -> Void)? = nil
 
     @Namespace private var indicator
 
@@ -36,6 +38,7 @@ struct FloatingTabBar: View {
         }
         .padding(4)
         .background { barBackground }
+        .sensoryFeedback(.selection, trigger: selection)
         .padding(.horizontal, Self.margin)
         .padding(.bottom, Self.margin)
     }
@@ -45,6 +48,7 @@ struct FloatingTabBar: View {
     private func button(for item: Item) -> some View {
         let isSelected = selection == item.id
         return Button {
+            onTap?(item.id)
             guard selection != item.id else { return }
             withAnimation(.app) { selection = item.id }
         } label: {

@@ -5,7 +5,10 @@ struct DiscoverView: View {
 
     /// Search text, owned by the root so it survives tab switches.
     @Binding var searchText: String
+    /// Changes when the Explorer tab button is tapped: opens the search field and the keyboard.
+    var focusToken = 0
 
+    @FocusState private var searchFocused: Bool
     @State private var viewModel = DiscoverViewModel()
     @State private var showAllSources = false
     @AppStorage("preferredTopics") private var preferredTopicsRaw = ""
@@ -27,6 +30,8 @@ struct DiscoverView: View {
             placement: .navigationBarDrawer(displayMode: .always),
             prompt: "Rechercher un sujet"
         )
+        .searchFocusedIfAvailable($searchFocused)
+        .onChange(of: focusToken) { _, _ in searchFocused = true }
         .onChange(of: searchText, initial: true) { _, text in
             viewModel.searchText = text
         }
@@ -88,12 +93,6 @@ struct DiscoverView: View {
                     ForEach(viewModel.blindspots) { story in
                         NavigationLink(value: story) {
                             StoryHeroCard(story: story, size: .medium)
-                                .overlay(alignment: .topLeading) {
-                                    if let side = story.computedCoverage?.blindspotSide {
-                                        BlindspotBadge(side: side)
-                                            .padding(AppSpacing.st)
-                                    }
-                                }
                                 .zoomSource(id: story.id, in: transition)
                         }
                         .buttonStyle(CardPressStyle())
@@ -242,3 +241,10 @@ struct BlindspotBadge: View {
     .environment(BookmarkStore())
 }
 #endif
+
+private extension View {
+    @ViewBuilder
+    func searchFocusedIfAvailable(_ focused: FocusState<Bool>.Binding) -> some View {
+        if #available(iOS 18.0, *) { searchFocused(focused) } else { self }
+    }
+}

@@ -9,8 +9,10 @@ struct StoryDetailView: View {
     @Environment(ReadingHistoryStore.self) private var readingHistory
     @Environment(\.tabBarState) private var tabBar
     @Environment(\.commentStore) private var comments
-    @State private var showPaywallBanner = false
+    @Environment(\.dismiss) private var dismiss
     @State private var showPaywallSheet = false
+    /// Free topics left, shown for a few seconds when the allowance is nearly used.
+    @State private var toastRemaining: Int?
     /// Side whose articles are shown in the sheet (opened by tapping a card).
     @State private var sheetSide: PoliticalLean?
     /// Set to open the comments sheet; carries whether to start with the keyboard up.
@@ -21,6 +23,50 @@ struct StoryDetailView: View {
     }
 
     private var story: Story { viewModel.story }
+
+    // MARK: - Reading limit
+
+    private var isLocked: Bool { session.isLocked(story.id) }
+
+    /// Past the free allowance the page keeps its headline and standfirst; everything below is a blurred
+    /// preview behind the limit card.
+    @ViewBuilder
+    private func gated<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        if isLocked {
+            // One container, so the blur, the fade and the card apply once to the whole preview.
+            VStack(alignment: .leading, spacing: 0) { content() }
+                .frame(maxHeight: 440, alignment: .top)
+                .clipped()
+                .blur(radius: 7)
+                .mask(LinearGradient(colors: [.black, .black.opacity(0.35)], startPoint: .top, endPoint: .bottom))
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+                .overlay(alignment: .top) {
+                    ReadingLimitGate(
+                        used: session.freeLimit,
+                        total: session.freeLimit,
+                        onUpgrade: { showPaywallSheet = true },
+                        onBack: { dismiss() }
+                    )
+                    .padding(.top, AppSpacing.l)
+                }
+        } else {
+            VStack(alignment: .leading, spacing: 0) { content() }
+        }
+    }
+
+    private func showFreeToastIfNeeded() {
+        guard AppConfig.paywallEnabled, !session.isPremium, !session.isLocked(story.id),
+              session.remainingFree <= 2 else { return }
+        let remaining = session.remainingFree
+        Task {
+            try? await Task.sleep(for: .milliseconds(900))
+            toastRemaining = remaining
+            Haptics.lightImpact()
+            try? await Task.sleep(for: .seconds(4))
+            toastRemaining = nil
+        }
+    }
 
     var body: some View {
         ScrollView {
@@ -37,6 +83,7 @@ struct StoryDetailView: View {
                         .padding(.top, AppSpacing.st)
                 }
 
+                gated {
                 if story.computedCoverage != nil {
                     SideCarouselView(
                         story: story,
@@ -46,6 +93,12 @@ struct StoryDetailView: View {
                         sheetSide = side
                     }
                     .padding(.top, AppSpacing.l)
+                }
+
+                if AppConfig.commentsEnabled {
+                    discussion
+                        .padding(.horizontal, AppSpacing.m)
+                        .padding(.top, AppSpacing.xl)
                 }
 
                 StoryThreadSection(articles: story.articles)
@@ -61,11 +114,6 @@ struct StoryDetailView: View {
                     }
                     .padding(.top, AppSpacing.xl)
                 }
-
-                if AppConfig.commentsEnabled {
-                    discussion
-                        .padding(.horizontal, AppSpacing.m)
-                        .padding(.top, AppSpacing.xl)
                 }
             }
             .padding(.bottom, AppSpacing.xxl)
@@ -73,7 +121,7 @@ struct StoryDetailView: View {
         .shrinksTabBarOnScroll()
         // The nav bar would swallow taps meant for the area outside the comments panel.
         .toolbar(commentsRequest == nil ? .automatic : .hidden, for: .navigationBar)
-        .background(SwipeBackDisabler(isDisabled: commentsRequest != nil))
+        .appBackButton(swipeDisabled: commentsRequest != nil)
         .ignoresSafeArea(edges: .top)
         .background(AppColors.Adaptive.background.ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
@@ -81,27 +129,33 @@ struct StoryDetailView: View {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 if let url = story.articles.first.flatMap({ URL(string: $0.url) }) {
                     ShareLink(item: url, subject: Text(story.title)) {
-                        HeroIcon("arrow-up-on-square", size: 22)
+                        NavIcon("square.and.arrow.up")
                     }
                     .accessibilityLabel("Partager")
                 }
                 Button {
                     bookmarks.toggle(story)
                 } label: {
-                    HeroIcon("bookmark", solid: bookmarks.isBookmarked(story), size: 22)
+                    NavIcon(bookmarks.isBookmarked(story) ? "bookmark.fill" : "bookmark")
                 }
                 .accessibilityLabel(bookmarks.isBookmarked(story) ? "Retirer des enregistrés" : "Enregistrer")
+                .sensoryFeedback(trigger: bookmarks.isBookmarked(story)) { _, saved in
+                    saved ? .success : .impact(weight: .light)
+                }
             }
         }
         .tint(AppColors.Adaptive.textPrimary)
         .overlay(alignment: .bottom) {
-            if showPaywallBanner {
-                PaywallBannerView(isPresented: $showPaywallBanner) {
+            if let remaining = toastRemaining {
+                FreeTopicToast(remaining: remaining) {
+                    toastRemaining = nil
                     showPaywallSheet = true
                 }
-                .transition(.move(edge: .bottom))
+                .padding(.bottom, 104)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
+        .animation(.spring(duration: 0.45, bounce: 0.15), value: isLocked)
         .sheet(isPresented: $showPaywallSheet) {
             PaywallView()
         }
@@ -119,14 +173,10 @@ struct StoryDetailView: View {
             SideArticlesSheet(side: side, articles: articles(for: side))
         }
         .onAppear {
-            session.recordStoryOpen()
+            session.registerOpen(story.id)
             Analytics.track(.storyOpen, ["story": story.id.uuidString, "has_summary": story.spectrumSummary == nil ? "0" : "1"])
             readingHistory.recordOpen(story)
-            if session.shouldShowPaywall {
-                withAnimation(.app) {
-                    showPaywallBanner = true
-                }
-            }
+            showFreeToastIfNeeded()
         }
         .onDisappear { tabBar.isCompact = false }
         .task { await viewModel.triggerSummaryGeneration() }
@@ -157,16 +207,6 @@ struct StoryDetailView: View {
                 commentPreview(comment)
             }
 
-            if count > shown.count {
-                Button { openComments(typing: false) } label: {
-                    Text("Voir plus")
-                        .font(.appCaption)
-                        .foregroundStyle(AppColors.Adaptive.textMeta)
-                }
-                .buttonStyle(.plain)
-                .padding(.vertical, AppSpacing.xs)
-            }
-
             Button { openComments(typing: true) } label: {
                 HStack(spacing: AppSpacing.st) {
                     Image("ProfilePlaceholder")
@@ -182,7 +222,8 @@ struct StoryDetailView: View {
                 .padding(.leading, AppSpacing.xs)
                 .padding(.vertical, AppSpacing.xs)
                 .frame(minHeight: 44)
-                .overlay(Capsule().stroke(AppColors.stroke, lineWidth: 1))
+                .background(AppColors.Adaptive.cardSurface, in: Capsule())
+                .overlay(Capsule().stroke(Color(light: AppColors.Zinc.Hex.z50, dark: AppColors.Zinc.Hex.z800), lineWidth: 1))
                 .contentShape(Capsule())
             }
             .buttonStyle(.plain)
@@ -241,7 +282,7 @@ struct StoryDetailView: View {
             // overflow can't widen the layout.
             Color.clear
                 .frame(maxWidth: .infinity)
-                .frame(height: story.leadImageURL == nil ? 120 : 220)
+                .frame(height: story.leadImageURL == nil ? 120 : 340)
                 .overlay { RemoteImage(url: story.leadImageURL, tint: leadTint) }
                 .clipped()
                 .visualEffect { effect, proxy in
@@ -302,78 +343,4 @@ struct StoryDetailView: View {
 private struct CommentsRequest: Identifiable {
     let id = UUID()
     let typing: Bool
-}
-
-/// Swiping right goes back to the previous page, except while the comments panel is open (its
-/// drag-to-close could otherwise also trigger it and close the story). Uses a plain view that finds its navigation controller through the
-/// responder chain (a background view controller is not part of that hierarchy in SwiftUI).
-private struct SwipeBackDisabler: UIViewRepresentable {
-    let isDisabled: Bool
-
-    func makeUIView(context: Context) -> Probe { Probe() }
-    func updateUIView(_ view: Probe, context: Context) {
-        view.isDisabled = isDisabled
-        view.apply()
-    }
-
-    final class Probe: UIView {
-        private weak var navigation: UINavigationController?
-        var isDisabled = false
-
-        override init(frame: CGRect) {
-            super.init(frame: frame)
-            isUserInteractionEnabled = false
-        }
-        required init?(coder: NSCoder) { fatalError() }
-
-        private func findNavigationController() -> UINavigationController? {
-            var responder: UIResponder? = self
-            while let current = responder {
-                if let controller = current as? UIViewController {
-                    if let nav = controller.navigationController { return nav }
-                }
-                responder = current.next
-            }
-            return nil
-        }
-
-        func apply() {
-            if navigation == nil { navigation = findNavigationController() }
-            setSwipeBack(enabled: !isDisabled)
-        }
-
-        /// Every swipe-back recognizer: the edge one, iOS 26's full-width one, and the parallax
-        /// transition pans UIKit puts on the navigation controller's view.
-        private func swipeBackRecognizers() -> [UIGestureRecognizer] {
-            guard let navigation else { return [] }
-            var recognizers = (navigation.view.gestureRecognizers ?? []).filter {
-                String(describing: type(of: $0)).contains("ParallaxTransitionPan")
-            }
-            if let edge = navigation.interactivePopGestureRecognizer { recognizers.append(edge) }
-            if #available(iOS 26.0, *), let content = navigation.interactiveContentPopGestureRecognizer {
-                recognizers.append(content)
-            }
-            return recognizers
-        }
-
-        private func setSwipeBack(enabled: Bool) {
-            for recognizer in swipeBackRecognizers() { recognizer.isEnabled = enabled }
-        }
-
-        override func didMoveToWindow() {
-            super.didMoveToWindow()
-            if window != nil {
-                apply()
-            } else {
-                setSwipeBack(enabled: true)
-                navigation = nil
-            }
-        }
-
-        // SwiftUI can switch the gesture back on during layout passes; keep it off.
-        override func layoutSubviews() {
-            super.layoutSubviews()
-            if window != nil { apply() }
-        }
-    }
 }

@@ -7,9 +7,12 @@ struct LawStepsCarousel: View {
     let law: Law
     /// Index into `law.steps` of the card in the middle (nil on the cards still to come).
     @Binding var selectedStep: Int?
+    /// Vertical timeline (one card per stage down a rail) instead of the horizontal carousel.
+    var vertical = false
 
     @State private var selected: String?
     @State private var width: CGFloat = 0
+    @State private var visible: CGFloat = 0
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private struct Item: Identifiable {
@@ -26,7 +29,10 @@ struct LawStepsCarousel: View {
         var items = [Item(id: "deposit", kind: .done, step: nil, place: law.kind ?? "Texte", label: "Dépôt")]
         items += law.steps.enumerated().map { index, step in
             let isLast = index == law.steps.count - 1 && !law.isPromulgated
-            return Item(id: "step\(index)", kind: isLast ? .current : .done, step: step, place: step.place, label: step.label)
+            // The label is the big title; when it would just repeat the place (e.g. "Conseil
+            // constitutionnel" said twice), show what happens at that stage instead.
+            let label = step.label == step.place ? "Décision" : step.label
+            return Item(id: "step\(index)", kind: isLast ? .current : .done, step: step, place: step.place, label: label)
         }
         items += law.upcoming.enumerated().map { index, text in
             let parts = text.components(separatedBy: " · ")
@@ -37,7 +43,9 @@ struct LawStepsCarousel: View {
     }
 
     private var cardFraction: CGFloat { dynamicTypeSize.isAccessibilitySize ? 0.88 : 0.8 }
-    private var cardWidth: CGFloat { max(width * cardFraction, 190) }
+    private var cardWidth: CGFloat {
+        vertical ? max(width - 2 * AppSpacing.m - 14 - AppSpacing.st, 190) : max(width * cardFraction, 190)
+    }
     /// Height of a reading card that shows a hemicycle: header, label, strip, hemicycle (aspect 1.9), tally.
     private var fullCardHeight: CGFloat {
         let inner = cardWidth - 2 * AppSpacing.m
@@ -47,7 +55,9 @@ struct LawStepsCarousel: View {
 
     var body: some View {
         Group {
-            if width > 0 {
+            if vertical {
+                if width > 0 { timeline } else { Color.clear }
+            } else if width > 0 {
                 ScrollViewReader { proxy in
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(alignment: .top, spacing: AppSpacing.s) {
@@ -98,29 +108,96 @@ struct LawStepsCarousel: View {
         )
     }
 
+    // MARK: - Vertical timeline
+
+    /// Newest stage first (stages still to come at the top, the filing at the bottom), one card per
+    /// snap, opening on the stage the law is at now.
+    private var timeline: some View {
+        let all = Array(items.reversed())
+        let cardHeight = fullCardHeight + 32
+        // The scroll view spans the whole screen (no safe-area insets), so equal margins above and
+        // below put the focused card exactly in the middle of the screen.
+        let margin = max((visible - cardHeight) / 2, AppSpacing.m)
+        return ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(all.enumerated()), id: \.element.id) { index, item in
+                    HStack(alignment: .top, spacing: AppSpacing.st) {
+                        rail(item, above: index > 0 ? all[index - 1] : nil, hasBelow: index + 1 < all.count, topInset: 0)
+                        card(item)
+                            .frame(maxWidth: .infinity, alignment: .topLeading)
+                            .frame(height: cardHeight)
+                            .padding(.bottom, index + 1 < all.count ? AppSpacing.xxl : 0)
+                    }
+                    .id(item.id)
+                }
+            }
+            .padding(.horizontal, AppSpacing.m)
+            .scrollTargetLayout()
+        }
+        .ignoresSafeArea(.container, edges: .vertical)
+        .contentMargins(.vertical, margin, for: .scrollContent)
+        // The neighbouring cards stay in view; a swipe moves exactly one card and snaps it to the centre.
+        .scrollTargetBehavior(.viewAligned(limitBehavior: .always))
+        .scrollPosition(id: $selected, anchor: .center)
+        // One tick each time a card snaps into the middle (not for the first positioning on open).
+        .sensoryFeedback(trigger: selected) { old, _ in old == nil ? nil : .selection }
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { visible = $0 }
+        .onAppear {
+            let start = items.first { $0.kind == .current } ?? items.last { $0.kind == .done } ?? items.first
+            guard let start else { return }
+            DispatchQueue.main.async { selected = start.id }
+        }
+    }
+
+    private let dotSize: CGFloat = 14
+    private func dotCenter(_ topInset: CGFloat) -> CGFloat { topInset + AppSpacing.m + 9 }
+
+    /// Dot for the stage with the line running through it, unbroken from one card to the next: solid
+    /// up to where the law stands, light for the stages still to come.
+    private func rail(_ item: Item, above: Item?, hasBelow: Bool, topInset: CGFloat) -> some View {
+        func line(_ kind: Item.Kind) -> Color { kind == .upcoming ? AppColors.Adaptive.divider : AppColors.Adaptive.textPrimary }
+        return ZStack(alignment: .top) {
+            VStack(spacing: 0) {
+                Rectangle()
+                    .fill(above.map { line($0.kind) } ?? .clear)
+                    .frame(width: 2, height: dotCenter(topInset))
+                Rectangle()
+                    .fill(hasBelow ? line(item.kind) : .clear)
+                    .frame(width: 2)
+                    .frame(maxHeight: .infinity)
+            }
+            Group {
+                if item.kind == .upcoming {
+                    Circle().fill(AppColors.Adaptive.background)
+                        .overlay(Circle().stroke(AppColors.Adaptive.textMeta, lineWidth: 2))
+                } else {
+                    Circle().fill(AppColors.Adaptive.textPrimary)
+                }
+            }
+            .frame(width: dotSize, height: dotSize)
+            .padding(.top, dotCenter(topInset) - dotSize / 2)
+        }
+        .frame(width: dotSize)
+        .frame(maxHeight: .infinity, alignment: .top)
+    }
+
     // MARK: - Cards
 
     private func card(_ item: Item) -> some View {
         VStack(alignment: .leading, spacing: AppSpacing.st) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(item.place)
-                    .font(.geist(.body, .medium))
-                    .foregroundStyle(AppColors.Adaptive.textPrimary)
-                Spacer(minLength: AppSpacing.s)
-                if let status = status(item) { StatusTag(text: status.text, icon: status.icon, tone: status.tone) }
-            }
+            // Date and place on one line, split by a dot.
+            Text([dateBeside(item), item.place].compactMap { $0 }.joined(separator: " · "))
+                .font(.appCaption)
+                .foregroundStyle(AppColors.Adaptive.textMeta)
+                .lineLimit(1)
 
-            HStack(alignment: .firstTextBaseline, spacing: AppSpacing.s) {
+            HStack(alignment: .center, spacing: AppSpacing.s) {
                 Text(item.label)
-                    .font(.geist(.title, .medium))
+                    .font(.geist(.heading, .medium))
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
+                    .lineLimit(1)
                 if let help = LawExplainer.glossary(item.label) {
                     JargonHelp(term: item.label, text: help)
-                }
-                if let date = dateBeside(item) {
-                    Text(date)
-                        .font(.appCaption)
-                        .foregroundStyle(AppColors.Adaptive.textMeta)
                 }
             }
 
@@ -139,12 +216,19 @@ struct LawStepsCarousel: View {
             }
         }
         .padding(AppSpacing.m)
+        // The status tag sits in the actual top-right corner of the card, independent of whether
+        // there's a date above the small title, so a dateless card (upcoming) has no blank row for it.
+        .overlay(alignment: .topTrailing) {
+            if let status = status(item) {
+                StatusTag(text: status.text, icon: status.icon, tone: status.tone)
+                    .padding(AppSpacing.m)
+            }
+        }
         // Every card has the height of one with a full hemicycle (also when none of them has one),
         // and stretches to the tallest in the row.
-        .frame(minHeight: fullCardHeight)
+        .frame(minHeight: vertical ? nil : fullCardHeight)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(AppColors.Adaptive.cardSurface, in: RoundedRectangle(cornerRadius: AppRadius.xl))
-        .overlay(RoundedRectangle(cornerRadius: AppRadius.xl).stroke(AppColors.stroke, lineWidth: 1))
         .opacity(item.kind == .upcoming ? 0.7 : 1)
         .accessibilityElement(children: .combine)
     }
@@ -165,11 +249,13 @@ struct LawStepsCarousel: View {
         return item.kind == .current ? ("En cours", "clock", .progress) : ("Terminé", "check-circle", .neutral)
     }
 
-    /// Dates shown next to the big label on the cards that have no vote (filing, Conseil constitutionnel, promulgation).
+    /// Date shown above the small title on every card that has one: the filing date on the deposit
+    /// card, and otherwise the latest date reached on that step (readings included, not just the
+    /// no-vote stages) so the date line is never blank while the step itself has one.
     private func dateBeside(_ item: Item) -> String? {
         if item.id == "deposit" { return LawDates.short(law.steps.first?.startedAt) }
-        if let step = item.step, step.code == "PROM" || step.code == "CC" { return LawDates.short(step.startedAt) }
-        return nil
+        guard let step = item.step else { return nil }   // upcoming: no date is known yet
+        return LawDates.short(step.decidedAt ?? step.debateAt ?? step.commissionAt ?? step.startedAt)
     }
 
     /// Dépôt · Commission · Séance · Vote of one reading, as four bar segments like the progress bar above

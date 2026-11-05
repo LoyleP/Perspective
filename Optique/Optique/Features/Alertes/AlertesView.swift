@@ -12,7 +12,6 @@ struct AlertesView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            AppHeader()
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: AppSpacing.l) {
                     Text("Alertes")
@@ -31,10 +30,12 @@ struct AlertesView: View {
             .shrinksTabBarOnScroll()
         }
         .background(AppColors.Adaptive.background.ignoresSafeArea())
-        .toolbar(.hidden, for: .navigationBar)
+        .appHeaderToolbar()
         .navigationDestination(item: $selectedStory) { story in
             StoryDetailView(story: story)
         }
+        // Loaded once at launch even while another tab is shown, so the first visit is instant.
+        .task { await viewModel.load() }
         .task(id: isActive) {
             if isActive { await viewModel.load() }
         }

@@ -1,4 +1,5 @@
 import SwiftUI
+import StoreKit
 
 /// App settings as a standard grouped list, presented as a sheet from Mon Optique.
 struct SettingsView: View {
@@ -11,11 +12,11 @@ struct SettingsView: View {
     @State private var showMethodologie = false
     @State private var showOwnership = false
     @State private var showPaywall = false
+    @State private var showManage = false
     @State private var confirmReset = false
     @State private var isRestoring = false
 
     #if DEBUG
-    @AppStorage("devIsPremium") private var devIsPremium = false
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = true
     @State private var showOnboarding = false
     @State private var notificationTestMessage = ""
@@ -24,33 +25,62 @@ struct SettingsView: View {
     var body: some View {
         Form {
             if AppConfig.paywallEnabled {
-            Section("Abonnement") {
-                LabeledContent("Formule", value: session.isPremium ? "Optique+" : "Gratuite")
-                if !session.isPremium {
-                    Button {
-                        showPaywall = true
-                    } label: {
-                        Label("Passer à Optique+", hero: "sparkles")
-                            .foregroundStyle(AppColors.Brand.accent)
-                    }
+                Section {
+                    PlanCard(
+                        isPremium: session.isPremium,
+                        used: session.storiesOpened,
+                        total: session.freeLimit,
+                        onUpgrade: { showPaywall = true },
+                        onManage: session.storeManager.isPremium ? { showManage = true } : nil
+                    )
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                } header: {
+                    Text("Abonnement")
                 }
-                Button {
-                    Task {
-                        isRestoring = true
-                        await session.storeManager.restorePurchases()
-                        isRestoring = false
-                    }
-                } label: {
-                    HStack {
-                        Label("Restaurer les achats", hero: "arrow-path")
-                        if isRestoring {
-                            Spacer()
-                            ProgressView()
+
+                Section {
+                    Button {
+                        Task {
+                            isRestoring = true
+                            await session.storeManager.restorePurchases()
+                            isRestoring = false
+                        }
+                    } label: {
+                        HStack {
+                            Label("Restaurer les achats", hero: "arrow-path")
+                            if isRestoring {
+                                Spacer()
+                                ProgressView()
+                            }
                         }
                     }
+                    .disabled(isRestoring)
                 }
-                .disabled(isRestoring)
-            }
+
+                // Test builds only: shows the app as a free or as an Optique+ reader sees it.
+                Section {
+                    Toggle(isOn: Binding(get: { session.testPremium }, set: { session.testPremium = $0 })) {
+                        Label("Compte Optique+", hero: "sparkles")
+                    }
+                    .sensoryFeedback(.selection, trigger: session.testPremium)
+                    Button {
+                        session.resetCounter()
+                        Haptics.lightImpact()
+                    } label: {
+                        LabeledContent {
+                            Text("\(session.storiesOpened) / \(session.freeLimit)")
+                                .monospacedDigit()
+                        } label: {
+                            Label("Remettre les sujets gratuits à zéro", hero: "arrow-uturn-left")
+                        }
+                    }
+                    .foregroundStyle(AppColors.Adaptive.textPrimary)
+                } header: {
+                    Text("Version de test")
+                } footer: {
+                    Text("Bascule entre la vue d'un compte gratuit (\(session.freeLimit) sujets par session) et celle d'un compte Optique+. Ce réglage disparaîtra de la version publique.")
+                }
             }
 
             Section {
@@ -77,11 +107,6 @@ struct SettingsView: View {
             }
 
             Section("Lecture") {
-                NavigationLink {
-                    MySpectrumView()
-                } label: {
-                    Label("Mon spectre de lecture", hero: "chart-bar")
-                }
                 NavigationLink {
                     TopicPreferencesView()
                 } label: {
@@ -126,12 +151,6 @@ struct SettingsView: View {
                 } label: {
                     Label("Design system", hero: "swatch")
                 }
-                Toggle(isOn: $devIsPremium) {
-                    Label("Mode premium", hero: "star")
-                }
-                .onChange(of: devIsPremium) { _, newValue in
-                    if newValue { session.storiesOpened = 0 }
-                }
                 Button {
                     Task { await testNotifications() }
                 } label: {
@@ -162,7 +181,7 @@ struct SettingsView: View {
             }
         }
         .confirmationDialog("Effacer l'historique ?", isPresented: $confirmReset, titleVisibility: .visible) {
-            Button("Effacer", role: .destructive) { history.reset() }
+            Button("Effacer", role: .destructive) { history.reset(); Haptics.warning() }
         } message: {
             Text("Votre historique et votre spectre de lecture seront remis à zéro.")
         }
@@ -175,6 +194,7 @@ struct SettingsView: View {
         .sheet(isPresented: $showPaywall) {
             PaywallView()
         }
+        .manageSubscriptionsSheet(isPresented: $showManage)
         #if DEBUG
         .fullScreenCover(isPresented: $showOnboarding) {
             OnboardingView()

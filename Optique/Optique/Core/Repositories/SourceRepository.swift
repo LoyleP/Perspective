@@ -22,6 +22,20 @@ final class SourceRepository: SourceRepositoryProtocol {
         }
     }
 
+    func cachedSources() async -> [Source]? {
+        #if DEBUG
+        if Fixtures.isActive { return nil }
+        #endif
+        return await APIClient.shared.cached("sources")
+    }
+
+    func cachedRecentArticles(sourceId: UUID, limit: Int) async -> [Article]? {
+        #if DEBUG
+        if Fixtures.isActive { return nil }
+        #endif
+        return await APIClient.shared.cached("source-articles", query: ["source_id": sourceId.uuidString, "limit": String(limit)])
+    }
+
     func fetchSource(id: UUID) async throws -> Source? {
         #if DEBUG
         if Fixtures.isActive { return Fixtures.sources.first { $0.id == id } }

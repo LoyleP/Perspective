@@ -28,6 +28,15 @@ final class StoryRepository: StoryRepositoryProtocol {
         }
     }
 
+    func cachedFeed(topic: String?, limit: Int, offset: Int) async -> [Story]? {
+        #if DEBUG
+        if Fixtures.isActive { return nil }
+        #endif
+        var query = ["limit": String(limit), "offset": String(offset)]
+        if let topic { query["topic"] = topic }
+        return await APIClient.shared.cached("feed", query: query)
+    }
+
     func fetchStory(id: UUID) async throws -> Story? {
         #if DEBUG
         if Fixtures.isActive { return Fixtures.stories.first { $0.id == id } }

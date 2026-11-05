@@ -62,6 +62,7 @@ struct SideCarouselView: View {
                 .onChange(of: selected) { _, id in
                     if let id { Analytics.track(.sideCardSwipe, ["story": story.id.uuidString, "side": String(id)]) }
                 }
+                .sensoryFeedback(.selection, trigger: selected)
                 .onAppear {
                     guard let id = selected else { return }
                     DispatchQueue.main.async { proxy.scrollTo(id, anchor: .center) }
@@ -158,7 +159,6 @@ struct SideCarouselView: View {
         .padding(AppSpacing.st)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .background(AppColors.Adaptive.cardSurface, in: RoundedRectangle(cornerRadius: AppRadius.xl))
-        .overlay(RoundedRectangle(cornerRadius: AppRadius.xl).stroke(AppColors.stroke, lineWidth: 1))
         .opacity(isEmpty ? 0.55 : 1)
         .contentShape(RoundedRectangle(cornerRadius: AppRadius.xl))
         }

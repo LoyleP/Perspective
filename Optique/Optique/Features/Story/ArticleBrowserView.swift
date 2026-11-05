@@ -51,6 +51,8 @@ struct ArticleBrowserView: View {
             }
         }
         .navigationBarTitleDisplayMode(.inline)
+        .appBackButton()
+        .sensoryFeedback(.selection, trigger: currentIndex)
         .task(id: currentIndex) {
             guard let lean = currentArticle.source?.politicalLean else { return }
             try? await Task.sleep(for: .seconds(2))

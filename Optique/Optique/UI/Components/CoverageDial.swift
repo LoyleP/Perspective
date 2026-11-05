@@ -9,9 +9,11 @@ struct CoverageDial: View {
     let selected: PoliticalLean?
     let onSelect: (PoliticalLean) -> Void
 
-    /// Gap between two arcs, in degrees.
-    private let gap = 2.0
+    /// Width of the gap between two arcs, in points: the same along its whole length.
+    private let gap: CGFloat = 4
     private let thickness: CGFloat = 44
+    /// Radius of the rounded corners of each slice.
+    private let corner: CGFloat = 6
 
     private struct Arc { let lean: PoliticalLean; let start: Double; let end: Double }   // degrees, 180 = far left … 0 = far right
 
@@ -37,9 +39,23 @@ struct CoverageDial: View {
             ZStack {
                 ForEach(arcs, id: \.lean) { arc in
                     let isSelected = selected == arc.lean
-                    ArcShape(start: arc.start - gap / 2, end: arc.end + gap / 2, radius: radius, center: center)
-                        .stroke(arc.lean.spectrumColor.opacity(selected == nil || isSelected ? 1 : 0.35),
-                                style: StrokeStyle(lineWidth: isSelected ? thickness + 8 : thickness, lineCap: .butt))
+                    let color = arc.lean.spectrumColor
+                    let dimmed = selected != nil && !isSelected
+                    let width = isSelected ? thickness + 8 : thickness
+                    // Rounded corners: the sector is shrunk by `corner` on every side, then stroked with a
+                    // round join of the same width, which rounds all four corners with that radius.
+                    // Each straight edge sits half the gap (plus the corner) away from the boundary
+                    // between two slices and runs parallel to it, so the gap has a constant width.
+                    let sector = SectorShape(start: arc.start, end: arc.end,
+                                             inner: radius - width / 2 + corner, outer: radius + width / 2 - corner,
+                                             offset: gap / 2 + corner, center: center)
+                    // Fill and stroke are composited together (compositingGroup) before the dimmed
+                    // opacity is applied, so their overlap doesn't stack into a visible lighter outline.
+                    sector
+                        .fill(color)
+                        .overlay(sector.stroke(color, style: StrokeStyle(lineWidth: corner * 2, lineJoin: .round)))
+                        .compositingGroup()
+                        .opacity(dimmed ? 0.35 : 1)
                 }
                 .animation(.app, value: selected)
 
@@ -83,23 +99,35 @@ struct CoverageDial: View {
     }
 }
 
-private struct ArcShape: Shape {
+/// A ring sector between two radii, `start`…`end` in degrees (180 = far left, 0 = far right). Its two
+/// straight edges run parallel to the slice boundaries, pulled in by `offset` points, so two
+/// neighbouring slices are separated by a gap of even width (not a wedge).
+private struct SectorShape: Shape {
     var start: Double
     var end: Double
-    let radius: CGFloat
+    var inner: CGFloat
+    var outer: CGFloat
+    let offset: CGFloat
     let center: CGPoint
 
-    var animatableData: AnimatablePair<Double, Double> {
-        get { AnimatablePair(start, end) }
-        set { start = newValue.first; end = newValue.second }
+    var animatableData: AnimatablePair<AnimatablePair<Double, Double>, AnimatablePair<CGFloat, CGFloat>> {
+        get { AnimatablePair(AnimatablePair(start, end), AnimatablePair(inner, outer)) }
+        set { start = newValue.first.first; end = newValue.first.second; inner = newValue.second.first; outer = newValue.second.second }
     }
 
     func path(in rect: CGRect) -> Path {
-        // Our angles run anticlockwise with y up; SwiftUI's run clockwise with y down.
         var path = Path()
-        guard start > end else { return path }
-        path.addArc(center: center, radius: radius,
-                    startAngle: .degrees(-start), endAngle: .degrees(-end), clockwise: false)
+        guard outer > inner, inner > offset else { return path }
+        // A point on a line parallel to the boundary, `offset` away, sits asin(offset / r) of angle in from it.
+        let outerPad = asin(Double(offset / outer)) * 180 / .pi
+        let innerPad = asin(Double(offset / inner)) * 180 / .pi
+        let o0 = start - outerPad, o1 = end + outerPad
+        let i0 = start - innerPad, i1 = end + innerPad
+        guard o0 > o1, i0 > i1 else { return path }
+        // Our angles run anticlockwise with y up; SwiftUI's run clockwise with y down.
+        path.addArc(center: center, radius: outer, startAngle: .degrees(-o0), endAngle: .degrees(-o1), clockwise: false)
+        path.addArc(center: center, radius: inner, startAngle: .degrees(-i1), endAngle: .degrees(-i0), clockwise: true)
+        path.closeSubpath()
         return path
     }
 }

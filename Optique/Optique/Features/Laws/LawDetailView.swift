@@ -6,31 +6,44 @@ struct LawDetailView: View {
     let law: Law
     @State private var detail: Law?
     @State private var selectedStory: Story?
-    /// Step card in the middle of the carousel; the progress bar above follows it.
-    @State private var selectedStep: Int?
+    @State private var showsPath = false
     @Environment(\.openURL) private var openURL
 
     private var shown: Law { detail ?? law }
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: AppSpacing.l) {
-                titleBlock
-                summaryBlock
+            VStack(alignment: .leading, spacing: AppSpacing.xl) {
+                VStack(alignment: .leading, spacing: AppSpacing.m) {
+                    titleBlock
+                    summaryBlock
+                }
                 pathBlock
-                stories
-                links
+                VStack(alignment: .leading, spacing: AppSpacing.l) {
+                    stories
+                    links
+                }
             }
             .padding(.vertical, AppSpacing.m)
             .padding(.bottom, AppSpacing.xxl)
         }
         .background(AppColors.Adaptive.background.ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
+        .appBackButton()
+        .toolbarBackground(.hidden, for: .navigationBar)
+        .navigationDestination(isPresented: $showsPath) {
+            LawStepsCarousel(law: shown, selectedStep: .constant(nil), vertical: true)
+            .background(AppColors.Adaptive.background.ignoresSafeArea())
+            .navigationBarTitleDisplayMode(.inline)
+            .appBackButton()
+        }
         .navigationDestination(item: $selectedStory) { story in
             StoryDetailView(story: story)
         }
         .onAppear { Analytics.track(.lawOpen, ["law": law.uid]) }
         .task {
+            // The law's page as last received (often prefetched by the list) shows at once.
+            if detail == nil, let cached = await LawRepository.shared.cachedLaw(uid: law.uid) { detail = cached }
             while !Task.isCancelled {
                 if let fresh = try? await LawRepository.shared.fetchLaw(uid: law.uid) { detail = fresh }
                 try? await Task.sleep(for: .seconds(300))
@@ -40,11 +53,26 @@ struct LawDetailView: View {
 
     private var titleBlock: some View {
         VStack(alignment: .leading, spacing: AppSpacing.s) {
-            Text(shown.kindLine)
-                .font(.appCaption)
-                .foregroundStyle(AppColors.Adaptive.textMeta)
+            if let name = shown.authorName {
+                HStack(spacing: AppSpacing.s) {
+                    AsyncImage(url: shown.authorPhoto.flatMap(URL.init(string:))) { image in
+                        image.resizable().scaledToFill()
+                    } placeholder: {
+                        Circle().fill(AppColors.Adaptive.surfaceElevated)
+                    }
+                    .frame(width: 24, height: 24)
+                    .clipShape(Circle())
+                    Text(name)
+                        .font(.appCaption)
+                        .foregroundStyle(AppColors.Adaptive.textMeta)
+                }
+            } else {
+                Text(shown.kindLine)
+                    .font(.appCaption)
+                    .foregroundStyle(AppColors.Adaptive.textMeta)
+            }
             Text(shown.displayTitle)
-                .font(.appHeading)
+                .font(.appTitle)
                 .foregroundStyle(AppColors.Adaptive.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -56,9 +84,6 @@ struct LawDetailView: View {
     private var summaryBlock: some View {
         if let summary = shown.summary {
             VStack(alignment: .leading, spacing: AppSpacing.s) {
-                Text("En bref")
-                    .font(.appHeading)
-                    .foregroundStyle(AppColors.Adaptive.textPrimary)
                 Text(summary)
                     .font(.appBody)
                     .lineSpacing(4)
@@ -73,20 +98,26 @@ struct LawDetailView: View {
     /// stage (same carousel as the story page's position cards).
     private var pathBlock: some View {
         VStack(alignment: .leading, spacing: AppSpacing.m) {
-            Text("Parcours")
-                .font(.appHeading)
-                .foregroundStyle(AppColors.Adaptive.textPrimary)
-                .padding(.horizontal, AppSpacing.m)
-
             VStack(alignment: .leading, spacing: AppSpacing.st) {
                 Text(LawExplainer.headline(for: shown))
-                    .font(.appBodyStrong)
+                    .font(.appHeading)
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
-                LawProgressBar(law: shown, showsLabels: true, selectedStep: selectedStep)
+                LawProgressBar(law: shown, showsLabels: true)
+                if let next = LawExplainer.next(for: shown) {
+                    Text("Prochaine étape : \(next)")
+                        .font(.appBody)
+                        .foregroundStyle(AppColors.Adaptive.textBody)
+                }
+                Button { showsPath = true } label: {
+                    HStack(spacing: AppSpacing.s) {
+                        Text("Voir tout le parcours")
+                        HeroIcon("chevron-right", size: 16)
+                    }
+                }
+                .buttonStyle(.grayCTA)
+                .padding(.top, AppSpacing.s)
             }
             .padding(.horizontal, AppSpacing.m)
-
-            LawStepsCarousel(law: shown, selectedStep: $selectedStep)
         }
     }
 
@@ -94,10 +125,6 @@ struct LawDetailView: View {
     private var stories: some View {
         if let stories = shown.stories, !stories.isEmpty {
             VStack(alignment: .leading, spacing: 0) {
-                Text("Dans l'actualité")
-                    .font(.appHeading)
-                    .foregroundStyle(AppColors.Adaptive.textPrimary)
-                    .padding(.bottom, AppSpacing.s)
                 ForEach(stories) { story in
                     Button { selectedStory = story } label: { StoryRow(story: story) }
                         .buttonStyle(.plain)

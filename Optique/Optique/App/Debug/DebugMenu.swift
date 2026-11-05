@@ -91,7 +91,6 @@ private struct DebugMenuView: View {
     @AppStorage(Fixtures.fixturesKey) private var useFixtures = false
     @AppStorage(Fixtures.stateKey) private var forcedState = "normal"
     @AppStorage(DebugRoute.textSizeKey) private var textSize = ""
-    @AppStorage("devIsPremium") private var devIsPremium = false
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = true
     @AppStorage("lastSeenAlertsAt") private var lastSeenAlertsAt: Double = 0
     @AppStorage("notificationsEnabled") private var notificationsEnabled = false
@@ -185,11 +184,11 @@ private struct DebugMenuView: View {
             launch("Onboarding", "hand.wave", .onboarding)
             launch("Paywall Optique+", "sparkles", .paywall)
             Button {
-                session.storiesOpened = 5
-                done("Compteur à 5 : ouvrez un sujet pour voir la bannière.")
+                session.fillCounter()
+                done("Limite atteinte : ouvrez un sujet pour voir l'écran de limite.")
                 dismiss()
             } label: {
-                Label("Bannière paywall souple", systemImage: "rectangle.bottomthird.inset.filled")
+                Label("Limite de lecture atteinte", systemImage: "rectangle.bottomthird.inset.filled")
             }
             DisclosureGroup("Écrans (plein écran)") {
                 launch("À la une", "newspaper", .feed)
@@ -290,9 +289,9 @@ private struct DebugMenuView: View {
 
     private var subscriptionSection: some View {
         Section("Abonnement") {
-            Toggle("Forcer Optique+ (premium)", isOn: $devIsPremium)
+            Toggle("Forcer Optique+ (premium)", isOn: Binding(get: { session.testPremium }, set: { session.testPremium = $0 }))
             LabeledContent("Sujets ouverts (session)", value: "\(session.storiesOpened)")
-            Button("Remettre le compteur à 0") { session.storiesOpened = 0 }
+            Button("Remettre le compteur à 0") { session.resetCounter() }
             Button("Restaurer les achats") {
                 Task {
                     await session.storeManager.restorePurchases()

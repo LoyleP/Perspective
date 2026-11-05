@@ -12,13 +12,33 @@ final class LawsViewModel {
         guard !isLoading else { return }
         isLoading = laws.isEmpty
         defer { isLoading = false }
+        // Last list received shows at once; the network refreshes it behind.
+        if laws.isEmpty, let cached = await LawRepository.shared.cachedLaws(), laws.isEmpty {
+            laws = cached.laws
+            checkedAt = cached.checkedAt
+            isLoading = false
+        }
         do {
             let page = try await LawRepository.shared.fetchLaws()
             laws = page.laws
             checkedAt = page.checkedAt
             error = nil
+            prefetchDetailsOnce(page.laws)
         } catch {
             if laws.isEmpty { self.error = AppError.from(error) }
+        }
+    }
+
+    private var didPrefetchDetails = false
+
+    /// Fetches every law's page in the background once per session, so opening one shows its
+    /// stories without waiting.
+    private func prefetchDetailsOnce(_ laws: [Law]) {
+        guard !didPrefetchDetails else { return }
+        didPrefetchDetails = true
+        let uids = laws.map(\.uid)
+        Task(priority: .utility) {
+            for uid in uids { _ = try? await LawRepository.shared.fetchLaw(uid: uid) }
         }
     }
 }
@@ -30,35 +50,38 @@ struct LawsView: View {
     @State private var viewModel = LawsViewModel()
     @State private var selected: Law?
     @State private var filter: LawFilter = .all
+    @State private var collapsed: Set<LawSection> = []
     var isActive = true
 
     private static let refreshInterval: Duration = .seconds(300)
 
     var body: some View {
         VStack(spacing: 0) {
-            AppHeader()
             LawTabs(selection: $filter)
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
-                    content
                     if let checkedAt = viewModel.checkedAt {
-                        Text("Assemblée nationale et Sénat · vérifié \(checkedAt.relativeToNowFrench())")
+                        Text("Vérifié \(checkedAt.relativeToNowFrench())")
                             .font(.appCaption)
                             .foregroundStyle(AppColors.Adaptive.textMeta)
                             .padding(.top, AppSpacing.m)
                     }
+                    content
                 }
                 .padding(.horizontal, AppSpacing.m)
                 .padding(.bottom, AppSpacing.xxl)
             }
             .refreshable { await viewModel.load() }
             .shrinksTabBarOnScroll()
+            .sensoryFeedback(.selection, trigger: collapsed)
         }
         .background(AppColors.Adaptive.background.ignoresSafeArea())
-        .toolbar(.hidden, for: .navigationBar)
+        .appHeaderToolbar()
         .navigationDestination(item: $selected) { law in
             LawDetailView(law: law)
         }
+        // Loaded once at launch even while another tab is shown, so the first visit is instant.
+        .task { await viewModel.load() }
         .task(id: isActive) {
             guard isActive else { return }
             while !Task.isCancelled {
@@ -84,18 +107,39 @@ struct LawsView: View {
         if viewModel.isLoading {
             SkeletonLines(count: 6)
         } else if let error = viewModel.error {
-            ContentUnavailableView("Lois indisponibles", hero: "building-library", description: Text(error.localizedDescription))
+            ContentUnavailableView("Lois indisponibles", hero: "scroll", description: Text(error.localizedDescription))
         } else if visibleLaws.isEmpty {
-            ContentUnavailableView("Aucun texte", hero: "building-library", description: Text("Aucun texte ne correspond à ce filtre pour le moment."))
+            ContentUnavailableView("Aucun texte", hero: "scroll", description: Text("Aucun texte ne correspond à ce filtre pour le moment."))
         } else {
             // Grouped by what is happening now, the most talked-about texts first in each group.
             ForEach(Array(groups.enumerated()), id: \.element.section) { index, group in
-                SectionHeader(title: group.section.rawValue)
-                    .padding(.top, index == 0 ? AppSpacing.s : AppSpacing.xl)
-                ForEach(group.laws) { law in
-                    Button { selected = law } label: { LawRow(law: law) }
-                        .buttonStyle(.plain)
-                    Divider().overlay(AppColors.Adaptive.divider)
+                let isCollapsed = collapsed.contains(group.section)
+                Button {
+                    withAnimation(.app) {
+                        if isCollapsed { collapsed.remove(group.section) } else { collapsed.insert(group.section) }
+                    }
+                } label: {
+                    HStack(spacing: AppSpacing.s) {
+                        HeroIcon("chevron-right", size: 18)
+                            .foregroundStyle(AppColors.Adaptive.textMeta)
+                            .rotationEffect(.degrees(isCollapsed ? 0 : 90))
+                        SectionHeader(title: group.section.rawValue)
+                        Spacer(minLength: 0)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(.isHeader)
+                .accessibilityValue(isCollapsed ? "Replié" : "Déplié")
+                .padding(.top, index == 0 ? AppSpacing.m : AppSpacing.xl)
+                .padding(.bottom, AppSpacing.m)
+                if !isCollapsed {
+                    VStack(spacing: AppSpacing.s) {
+                        ForEach(group.laws) { law in
+                            Button { selected = law } label: { LawRow(law: law) }
+                                .buttonStyle(.plain)
+                        }
+                    }
                 }
             }
         }
@@ -169,10 +213,10 @@ struct LawProgressBar: View {
 
 /// List groups: what is happening to the text right now.
 enum LawSection: String, CaseIterable, Identifiable {
-    case voted = "Votés récemment"
-    case debate = "En débat"
     case committee = "En commission"
+    case debate = "En débat"
     case filed = "Déposés"
+    case voted = "Votés récemment"
 
     var id: String { rawValue }
 
@@ -190,40 +234,54 @@ enum LawSection: String, CaseIterable, Identifiable {
     }
 }
 
-/// List row: a plain title, who it concerns, its status in a plain sentence, a simple progress bar
-/// and what's next.
+/// List row: a plain title, who it concerns in one line, and its status in a plain sentence. The
+/// section header above already says what stage the row is at, and the full path (progress bar
+/// included) is on the law's own page, so the row itself doesn't repeat either.
 private struct LawRow: View {
     let law: Law
 
     var body: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.s) {
-            Text(law.displayTitle)
-                .font(.geist(.body, .medium))
-                .foregroundStyle(AppColors.Adaptive.textPrimary)
-                .lineLimit(2)
-                .multilineTextAlignment(.leading)
-            if let why = law.whyItMatters, !why.isEmpty {
-                Text(why)
-                    .font(.appBody)
-                    .foregroundStyle(AppColors.Adaptive.textBody)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
+        VStack(alignment: .leading, spacing: AppSpacing.st) {
+            if let name = law.authorName {
+                HStack(spacing: AppSpacing.s) {
+                    AsyncImage(url: law.authorPhoto.flatMap(URL.init(string:))) { image in
+                        image.resizable().scaledToFill()
+                    } placeholder: {
+                        Circle().fill(AppColors.Adaptive.surfaceElevated)
+                    }
+                    .frame(width: 24, height: 24)
+                    .clipShape(Circle())
+                    Text(name)
+                        .font(.appCaption)
+                        .foregroundStyle(AppColors.Adaptive.textMeta)
+                        .lineLimit(1)
+                }
             }
-            Text(LawExplainer.headline(for: law))
-                .font(.appBody)
-                .foregroundStyle(AppColors.Adaptive.textMeta)
-                .multilineTextAlignment(.leading)
-            LawProgressBar(law: law)
-                .padding(.top, 2)
-            if let next = LawExplainer.next(for: law) {
-                Text("Ensuite : \(next)")
+            VStack(alignment: .leading, spacing: AppSpacing.s) {
+                Text(law.displayTitle)
+                    .font(.geist(.body, .medium))
+                    .foregroundStyle(AppColors.Adaptive.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let why = law.whyItMatters, !why.isEmpty {
+                    Text(why)
+                        .font(.appBody)
+                        .foregroundStyle(AppColors.Adaptive.textBody)
+                        .lineLimit(1)
+                        .multilineTextAlignment(.leading)
+                }
+                Text(LawExplainer.headline(for: law))
                     .font(.appCaption)
                     .foregroundStyle(AppColors.Adaptive.textMeta)
-                    .lineLimit(2)
+                    .lineLimit(1)
+                    .multilineTextAlignment(.leading)
+                LawProgressBar(law: law)
+                    .padding(.top, AppSpacing.xs)
             }
         }
-        .padding(.vertical, AppSpacing.m)
-        .contentShape(Rectangle())
+        .padding(AppSpacing.m)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(AppColors.Adaptive.cardSurface, in: RoundedRectangle(cornerRadius: AppRadius.xl))
+        .contentShape(RoundedRectangle(cornerRadius: AppRadius.xl))
         .accessibilityElement(children: .combine)
     }
 }
@@ -289,6 +347,7 @@ struct LawTabs: View {
             .onChange(of: selection) { _, new in
                 withAnimation(.app) { proxy.scrollTo(new, anchor: .center) }
             }
+            .sensoryFeedback(.selection, trigger: selection)
         }
     }
 }

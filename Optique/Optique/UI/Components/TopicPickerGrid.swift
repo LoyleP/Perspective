@@ -53,6 +53,7 @@ struct TopicPickerGrid: View {
                 .accessibilityAddTraits(isOn ? .isSelected : [])
             }
         }
+        .sensoryFeedback(.selection, trigger: selection)
     }
 }
 
@@ -76,6 +77,7 @@ struct TopicPreferencesView: View {
         .background(AppColors.Adaptive.background.ignoresSafeArea())
         .navigationTitle("Thèmes préférés")
         .navigationBarTitleDisplayMode(.inline)
+        .appBackButton()
     }
 }
 

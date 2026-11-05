@@ -89,6 +89,9 @@ struct Law: Codable, Hashable, Identifiable {
     let summary: String?
     let storyCount: Int?
     let senatUrl: String?
+    /// Who filed the text, with a portrait.
+    let authorName: String?
+    let authorPhoto: String?
     /// Generic stages still to come ("1re lecture · Sénat", "Promulgation"…).
     let upcoming: [String]
     /// Present on the detail endpoint only.
@@ -103,6 +106,8 @@ struct Law: Codable, Hashable, Identifiable {
         case lastActAt = "last_act_at"
         case storyCount = "story_count"
         case senatUrl = "senat_url"
+        case authorName = "author_name"
+        case authorPhoto = "author_photo"
     }
 
     var displayTitle: String {

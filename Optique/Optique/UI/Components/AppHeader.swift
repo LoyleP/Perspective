@@ -3,18 +3,17 @@ import SwiftUI
 /// Round profile button: opens Mon Optique. There are no accounts, so it shows a placeholder photo
 /// (`Assets.xcassets/ProfilePlaceholder`).
 struct ProfileAvatarButton: View {
+    /// A plain `Button` (not a `NavigationLink`): in a toolbar the glass background of a link comes out oval.
+    let action: () -> Void
+
     var body: some View {
-        NavigationLink {
-            ProfileView()
-        } label: {
+        Button(action: action) {
             Image("ProfilePlaceholder")
                 .resizable()
                 .scaledToFill()
                 .frame(width: 34, height: 34)
                 .clipShape(Circle())
                 .overlay(Circle().stroke(AppColors.stroke, lineWidth: 1))
-                .frame(width: 44, height: 44)
-                .contentShape(Rectangle())
         }
         .accessibilityLabel("Mon Optique")
     }
@@ -37,7 +36,16 @@ struct HeaderLogo: View {
 struct AppHeader: View {
     var body: some View {
         HStack {
-            ProfileAvatarButton()
+            NavigationLink { ProfileView() } label: {
+                Color.clear.frame(width: 44, height: 44)
+                    .overlay {
+                        Image("ProfilePlaceholder").resizable().scaledToFill()
+                            .frame(width: 34, height: 34).clipShape(Circle())
+                            .overlay(Circle().stroke(AppColors.stroke, lineWidth: 1))
+                    }
+                    .contentShape(Rectangle())
+            }
+            .accessibilityLabel("Mon Optique")
             Spacer()
             HeaderLogo()
             Spacer()
@@ -49,17 +57,24 @@ struct AppHeader: View {
     }
 }
 
-extension View {
-    /// Same header as `AppHeader`, built from navigation-bar items (for screens that keep
-    /// the navigation bar, such as Explorer with its search field).
-    func appHeaderToolbar() -> some View {
-        self
+private struct AppHeaderToolbar: ViewModifier {
+    @State private var showsProfile = false
+
+    func body(content: Content) -> some View {
+        content
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) { ProfileAvatarButton() }
+                ToolbarItem(placement: .topBarLeading) { ProfileAvatarButton { showsProfile = true } }
                 ToolbarItem(placement: .principal) { HeaderLogo() }
             }
+            .navigationDestination(isPresented: $showsProfile) { ProfileView() }
     }
+}
+
+extension View {
+    /// Same header as `AppHeader`, built from navigation-bar items: the profile picture as a toolbar
+    /// button (a circle) and the logo at the centre.
+    func appHeaderToolbar() -> some View { modifier(AppHeaderToolbar()) }
 }
 
 /// Horizontal topic tabs under the header: the selected tab is bold ink with an underline.
@@ -83,13 +98,12 @@ struct TopicTabs: View {
                     ForEach(topics) { topic in
                         let isSelected = topic == shown
                         Button {
-                            if topic != shown { onWillSwitch() }
+                            if topic != shown { onWillSwitch(); Haptics.selection() }
                             withAnimation(.app) { shown = topic }
-                            // The page below switches once the indicator has landed, so loading
-                            // it never competes with the animation. The animation never waits on it.
+                            // The page below switches right away: its stories come from memory or
+                            // the disk cache, so there is nothing to wait for.
                             pending?.cancel()
                             pending = Task {
-                                try? await Task.sleep(for: .milliseconds(420))
                                 guard !Task.isCancelled else { return }
                                 if selection == topic { onSwitchCancelled() }
                                 selection = topic

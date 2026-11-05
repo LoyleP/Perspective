@@ -18,7 +18,6 @@ struct FeedView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            AppHeader()
             TopicTabs(selection: $topic, onWillSwitch: { isSwitching = true }, onSwitchCancelled: { isSwitching = false })
 
             ScrollView {
@@ -33,7 +32,7 @@ struct FeedView: View {
             .shrinksTabBarOnScroll()
         }
         .background(AppColors.Adaptive.background.ignoresSafeArea())
-        .toolbar(.hidden, for: .navigationBar)
+        .appHeaderToolbar()
         .navigationDestination(for: Story.self) { story in
             StoryDetailView(story: story)
         }
@@ -238,7 +237,9 @@ struct FeedView: View {
             .buttonStyle(CardPressStyle())
             .contextMenu {
                 Button {
+                    let wasSaved = bookmarks.isBookmarked(story)
                     bookmarks.toggle(story)
+                    if wasSaved { Haptics.lightImpact() } else { Haptics.success() }
                 } label: {
                     if bookmarks.isBookmarked(story) {
                         Label("Retirer des enregistrés", hero: "bookmark-slash")

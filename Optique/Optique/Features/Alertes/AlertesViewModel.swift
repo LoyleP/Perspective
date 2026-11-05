@@ -20,8 +20,12 @@ final class AlertesViewModel {
         await NotificationManager.shared.checkAuthorizationStatus()
         authorizationStatus = NotificationManager.shared.authorizationStatus
 
-        isLoading = true
         error = nil
+        // Last alerts received show at once; the network refreshes them behind.
+        if notifications.isEmpty, let cached = await NotificationManager.shared.cachedNotifications(), notifications.isEmpty {
+            notifications = cached
+        }
+        isLoading = notifications.isEmpty
 
         do {
             notifications = try await NotificationManager.shared.fetchNotifications()

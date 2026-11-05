@@ -17,6 +17,10 @@ final class LawRepository: Sendable {
         }
     }
 
+    func cachedLaws() async -> LawsPage? { await APIClient.shared.cached("laws") }
+
+    func cachedLaw(uid: String) async -> Law? { await APIClient.shared.cached("law", query: ["uid": uid]) }
+
     func fetchLaw(uid: String) async throws -> Law {
         do {
             return try await APIClient.shared.get("law", query: ["uid": uid])

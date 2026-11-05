@@ -11,16 +11,19 @@ final class APIClient: Sendable {
 
     private init() {}
 
-    func get<T: Decodable>(_ path: String, query: [String: String] = [:]) async throws -> T {
+    private func url(_ path: String, _ query: [String: String]) -> URL {
         var components = URLComponents(url: baseURL.appendingPathComponent(path), resolvingAgainstBaseURL: false)!
         if !query.isEmpty {
             components.queryItems = query.sorted { $0.key < $1.key }.map { URLQueryItem(name: $0.key, value: $0.value) }
         }
-        let url = components.url!
+        return components.url!
+    }
+
+    func get<T: Decodable>(_ path: String, query: [String: String] = [:]) async throws -> T {
+        let url = url(path, query)
         do {
-            let (data, response) = try await session.data(from: url)
-            try Self.validate(response, url: url)
-            let value = try Self.makeDecoder().decode(T.self, from: data)
+            let data = try await Self.inflight.data(for: url, session: session)
+            let value = try Self.decoder.decode(T.self, from: data)
             ResponseCache.store(data, for: url)
             return value
         } catch {
@@ -28,13 +31,24 @@ final class APIClient: Sendable {
             // exact request, so screens keep their content instead of showing an error.
             if !Self.isCancellation(error),
                let cached = ResponseCache.data(for: url),
-               let value = try? Self.makeDecoder().decode(T.self, from: cached) {
+               let value = try? Self.decoder.decode(T.self, from: cached) {
                 Log.repository.error("GET \(url.path) failed (\(error)); serving cached response")
                 return value
             }
             throw error
         }
     }
+
+    /// The last good response for this exact request (memory, then disk), or nil. Screens show it
+    /// at once and refresh from the network behind it.
+    func cached<T: Decodable>(_ path: String, query: [String: String] = [:]) async -> T? {
+        let url = url(path, query)
+        guard let data = ResponseCache.data(for: url) else { return nil }
+        return try? Self.decoder.decode(T.self, from: data)
+    }
+
+    /// Identical requests already on their way share one network call.
+    private static let inflight = InflightRequests()
 
     private static func isCancellation(_ error: Error) -> Bool {
         error is CancellationError || (error as? URLError)?.code == .cancelled
@@ -58,26 +72,33 @@ final class APIClient: Sendable {
     }
 
     // Handles timestamptz ("2026-03-17T10:30:00.000Z") and date-only ("2026-03-17") strings.
-    private static func makeDecoder() -> JSONDecoder {
+    // The formatters are built once: creating them per date made decoding a feed slow.
+    nonisolated(unsafe) private static let isoFractional: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
+    nonisolated(unsafe) private static let isoPlain: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime]
+        return f
+    }()
+    nonisolated(unsafe) private static let dayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = TimeZone(identifier: "UTC")
+        f.dateFormat = "yyyy-MM-dd"
+        return f
+    }()
+
+    nonisolated(unsafe) private static let decoder: JSONDecoder = {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .custom { decoder in
             let container = try decoder.singleValueContainer()
             let string = try container.decode(String.self)
-
-            let iso = ISO8601DateFormatter()
-
-            iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-            if let date = iso.date(from: string) { return date }
-
-            iso.formatOptions = [.withInternetDateTime]
-            if let date = iso.date(from: string) { return date }
-
-            let dateFmt = DateFormatter()
-            dateFmt.locale = Locale(identifier: "en_US_POSIX")
-            dateFmt.timeZone = TimeZone(identifier: "UTC")
-            dateFmt.dateFormat = "yyyy-MM-dd"
-            if let date = dateFmt.date(from: string) { return date }
-
+            if let date = isoFractional.date(from: string) ?? isoPlain.date(from: string) ?? dayFormatter.date(from: string) {
+                return date
+            }
             throw DecodingError.dataCorrupted(
                 DecodingError.Context(
                     codingPath: decoder.codingPath,
@@ -86,6 +107,30 @@ final class APIClient: Sendable {
             )
         }
         return decoder
+    }()
+}
+
+/// Shares one network call between identical GETs started at the same time.
+private final class InflightRequests: @unchecked Sendable {
+    private let lock = NSLock()
+    private var tasks: [URL: Task<Data, Error>] = [:]
+
+    func data(for url: URL, session: URLSession) async throws -> Data {
+        lock.lock()
+        if let task = tasks[url] { lock.unlock(); return try await task.value }
+        let task = Task<Data, Error> {
+            let (data, response) = try await session.data(from: url)
+            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+                let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+                Log.repository.error("HTTP \(status) for \(url.path)")
+                throw URLError(.badServerResponse)
+            }
+            return data
+        }
+        tasks[url] = task
+        lock.unlock()
+        defer { lock.lock(); tasks[url] = nil; lock.unlock() }
+        return try await task.value
     }
 }
 
@@ -103,11 +148,22 @@ private enum ResponseCache {
         return directory.appendingPathComponent(hash)
     }
 
+    /// Recent responses kept in memory too, so reopening a screen doesn't touch the disk.
+    nonisolated(unsafe) private static let memory: NSCache<NSURL, NSData> = {
+        let c = NSCache<NSURL, NSData>()
+        c.totalCostLimit = 32 * 1024 * 1024
+        return c
+    }()
+
     static func store(_ data: Data, for url: URL) {
+        memory.setObject(data as NSData, forKey: url as NSURL, cost: data.count)
         try? data.write(to: file(for: url), options: .atomic)
     }
 
     static func data(for url: URL) -> Data? {
-        try? Data(contentsOf: file(for: url))
+        if let hit = memory.object(forKey: url as NSURL) { return hit as Data }
+        guard let data = try? Data(contentsOf: file(for: url)) else { return nil }
+        memory.setObject(data as NSData, forKey: url as NSURL, cost: data.count)
+        return data
     }
 }

@@ -8,7 +8,7 @@ export async function GET(request: Request): Promise<Response> {
   try {
     const { rows } = await pool.query(
       `SELECT uid, title, short_title, plain_title, why_it_matters, kind, status, state, accelerated, deposited_at, last_act_at,
-              steps, summary, story_ids, senat_url
+              steps, summary, story_ids, senat_url, author_name, author_photo
          FROM laws WHERE uid = $1`,
       [uid]
     );

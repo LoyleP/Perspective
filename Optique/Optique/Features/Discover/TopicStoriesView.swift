@@ -60,8 +60,21 @@ struct TopicStoriesView: View {
         .background(AppColors.Adaptive.background.ignoresSafeArea())
         .navigationTitle(topic.rawValue)
         .navigationBarTitleDisplayMode(.large)
+        .appBackButton()
         .task {
-            if stories.isEmpty { await loadMore() }
+            guard stories.isEmpty else { return }
+            // The last first page received shows at once; the network then replaces it.
+            if let cached = await StoryRepository.shared.cachedFeed(topic: topic.filterValue, limit: pageSize, offset: 0),
+               !cached.isEmpty, stories.isEmpty {
+                stories = cached
+                hasMore = cached.count == pageSize
+                if let fresh = try? await StoryRepository.shared.fetchFeed(topic: topic.filterValue, limit: pageSize, offset: 0) {
+                    stories = fresh
+                    hasMore = fresh.count == pageSize
+                }
+                return
+            }
+            await loadMore()
         }
     }
 

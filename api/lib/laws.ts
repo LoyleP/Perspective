@@ -134,6 +134,17 @@ function groupLean(abbr: string | null, name: string | null): number {
 }
 
 const organeCache = new Map<string, { abbr: string | null; name: string | null }>();
+const acteurCache = new Map<string, { name: string | null; photo: string | null }>();
+async function acteur(uid: string | null | undefined) {
+  if (!uid) return { name: null, photo: null };
+  if (!acteurCache.has(uid)) {
+    const a = await tric(`/acteurs/${uid}`).catch(() => ({}));
+    const name = [a.prenom, a.nom].filter(Boolean).join(" ");
+    acteurCache.set(uid, { name: name || null, photo: a.urlImage ?? null });
+  }
+  return acteurCache.get(uid)!;
+}
+
 async function organe(uid: string) {
   if (!organeCache.has(uid)) {
     const o = await tric(`/organes/${uid}`).catch(() => ({}));
@@ -286,7 +297,7 @@ async function listDossiers(since: string) {
       sort: "dateDernierActe.desc",
       perPage: 100,
       page,
-      select: "uid,titre,typeInitiative,statut,etat,procedureAcceleree,dateDepot,dateDernierActe,senatChemin,documentDeposeRefUid",
+      select: "uid,titre,typeInitiative,statut,etat,procedureAcceleree,dateDepot,dateDernierActe,senatChemin,documentDeposeRefUid,acteurPrincipalRefUid",
     });
     out.push(...batch);
     if (batch.length < 100) break;
@@ -299,7 +310,7 @@ async function listDossiers(since: string) {
  * app) only look at dossiers with a recent act; a full run (daily) re-selects everything active.
  */
 export async function syncLaws({ full = false } = {}): Promise<{ skipped?: boolean; updated: number }> {
-  await pool.query("ALTER TABLE laws ADD COLUMN IF NOT EXISTS plain_title text, ADD COLUMN IF NOT EXISTS why_it_matters text");
+  await pool.query("ALTER TABLE laws ADD COLUMN IF NOT EXISTS plain_title text, ADD COLUMN IF NOT EXISTS why_it_matters text, ADD COLUMN IF NOT EXISTS author_name text, ADD COLUMN IF NOT EXISTS author_photo text");
   await pool.query("INSERT INTO laws_sync (id) VALUES (1) ON CONFLICT DO NOTHING");
   const { rows: claim } = await pool.query(
     `UPDATE laws_sync SET synced_at = now()
@@ -321,25 +332,27 @@ export async function syncLaws({ full = false } = {}): Promise<{ skipped?: boole
     const storyIds = matchStories(d.titre, stories);
     const keep = d.typeInitiative === "Projet de loi" || storyIds.length > 0;
     if (!keep) continue;
-    const [actes, votes] = await Promise.all([
+    const [actes, votes, author] = await Promise.all([
       tric("/actesLegislatifs/json", { dossierRefUid: d.uid, perPage: 300 }),
       fetchVotes(d.uid),
+      acteur(d.acteurPrincipalRefUid),
     ]);
     const steps = buildSteps(actes, votes);
     const promulgated = steps.some((s) => s.code === "PROM");
     await pool.query(
       `INSERT INTO laws (uid, title, kind, status, state, accelerated, deposited_at, last_act_at, steps,
-                         story_ids, senat_url, document_uid, synced_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::uuid[], $11, $12, now())
+                         story_ids, senat_url, document_uid, author_name, author_photo, synced_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::uuid[], $11, $12, $13, $14, now())
        ON CONFLICT (uid) DO UPDATE SET
          title = EXCLUDED.title, kind = EXCLUDED.kind, status = EXCLUDED.status, state = EXCLUDED.state,
          accelerated = EXCLUDED.accelerated, last_act_at = EXCLUDED.last_act_at, steps = EXCLUDED.steps,
          story_ids = EXCLUDED.story_ids, senat_url = EXCLUDED.senat_url,
-         document_uid = EXCLUDED.document_uid, synced_at = now()`,
+         document_uid = EXCLUDED.document_uid, author_name = EXCLUDED.author_name,
+         author_photo = EXCLUDED.author_photo, synced_at = now()`,
       [
         d.uid, d.titre, d.typeInitiative, d.statut, promulgated ? "Promulguée" : d.etat,
         !!d.procedureAcceleree, d.dateDepot, d.dateDernierActe, JSON.stringify(steps),
-        storyIds, d.senatChemin, d.documentDeposeRefUid,
+        storyIds, d.senatChemin, d.documentDeposeRefUid, author.name, author.photo,
       ]
     );
     updated++;

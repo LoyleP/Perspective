@@ -30,11 +30,12 @@ struct SourceDetailView: View {
         }
         .background(AppColors.Adaptive.background.ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
+        .appBackButton()
         .toolbar {
             if let url = URL(string: source.url) {
                 ToolbarItem(placement: .topBarTrailing) {
                     Link(destination: url) {
-                        HeroIcon("globe-alt", size: 22)
+                        NavIcon("globe")
                     }
                     .accessibilityLabel("Ouvrir le site")
                 }
@@ -187,7 +188,10 @@ struct SourceDetailView: View {
     // MARK: - Data
 
     private func loadArticles() async {
-        isLoadingArticles = true
+        if articles.isEmpty, let cached = await SourceRepository.shared.cachedRecentArticles(sourceId: source.id, limit: 15) {
+            articles = cached
+        }
+        isLoadingArticles = articles.isEmpty
         do {
             articles = try await SourceRepository.shared.fetchRecentArticles(sourceId: source.id, limit: 15)
         } catch {

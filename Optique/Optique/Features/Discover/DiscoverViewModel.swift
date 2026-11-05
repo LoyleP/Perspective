@@ -6,7 +6,9 @@ import OSLog
 final class DiscoverViewModel {
 
     /// Latest stories, used for topic tiles and blind spots.
-    private(set) var stories: [Story] = []
+    private(set) var stories: [Story] = [] {
+        didSet { blindspots = Self.blindspots(in: stories) }
+    }
     private(set) var sources: [Source] = []
     private(set) var isLoading = false
     private(set) var error: AppError?
@@ -36,8 +38,11 @@ final class DiscoverViewModel {
         searchText.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    /// Stories covered mostly by one side, most-covered first.
-    var blindspots: [Story] {
+    /// Stories covered mostly by one side, most-covered first. Worked out when the stories change,
+    /// not on every redraw.
+    private(set) var blindspots: [Story] = []
+
+    private static func blindspots(in stories: [Story]) -> [Story] {
         Array(
             stories
                 .filter { $0.computedCoverage?.blindspotSide != nil }
@@ -59,6 +64,13 @@ final class DiscoverViewModel {
         guard !isFresh, !isLoading else { return }
         isLoading = true
         error = nil
+        // Last known stories at once, refreshed from the network behind them.
+        if stories.isEmpty, let cached = await repository.cachedFeed(topic: nil, limit: poolSize, offset: 0), stories.isEmpty {
+            stories = cached
+        }
+        if sources.isEmpty, let cached = await sourceRepository.cachedSources(), sources.isEmpty {
+            sources = cached
+        }
         do {
             stories = try await repository.fetchFeed(topic: nil, limit: poolSize, offset: 0)
             lastFetchedAt = Date()

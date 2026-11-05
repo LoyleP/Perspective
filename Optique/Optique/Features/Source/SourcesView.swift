@@ -12,7 +12,10 @@ private final class SourcesViewModel {
 
     func loadSources() async {
         guard !isLoading else { return }
-        isLoading = true
+        if sources.isEmpty, let cached = await SourceRepository.shared.cachedSources(), sources.isEmpty {
+            sources = cached
+        }
+        isLoading = sources.isEmpty
         error = nil
         do {
             sources = try await SourceRepository.shared.fetchAllSources()
@@ -36,6 +39,7 @@ struct SourcesView: View {
             .background(AppColors.Adaptive.background.ignoresSafeArea())
             .navigationTitle("Sources")
             .navigationBarTitleDisplayMode(.large)
+            .appBackButton()
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "Rechercher un média")
             .task { await viewModel.loadSources() }
     }

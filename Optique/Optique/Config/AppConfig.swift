@@ -5,12 +5,14 @@ enum AppConfig {
     static let apiBaseURL = URL(string: "https://api-chi-henna-92.vercel.app/api")!
 
     // MARK: - Features
-    /// Master switch for Optique+: the soft-paywall banner, the paywall sheet and the
-    /// subscription section in Réglages. Off for now; flip to `true` to bring it all back.
-    static let paywallEnabled = false
+    /// Master switch for Optique+: the reading limit, the paywall sheet and the subscription
+    /// section in Réglages.
+    static let paywallEnabled = true
+    /// Topics a free reader can open per session before the reading limit.
+    static let freeStoriesPerSession = 5
     /// Comments are stored on the device only, so every reader sees an empty thread. Hidden until
     /// there is a backend; flip to `true` to bring the section and the sheet back.
-    static let commentsEnabled = false
+    static let commentsEnabled = true
     /// Opening a story without a written summary used to ask the server to write one. The free Gemini
     /// tier allows ~20 requests a day, so summaries are now written ahead of time by the hourly refresh
     /// (and the cards fall back to each side's headlines until then).
