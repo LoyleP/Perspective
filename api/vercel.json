@@ -12,8 +12,100 @@
   },
   "crons": [
     {
-      "path": "/api/refresh-stories",
+      "path": "/api/refresh-stories?h=0",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/refresh-stories?h=1",
+      "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/refresh-stories?h=2",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/refresh-stories?h=3",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/refresh-stories?h=4",
       "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/refresh-stories?h=5",
+      "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/refresh-stories?h=6",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/refresh-stories?h=7",
+      "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/refresh-stories?h=8",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/refresh-stories?h=9",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/refresh-stories?h=10",
+      "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/refresh-stories?h=11",
+      "schedule": "0 11 * * *"
+    },
+    {
+      "path": "/api/refresh-stories?h=12",
+      "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/refresh-stories?h=13",
+      "schedule": "0 13 * * *"
+    },
+    {
+      "path": "/api/refresh-stories?h=14",
+      "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/refresh-stories?h=15",
+      "schedule": "0 15 * * *"
+    },
+    {
+      "path": "/api/refresh-stories?h=16",
+      "schedule": "0 16 * * *"
+    },
+    {
+      "path": "/api/refresh-stories?h=17",
+      "schedule": "0 17 * * *"
+    },
+    {
+      "path": "/api/refresh-stories?h=18",
+      "schedule": "0 18 * * *"
+    },
+    {
+      "path": "/api/refresh-stories?h=19",
+      "schedule": "0 19 * * *"
+    },
+    {
+      "path": "/api/refresh-stories?h=20",
+      "schedule": "0 20 * * *"
+    },
+    {
+      "path": "/api/refresh-stories?h=21",
+      "schedule": "0 21 * * *"
+    },
+    {
+      "path": "/api/refresh-stories?h=22",
+      "schedule": "0 22 * * *"
+    },
+    {
+      "path": "/api/refresh-stories?h=23",
+      "schedule": "0 23 * * *"
     },
     {
       "path": "/api/laws?sync=full",
