@@ -10,6 +10,7 @@ import SwiftUI
 struct OnboardingView: View {
 
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+    @Environment(\.dismiss) private var dismiss
     @AppStorage("preferredTopics") private var preferredTopicsRaw = ""
     @AppStorage("notificationsEnabled") private var notificationsEnabled = false
     @AppStorage("alertsPromptDismissed") private var alertsPromptDismissed = false
@@ -258,6 +259,7 @@ struct OnboardingView: View {
         preferredTopicsRaw = StoryTopic.storageValue(topics)
         hasCompletedOnboarding = true
         Haptics.success()
+        dismiss()
     }
 
     private func load() async {

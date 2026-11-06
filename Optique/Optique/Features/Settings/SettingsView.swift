@@ -200,7 +200,7 @@ struct SettingsView: View {
             textSheet(title: "Propriété des médias", text: ownershipText)
         }
         .sheet(isPresented: $showPaywall) {
-            PaywallView()
+            PaywallView(isReplay: true)
         }
         .manageSubscriptionsSheet(isPresented: $showManage)
         .fullScreenCover(isPresented: $showOnboarding) {

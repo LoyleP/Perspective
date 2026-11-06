@@ -8,6 +8,8 @@ struct PaywallView: View {
 
     /// Closes the paywall when it isn't shown in a sheet (the debug launcher shows it as the root).
     var onClose: (() -> Void)? = nil
+    /// Replayed from the test section: the main button closes the paywall when no purchase is possible.
+    var isReplay = false
 
     @Environment(\.dismiss) private var systemDismiss
     @Environment(SessionState.self) private var session
@@ -382,6 +384,7 @@ struct PaywallView: View {
             session.testPremium = true
             dismiss()
             #else
+            if isReplay { dismiss(); return }
             errorMessage = "Les abonnements sont indisponibles pour le moment. Réessayez plus tard."
             showError = true
             #endif
