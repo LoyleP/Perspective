@@ -51,7 +51,7 @@ struct FreeTopicToast: View {
     let action: () -> Void
 
     private var text: String {
-        remaining == 0 ? "Dernier sujet gratuit de la session" : "Plus que \(remaining) sujet\(remaining > 1 ? "s" : "") gratuit\(remaining > 1 ? "s" : "")"
+        remaining == 0 ? "Dernier sujet gratuit du jour" : "Plus que \(remaining) sujet\(remaining > 1 ? "s" : "") gratuit\(remaining > 1 ? "s" : "")"
     }
 
     var body: some View {
@@ -95,7 +95,7 @@ struct ReadingLimitGate: View {
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityAddTraits(.isHeader)
-                Text("Optique+ lève la limite et soutient une information qui montre tous les points de vue. Vos sujets gratuits reviennent à la prochaine session.")
+                Text("Optique+ lève la limite et soutient une information qui montre tous les points de vue. Vos sujets gratuits reviennent demain.")
                     .font(.appBody)
                     .foregroundStyle(AppColors.Adaptive.textBody)
                     .lineSpacing(3)
@@ -162,8 +162,8 @@ struct PlanCard: View {
             }
             ReadingMeter(used: used, total: total)
             Text(used >= total
-                 ? "Vous avez utilisé vos sujets gratuits. Ils reviennent à la prochaine session."
-                 : "\(total - used) sujet\(total - used > 1 ? "s" : "") gratuit\(total - used > 1 ? "s" : "") restant\(total - used > 1 ? "s" : "") dans cette session.")
+                 ? "Vous avez utilisé vos sujets gratuits. Ils reviennent demain."
+                 : "\(total - used) sujet\(total - used > 1 ? "s" : "") gratuit\(total - used > 1 ? "s" : "") restant\(total - used > 1 ? "s" : "") aujourd'hui.")
                 .font(.appBody)
                 .foregroundStyle(AppColors.Adaptive.textBody)
                 .fixedSize(horizontal: false, vertical: true)

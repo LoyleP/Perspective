@@ -138,7 +138,7 @@ struct PaywallView: View {
 
     private var benefits: some View {
         VStack(spacing: 0) {
-            benefit("book-open", "Sujets illimités", "Fini la limite de 5 sujets par session.")
+            benefit("book-open", "Sujets illimités", "Fini la limite de 5 sujets par jour.")
             Divider().overlay(AppColors.Adaptive.divider).padding(.leading, 68)
             benefit("heart", "Un projet indépendant", "Financé par ses lecteurs, sans groupe de presse derrière.")
             Divider().overlay(AppColors.Adaptive.divider).padding(.leading, 68)

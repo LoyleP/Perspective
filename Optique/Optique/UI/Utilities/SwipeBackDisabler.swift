@@ -1,9 +1,9 @@
 import SwiftUI
 import UIKit
 
-/// Swiping right goes back to the previous page, except while the comments panel is open (its
-/// drag-to-close could otherwise also trigger it and close the story). Uses a plain view that finds its navigation controller through the
-/// responder chain (a background view controller is not part of that hierarchy in SwiftUI).
+/// Switches the navigation controller's swipe-back gestures off while `isDisabled` (the comments
+/// panel's drag-to-close could otherwise also pop the story), and back on afterwards. It only toggles
+/// `isEnabled`; UIKit keeps owning the gestures. Finds its navigation controller through the responder chain.
 struct SwipeBackDisabler: UIViewRepresentable {
     let isDisabled: Bool
 
@@ -16,7 +16,7 @@ struct SwipeBackDisabler: UIViewRepresentable {
     final class Probe: UIView {
         private weak var navigation: UINavigationController?
         var isDisabled = false
-        private weak var originalDelegate: UIGestureRecognizerDelegate?
+        private var didDisable = false
 
         override init(frame: CGRect) {
             super.init(frame: frame)
@@ -27,9 +27,7 @@ struct SwipeBackDisabler: UIViewRepresentable {
         private func findNavigationController() -> UINavigationController? {
             var responder: UIResponder? = self
             while let current = responder {
-                if let controller = current as? UIViewController {
-                    if let nav = controller.navigationController { return nav }
-                }
+                if let controller = current as? UIViewController, let nav = controller.navigationController { return nav }
                 responder = current.next
             }
             return nil
@@ -37,18 +35,18 @@ struct SwipeBackDisabler: UIViewRepresentable {
 
         func apply() {
             if navigation == nil { navigation = findNavigationController() }
-            // With the system back button hidden, UIKit refuses the edge swipe: let it through.
-            if let edge = navigation?.interactivePopGestureRecognizer, edge.delegate != nil {
-                originalDelegate = edge.delegate
-                edge.delegate = nil
+            // Only touch the gestures while disabled, and give them back exactly once.
+            if isDisabled {
+                setSwipeBack(enabled: false)
+                didDisable = true
+            } else if didDisable {
+                setSwipeBack(enabled: true)
+                didDisable = false
             }
-            setSwipeBack(enabled: !isDisabled)
         }
 
-        /// Every swipe-back recognizer: the edge one, iOS 26's full-width one, and the parallax
-        /// transition pans UIKit puts on the navigation controller's view.
-        private func swipeBackRecognizers() -> [UIGestureRecognizer] {
-            guard let navigation else { return [] }
+        private func setSwipeBack(enabled: Bool) {
+            guard let navigation else { return }
             var recognizers = (navigation.view.gestureRecognizers ?? []).filter {
                 String(describing: type(of: $0)).contains("ParallaxTransitionPan")
             }
@@ -56,11 +54,7 @@ struct SwipeBackDisabler: UIViewRepresentable {
             if #available(iOS 26.0, *), let content = navigation.interactiveContentPopGestureRecognizer {
                 recognizers.append(content)
             }
-            return recognizers
-        }
-
-        private func setSwipeBack(enabled: Bool) {
-            for recognizer in swipeBackRecognizers() { recognizer.isEnabled = enabled }
+            for recognizer in recognizers { recognizer.isEnabled = enabled }
         }
 
         override func didMoveToWindow() {
@@ -68,13 +62,12 @@ struct SwipeBackDisabler: UIViewRepresentable {
             if window != nil {
                 apply()
             } else {
-                setSwipeBack(enabled: true)
-                if let original = originalDelegate { navigation?.interactivePopGestureRecognizer?.delegate = original }
+                if didDisable { setSwipeBack(enabled: true); didDisable = false }
                 navigation = nil
             }
         }
 
-        // SwiftUI can switch the gesture back on during layout passes; keep it off.
+        // SwiftUI can switch the gesture back on during layout passes; keep it off while disabled.
         override func layoutSubviews() {
             super.layoutSubviews()
             if window != nil { apply() }

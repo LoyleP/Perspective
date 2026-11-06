@@ -16,9 +16,10 @@ struct SettingsView: View {
     @State private var confirmReset = false
     @State private var isRestoring = false
 
-    #if DEBUG
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = true
     @State private var showOnboarding = false
+
+    #if DEBUG
     @State private var notificationTestMessage = ""
     #endif
 
@@ -76,10 +77,23 @@ struct SettingsView: View {
                         }
                     }
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
+                    Button {
+                        hasCompletedOnboarding = false
+                        showOnboarding = true
+                    } label: {
+                        Label("Rejouer l'onboarding", hero: "arrow-uturn-left")
+                    }
+                    .foregroundStyle(AppColors.Adaptive.textPrimary)
+                    Button {
+                        showPaywall = true
+                    } label: {
+                        Label("Afficher le paywall", hero: "sparkles")
+                    }
+                    .foregroundStyle(AppColors.Adaptive.textPrimary)
                 } header: {
                     Text("Version de test")
                 } footer: {
-                    Text("Bascule entre la vue d'un compte gratuit (\(session.freeLimit) sujets par session) et celle d'un compte Optique+. Ce réglage disparaîtra de la version publique.")
+                    Text("Bascule entre la vue d'un compte gratuit (\(session.freeLimit) sujets par jour) et celle d'un compte Optique+. Ce réglage disparaîtra de la version publique.")
                 }
             }
 
@@ -161,12 +175,6 @@ struct SettingsView: View {
                         .font(.appCaption)
                         .foregroundStyle(AppColors.Adaptive.textMeta)
                 }
-                Button {
-                    hasCompletedOnboarding = false
-                    showOnboarding = true
-                } label: {
-                    Label("Rejouer l'onboarding", hero: "arrow-uturn-left")
-                }
             }
             #endif
         }
@@ -195,11 +203,9 @@ struct SettingsView: View {
             PaywallView()
         }
         .manageSubscriptionsSheet(isPresented: $showManage)
-        #if DEBUG
         .fullScreenCover(isPresented: $showOnboarding) {
             OnboardingView()
         }
-        #endif
     }
 
     // MARK: - Sheets

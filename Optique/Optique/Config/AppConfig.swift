@@ -8,8 +8,8 @@ enum AppConfig {
     /// Master switch for Optique+: the reading limit, the paywall sheet and the subscription
     /// section in Réglages.
     static let paywallEnabled = true
-    /// Topics a free reader can open per session before the reading limit.
-    static let freeStoriesPerSession = 5
+    /// Topics a free reader can open per day before the reading limit.
+    static let freeStoriesPerDay = 5
     /// Comments are stored on the device only, so every reader sees an empty thread. Hidden until
     /// there is a backend; flip to `true` to bring the section and the sheet back.
     static let commentsEnabled = true

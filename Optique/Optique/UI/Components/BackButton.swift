@@ -1,36 +1,21 @@
 import SwiftUI
 
-/// The one return button of the app: a bold chevron in the navigation bar's round glass button.
-/// Every pushed page gets it through `.appBackButton()`, so they cannot drift apart: change the look
-/// here (or in `NavIcon`) and every return button changes with it.
-struct BackButton: View {
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        Button { dismiss() } label: {
-            NavIcon("chevron.left")
-        }
-        .accessibilityLabel("Retour")
-    }
-}
-
+/// The app's return button is the system's own: UIKit draws it and owns the swipe-back gestures
+/// (edge and full-width), so they work on every page, every iOS version, with nothing to keep in
+/// sync. Every pushed page still goes through `.appBackButton()`, the single place to change that.
 private struct AppBackButton: ViewModifier {
     /// True while a panel on the page uses the swipe itself (the comments panel).
     let swipeDisabled: Bool
 
     func body(content: Content) -> some View {
         content
-            .navigationBarBackButtonHidden(true)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) { BackButton() }
-            }
-            // The system's back swipe is switched off with its button; this brings it back.
+            .navigationBarBackButtonHidden(false)
             .background(SwipeBackDisabler(isDisabled: swipeDisabled))
     }
 }
 
 extension View {
-    /// Replaces the system back button with `BackButton` and keeps the swipe-back gesture.
+    /// The system back button and swipe-back; `swipeDisabled` switches the swipe off for a while.
     func appBackButton(swipeDisabled: Bool = false) -> some View {
         modifier(AppBackButton(swipeDisabled: swipeDisabled))
     }
