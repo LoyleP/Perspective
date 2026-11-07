@@ -48,12 +48,12 @@ struct OptiqueApp: App {
             DebugScreenHost(screen: screen, onHome: { debugScreen = nil })
         } else {
             RootView()
-                .font(.appBody)
+                .typeStyle(.body)
                 .debugTextSizeOverride()
         }
         #else
         RootView()
-            .font(.appBody)
+            .typeStyle(.body)
         #endif
     }
 
@@ -68,10 +68,12 @@ struct OptiqueApp: App {
                     }
                 }
             }
+            .preferredColorScheme(.light)
             .onChange(of: scenePhase) { oldPhase, newPhase in
                 if newPhase == .active {
                     Task {
                         await NotificationManager.shared.checkForNewStories()
+                        await LawFollowStore.shared.checkForUpdates()
                     }
                 }
             }

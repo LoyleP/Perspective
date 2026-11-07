@@ -77,68 +77,81 @@ extension View {
     func appHeaderToolbar() -> some View { modifier(AppHeaderToolbar()) }
 }
 
-/// Horizontal topic tabs under the header: the selected tab is bold ink with an underline.
-struct TopicTabs: View {
-    @Binding var selection: StoryTopic
-    /// Called on tap, before the (deferred) selection change, so the page can show its loader at once.
-    var onWillSwitch: () -> Void = {}
-    /// Called when the deferred change turned out to be a no-op (tapped back to the current tab).
-    var onSwitchCancelled: () -> Void = {}
-    @Namespace private var indicator
-    /// Drives the indicator on its own, so only the tab bar animates and the page below doesn't.
-    @State private var shown: StoryTopic = .tout
-    @State private var pending: Task<Void, Never>?
-
-    private var topics: [StoryTopic] { [.tout] + StoryTopic.selectable }
+/// Pills under the header: rounded chips (with an optional icon), the selected one filled. The fill
+/// slides from pill to pill, and the row scrolls to keep the selected one in view.
+struct PillTabs<Item: Hashable & Identifiable>: View {
+    let items: [Item]
+    @Binding var selection: Item
+    let title: (Item) -> String
+    var icon: (Item) -> String? = { _ in nil }
+    /// Each pill's frame inside the row, so the grey capsules and the highlight can be drawn as
+    /// layers of their own: grey capsules, then the highlight, then every label on top.
+    @State private var frames: [Item: CGRect] = [:]
 
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 0) {
-                    ForEach(topics) { topic in
-                        let isSelected = topic == shown
+                HStack(spacing: 6) {
+                    ForEach(items) { item in
+                        let isSelected = item == selection
                         Button {
-                            if topic != shown { onWillSwitch(); Haptics.selection() }
-                            withAnimation(.app) { shown = topic }
-                            // The page below switches right away: its stories come from memory or
-                            // the disk cache, so there is nothing to wait for.
-                            pending?.cancel()
-                            pending = Task {
-                                guard !Task.isCancelled else { return }
-                                if selection == topic { onSwitchCancelled() }
-                                selection = topic
-                                pending = nil
-                            }
+                            withAnimation(.app) { selection = item }
                         } label: {
-                            Text(topic == .tout ? "À la une" : topic.rawValue)
-                                .font(.appCaption)
-                                .foregroundStyle(isSelected ? AppColors.Adaptive.textPrimary : AppColors.Adaptive.textMeta)
-                                .padding(.horizontal, AppSpacing.st)
-                                .frame(minHeight: 44)
-                                .overlay(alignment: .bottom) {
-                                    // One shared view: it slides and resizes to the selected tab.
-                                    if isSelected {
-                                        Rectangle()
-                                            .fill(AppColors.Adaptive.textPrimary)
-                                            .frame(height: 2)
-                                            .matchedGeometryEffect(id: "indicator", in: indicator)
-                                    }
-                                }
-                                .contentShape(Rectangle())
+                            HStack(spacing: 5) {
+                                if let name = icon(item) { LucideIcon(name, size: 14) }
+                                Text(title(item))
+                                    .typeStyle(.metaMedium)
+                            }
+                            .foregroundStyle(isSelected ? AppColors.Adaptive.background : AppColors.Adaptive.textPrimary)
+                            .padding(.horizontal, 12)
+                            .frame(height: 32)
+                            .contentShape(Capsule())
                         }
                         .buttonStyle(.plain)
                         .accessibilityAddTraits(isSelected ? .isSelected : [])
-                        .id(topic)
+                        .onGeometryChange(for: CGRect.self) { $0.frame(in: .named("pills")) } action: { frames[item] = $0 }
+                        .id(item)
                     }
                 }
-                .padding(.horizontal, AppSpacing.s)
+                .background(alignment: .topLeading) {
+                    ZStack(alignment: .topLeading) {
+                        ForEach(items) { item in
+                            if let frame = frames[item] {
+                                Capsule().fill(AppColors.Adaptive.surfaceElevated)
+                                    .frame(width: frame.width, height: frame.height)
+                                    .offset(x: frame.minX, y: frame.minY)
+                            }
+                        }
+                        if let frame = frames[selection] {
+                            Capsule().fill(AppColors.Adaptive.textPrimary)
+                                .frame(width: frame.width, height: frame.height)
+                                .offset(x: frame.minX, y: frame.minY)
+                        }
+                    }
+                }
+                .coordinateSpace(name: "pills")
+                .padding(.horizontal, AppSpacing.m)
+                .padding(.vertical, AppSpacing.s)
             }
-            .onAppear { shown = selection }
             .onChange(of: selection) { _, new in
-                if pending == nil, shown != new { withAnimation(.app) { shown = new } }
                 withAnimation(.app) { proxy.scrollTo(new, anchor: .center) }
             }
         }
+    }
+}
+
+/// The home page's topic pills.
+struct TopicPills: View {
+    let topics: [StoryTopic]
+    @Binding var selection: StoryTopic
+
+    var body: some View {
+        PillTabs(
+            items: topics,
+            selection: $selection,
+            title: { $0 == .tout ? "À la une" : $0.rawValue },
+            icon: { $0.lucideIcon }
+        )
     }
 }
 
@@ -148,7 +161,7 @@ struct TopicTabs: View {
     return NavigationStack {
         VStack(spacing: 0) {
             AppHeader()
-            TopicTabs(selection: $topic)
+            TopicPills(topics: [.tout] + StoryTopic.selectable, selection: $topic)
             Spacer()
         }
         .toolbar(.hidden, for: .navigationBar)

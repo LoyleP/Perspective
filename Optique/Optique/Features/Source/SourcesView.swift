@@ -50,7 +50,7 @@ struct SourcesView: View {
             ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if let error = viewModel.error, viewModel.sources.isEmpty {
             ContentUnavailableView {
-                Label("Impossible de charger", hero: "signal-slash", size: 44)
+                Label("Impossible de charger", lucide: "wifi-off", size: 44)
             } description: {
                 Text(error.localizedDescription)
             } actions: {
@@ -97,10 +97,10 @@ struct SourcesView: View {
                             HStack(spacing: AppSpacing.s) {
                                 Circle().fill(lean.spectrumColor).frame(width: 10, height: 10)
                                 Text(lean.label)
-                                    .font(.appBodyStrong)
+                                    .typeStyle(.ui)
                                     .foregroundStyle(AppColors.Adaptive.textPrimary)
                                 Text("\(group.count)")
-                                    .font(.appCaption)
+                                    .typeStyle(.meta)
                                     .foregroundStyle(AppColors.Adaptive.textMeta)
                                 Spacer()
                             }
@@ -127,18 +127,18 @@ private struct SourceRow: View {
             SourceAvatarView(source: source, size: 40)
             VStack(alignment: .leading, spacing: 2) {
                 Text(source.name)
-                    .font(.appBodyStrong)
+                    .typeStyle(.ui)
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
                 if let owner = source.ownerName ?? source.ownerType?.displayName {
                     Text(owner)
-                        .font(.appCaption)
+                        .typeStyle(.meta)
                         .foregroundStyle(AppColors.Adaptive.textMeta)
                         .lineLimit(1)
                 }
             }
             Spacer()
-            HeroIcon("chevron-right", size: 14)
-                .font(.appCaption)
+            LucideIcon("chevron-right", size: 14)
+                .typeStyle(.meta)
                 .foregroundStyle(AppColors.Adaptive.textMeta)
         }
         .padding(.horizontal, AppSpacing.m)

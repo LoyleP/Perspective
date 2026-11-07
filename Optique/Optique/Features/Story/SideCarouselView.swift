@@ -9,12 +9,17 @@ struct SideCarouselView: View {
     let isSummaryUnavailable: Bool
     /// Called when a card with articles is tapped.
     var onSelectSide: (PoliticalLean) -> Void = { _ in }
+    /// Demo mode (onboarding): moves from side to side by itself until the reader touches it.
+    var autoPlays = false
 
     @State private var selected: PoliticalLean.ID?
+    @State private var lastAutoSelection: PoliticalLean.ID?
+    @State private var readerTookOver = false
 
-    init(story: Story, isSummaryUnavailable: Bool, onSelectSide: @escaping (PoliticalLean) -> Void = { _ in }) {
+    init(story: Story, isSummaryUnavailable: Bool, autoPlays: Bool = false, onSelectSide: @escaping (PoliticalLean) -> Void = { _ in }) {
         self.story = story
         self.isSummaryUnavailable = isSummaryUnavailable
+        self.autoPlays = autoPlays
         self.onSelectSide = onSelectSide
         let top = story.computedCoverage.flatMap { coverage in
             PoliticalLean.allCases.max { coverage.share(of: $0) < coverage.share(of: $1) }
@@ -60,6 +65,7 @@ struct SideCarouselView: View {
                 .scrollTargetBehavior(.viewAligned)
                 .scrollPosition(id: $selected, anchor: .center)
                 .onChange(of: selected) { _, id in
+                    if autoPlays, id != lastAutoSelection { readerTookOver = true }
                     if let id { Analytics.track(.sideCardSwipe, ["story": story.id.uuidString, "side": String(id)]) }
                 }
                 .sensoryFeedback(.selection, trigger: selected)
@@ -67,6 +73,7 @@ struct SideCarouselView: View {
                     guard let id = selected else { return }
                     DispatchQueue.main.async { proxy.scrollTo(id, anchor: .center) }
                 }
+                .task(id: autoPlays) { await autoPlay() }
                 }
             } else {
                 Color.clear.frame(height: 200)
@@ -88,6 +95,21 @@ struct SideCarouselView: View {
         PoliticalLean.allCases.compactMap { lean in
             let count = coverage?.countsByLean[lean] ?? 0
             return count > 0 ? (lean, count) : nil
+        }
+    }
+
+    /// The demo: every few seconds the needle swings to the next side that has coverage, and its card slides in.
+    private func autoPlay() async {
+        guard autoPlays else { return }
+        let covered = PoliticalLean.allCases.filter { (coverage?.countsByLean[$0] ?? 0) > 0 }
+        guard covered.count > 1 else { return }
+        try? await Task.sleep(for: .seconds(1.6))
+        var index = covered.firstIndex { $0.id == selected } ?? 0
+        while !Task.isCancelled && !readerTookOver {
+            index = (index + 1) % covered.count
+            lastAutoSelection = covered[index].id
+            withAnimation(.app) { selected = covered[index].id }
+            try? await Task.sleep(for: .seconds(2.8))
         }
     }
 
@@ -115,7 +137,6 @@ struct SideCarouselView: View {
     private func card(for lean: PoliticalLean) -> some View {
         let sources = story.sources.filter { PoliticalLean.from($0.politicalLean) == lean }
         let count = coverage?.countsByLean[lean] ?? 0
-        let share = coverage?.share(of: lean) ?? 0
         let isEmpty = count == 0
         let perspective = story.spectrumSummary?.perspectives.first { $0.lean == lean }
 
@@ -124,23 +145,13 @@ struct SideCarouselView: View {
             onSelectSide(lean)
         } label: {
         VStack(alignment: .leading, spacing: AppSpacing.st) {
-            Text(lean.label)
-                .font(.geist(.body, .medium))
-                .foregroundStyle(AppColors.Adaptive.textPrimary)
-
-            HStack(alignment: .firstTextBaseline, spacing: AppSpacing.s) {
-                Text(share, format: .percent.precision(.fractionLength(0)))
-                    .font(.geist(.title, .medium))
-                    .monospacedDigit()
-                    .foregroundStyle(AppColors.Adaptive.textPrimary)
-                Text(count == 1 ? "1 source" : "\(count) sources")
-                    .font(.appCaption)
-                    .foregroundStyle(AppColors.Adaptive.textMeta)
-            }
-
             if isEmpty {
+                // Without a title on the card, the empty state says which side it is.
+                Text(lean.label)
+                    .typeStyle(.ui)
+                    .foregroundStyle(AppColors.Adaptive.textPrimary)
                 Text("Aucun média de ce bord n'a couvert ce sujet.")
-                    .font(.appBody)
+                    .typeStyle(.body)
                     .foregroundStyle(AppColors.Adaptive.textMeta)
             } else {
                 SourceStack(sources: sources, limit: 3, size: 24, ringColor: AppColors.Adaptive.cardSurface)
@@ -149,8 +160,8 @@ struct SideCarouselView: View {
                 // Straight to the articles, instead of guessing that the card is tappable.
                 HStack(spacing: 6) {
                     Text(count == 1 ? "Lire l'article" : "Lire les \(count) articles")
-                        .font(.appCaption)
-                    HeroIcon("chevron-right", size: 14)
+                        .typeStyle(.meta)
+                    LucideIcon("chevron-right", size: 14)
                 }
                 .foregroundStyle(AppColors.Adaptive.textPrimary)
                 .padding(.top, AppSpacing.xs)
@@ -158,7 +169,8 @@ struct SideCarouselView: View {
         }
         .padding(AppSpacing.st)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .background(AppColors.Adaptive.cardSurface, in: RoundedRectangle(cornerRadius: AppRadius.xl))
+        // Each card carries a pale tint of its own side's hue.
+        .background(lean.tagBackground(), in: RoundedRectangle(cornerRadius: AppRadius.xl))
         .opacity(isEmpty ? 0.55 : 1)
         .contentShape(RoundedRectangle(cornerRadius: AppRadius.xl))
         }
@@ -179,7 +191,7 @@ struct SideCarouselView: View {
                             .alignmentGuide(.firstTextBaseline) { $0[.bottom] - 1 }
                             .accessibilityHidden(true)
                         Text(bullet)
-                            .font(.appBody)
+                            .typeStyle(.body)
                             .lineSpacing(3)
                             .foregroundStyle(AppColors.Adaptive.textBody)
                             .multilineTextAlignment(.leading)
@@ -192,7 +204,7 @@ struct SideCarouselView: View {
             // so the card is never empty or stuck loading.
             VStack(alignment: .leading, spacing: AppSpacing.s) {
                 Text("Leurs titres")
-                    .font(.appCaption)
+                    .typeStyle(.meta)
                     .foregroundStyle(AppColors.Adaptive.textMeta)
                 ForEach(headlines(for: lean), id: \.self) { title in
                     HStack(alignment: .firstTextBaseline, spacing: AppSpacing.s) {
@@ -202,7 +214,7 @@ struct SideCarouselView: View {
                             .alignmentGuide(.firstTextBaseline) { $0[.bottom] - 1 }
                             .accessibilityHidden(true)
                         Text(title)
-                            .font(.appBody)
+                            .typeStyle(.body)
                             .foregroundStyle(AppColors.Adaptive.textBody)
                             .lineLimit(3)
                             .multilineTextAlignment(.leading)

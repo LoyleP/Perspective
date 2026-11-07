@@ -88,8 +88,8 @@ struct ArticleBrowserView: View {
                         currentIndex -= 1
                     }
                 } label: {
-                    HeroIcon("chevron-left", size: 20)
-                        .font(.appBody)
+                    LucideIcon("chevron-left", size: 20)
+                        .typeStyle(.body)
                         .foregroundStyle(canGoBack ? AppColors.Adaptive.textPrimary : AppColors.Adaptive.textTertiary)
                 }
                 .disabled(!canGoBack)
@@ -99,8 +99,8 @@ struct ArticleBrowserView: View {
                         currentIndex += 1
                     }
                 } label: {
-                    HeroIcon("chevron-right", size: 20)
-                        .font(.appBody)
+                    LucideIcon("chevron-right", size: 20)
+                        .typeStyle(.body)
                         .foregroundStyle(canGoForward ? AppColors.Adaptive.textPrimary : AppColors.Adaptive.textTertiary)
                 }
                 .disabled(!canGoForward)
@@ -140,7 +140,7 @@ struct ArticleBrowserView: View {
         return ZStack {
             Circle().fill(lean?.spectrumColor ?? AppColors.Adaptive.placeholder)
             Text(String(source.name.prefix(1)).uppercased())
-                .font(.appCaption)
+                .typeStyle(.meta)
                 .foregroundStyle(lean?.tagTextColor ?? AppColors.Adaptive.textSecondary)
         }
     }
@@ -151,7 +151,7 @@ struct ArticleBrowserView: View {
             Circle()
                 .fill(lean?.spectrumColor ?? AppColors.Adaptive.placeholder)
             Text(String(source.name.prefix(1)).uppercased())
-                .font(.appHeading)
+                .typeStyle(.section)
                 .foregroundStyle(lean?.tagTextColor ?? AppColors.Adaptive.textSecondary)
         }
         .frame(width: 48, height: 48)

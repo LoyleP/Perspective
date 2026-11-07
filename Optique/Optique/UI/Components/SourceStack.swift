@@ -7,6 +7,8 @@ struct SourceStack: View {
     var size: CGFloat = 20
     /// Ring drawn around each logo to separate it from its neighbour; match the backdrop.
     var ringColor: Color = AppColors.Adaptive.background
+    /// The "+N" count of logos beyond `limit`.
+    var showsOverflow = true
 
     var body: some View {
         HStack(spacing: AppSpacing.xs) {
@@ -16,9 +18,9 @@ struct SourceStack: View {
                         .overlay(Circle().stroke(ringColor, lineWidth: 1.5))
                 }
             }
-            if sources.count > limit {
+            if showsOverflow && sources.count > limit {
                 Text("+\(sources.count - limit)")
-                    .font(.appCaption)
+                    .typeStyle(.meta)
                     .monospacedDigit()
                     .foregroundStyle(AppColors.Adaptive.textTertiary)
             }

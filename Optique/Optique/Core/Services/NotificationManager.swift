@@ -77,6 +77,10 @@ final class NotificationManager: NSObject {
         lastCheckedStoryCount = UserDefaults.standard.integer(forKey: "lastStoryCount")
     }
 
+    func notify(title: String, body: String) async {
+        await scheduleLocalNotification(title: title, body: body, storyID: nil)
+    }
+
     private func scheduleLocalNotification(title: String, body: String, storyID: UUID?) async {
         let content = UNMutableNotificationContent()
         content.title = title

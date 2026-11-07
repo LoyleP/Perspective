@@ -22,6 +22,9 @@ struct StoryDetailView: View {
         _viewModel = State(initialValue: StoryDetailViewModel(story: story))
     }
 
+    @State private var isAtTop = false
+    @State private var dragStartedAtTop: Bool?
+
     private var story: Story { viewModel.story }
 
     // MARK: - Reading limit
@@ -75,10 +78,7 @@ struct StoryDetailView: View {
 
                 // What happened, in one sentence, right under the headline.
                 if let summary = story.standfirst {
-                    Text(summary)
-                        .font(.appBody)
-                        .foregroundStyle(AppColors.Adaptive.textBody)
-                        .lineSpacing(4)
+                    ExpandableText(text: summary)
                         .padding(.horizontal, AppSpacing.m)
                         .padding(.top, AppSpacing.st)
                 }
@@ -117,8 +117,23 @@ struct StoryDetailView: View {
                 }
             }
             .padding(.bottom, AppSpacing.xxl)
+            .noTopBounce()
         }
         .shrinksTabBarOnScroll()
+        .trackingScrollTop { isAtTop = $0 }
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 12)
+                .onChanged { _ in
+                    if dragStartedAtTop == nil { dragStartedAtTop = isAtTop }
+                }
+                .onEnded { value in
+                    defer { dragStartedAtTop = nil }
+                    guard dragStartedAtTop == true, commentsRequest == nil,
+                          value.translation.height > abs(value.translation.width) * 1.5,
+                          value.translation.height > 70 || value.predictedEndTranslation.height > 250 else { return }
+                    dismiss()
+                }
+        )
         // The nav bar would swallow taps meant for the area outside the comments panel.
         .toolbar(commentsRequest == nil ? .automatic : .hidden, for: .navigationBar)
         .appBackButton(swipeDisabled: commentsRequest != nil)
@@ -129,14 +144,14 @@ struct StoryDetailView: View {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 if let url = story.articles.first.flatMap({ URL(string: $0.url) }) {
                     ShareLink(item: url, subject: Text(story.title)) {
-                        NavIcon("square.and.arrow.up")
+                        NavIcon("share")
                     }
                     .accessibilityLabel("Partager")
                 }
                 Button {
                     bookmarks.toggle(story)
                 } label: {
-                    NavIcon(bookmarks.isBookmarked(story) ? "bookmark.fill" : "bookmark")
+                    NavIcon("bookmark", filled: bookmarks.isBookmarked(story))
                 }
                 .accessibilityLabel(bookmarks.isBookmarked(story) ? "Retirer des enregistrés" : "Enregistrer")
                 .sensoryFeedback(trigger: bookmarks.isBookmarked(story)) { _, saved in
@@ -192,12 +207,12 @@ struct StoryDetailView: View {
         return VStack(alignment: .leading, spacing: AppSpacing.st) {
             HStack(alignment: .firstTextBaseline, spacing: AppSpacing.s) {
                 Text("Commentaires")
-                    .font(.appHeading)
+                    .typeStyle(.section)
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
                     .accessibilityAddTraits(.isHeader)
                 if count > 0 {
                     Text("\(count)")
-                        .font(.appCaption)
+                        .typeStyle(.meta)
                         .monospacedDigit()
                         .foregroundStyle(AppColors.Adaptive.textMeta)
                 }
@@ -215,7 +230,7 @@ struct StoryDetailView: View {
                         .frame(width: 36, height: 36)
                         .clipShape(Circle())
                     Text("Ajouter un commentaire…")
-                        .font(.appBody)
+                        .typeStyle(.body)
                         .foregroundStyle(AppColors.Adaptive.textMeta)
                     Spacer(minLength: 0)
                 }
@@ -242,28 +257,28 @@ struct StoryDetailView: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: AppSpacing.s) {
                     Text(comment.author)
-                        .font(.appCaption)
+                        .typeStyle(.meta)
                         .foregroundStyle(AppColors.Adaptive.textPrimary)
                     Text(comment.createdAt.relativeToNowFrench())
-                        .font(.appCaption)
+                        .typeStyle(.meta)
                         .foregroundStyle(AppColors.Adaptive.textMeta)
                 }
                 Text(comment.text)
-                    .font(.appBody)
+                    .typeStyle(.body)
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
                     .lineLimit(3)
                     .multilineTextAlignment(.leading)
                 if replyCount > 0 {
                     Text(replyCount == 1 ? "1 réponse" : "\(replyCount) réponses")
-                        .font(.appCaption)
+                        .typeStyle(.meta)
                         .foregroundStyle(AppColors.Adaptive.textMeta)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             if comment.likes > 0 {
                 VStack(spacing: 2) {
-                    HeroIcon("heart", solid: comment.likedByMe, size: 18)
-                    Text("\(comment.likes)").font(.appCaption).monospacedDigit()
+                    LucideIcon("heart", filled: comment.likedByMe, size: 18)
+                    Text("\(comment.likes)").typeStyle(.meta).monospacedDigit()
                 }
                 .foregroundStyle(AppColors.Adaptive.textMeta)
             }
@@ -275,7 +290,7 @@ struct StoryDetailView: View {
 
     // MARK: - Header
 
-    /// Lead photo (stretches when pulled down); the headline sits below it.
+    /// Lead photo; the headline sits below it.
     private var header: some View {
         VStack(alignment: .leading, spacing: AppSpacing.st) {
             // Color.clear sizes to the proposed width; the filled photo is an overlay, so its
@@ -285,20 +300,15 @@ struct StoryDetailView: View {
                 .frame(height: story.leadImageURL == nil ? 120 : 340)
                 .overlay { RemoteImage(url: story.leadImageURL, tint: leadTint) }
                 .clipped()
-                .visualEffect { effect, proxy in
-                    let pull = max(proxy.frame(in: .scrollView).minY, 0)
-                    return effect.scaleEffect(1 + pull / max(proxy.size.height, 1), anchor: .bottom)
-                }
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: AppSpacing.st) {
-                Text(story.metaLine)
-                    .font(.appCaption)
+                Text(story.timeLine)
+                    .typeStyle(.meta)
                     .foregroundStyle(AppColors.Adaptive.textMeta)
                 Text(story.title)
-                    .font(.appTitle)
+                    .typeStyle(.display)
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
-                    .lineLimit(3)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityAddTraits(.isHeader)
             }
@@ -343,4 +353,18 @@ struct StoryDetailView: View {
 private struct CommentsRequest: Identifiable {
     let id = UUID()
     let typing: Bool
+}
+
+private extension View {
+    /// Reports whether the scroll view rests at its top edge (iOS 18+; before that it reports nothing).
+    @ViewBuilder
+    func trackingScrollTop(_ update: @escaping (Bool) -> Void) -> some View {
+        if #available(iOS 18.0, *) {
+            onScrollGeometryChange(for: Bool.self) { $0.contentOffset.y + $0.contentInsets.top <= 1 } action: { _, top in
+                update(top)
+            }
+        } else {
+            self
+        }
+    }
 }

@@ -44,42 +44,43 @@ final class LawsViewModel {
 }
 
 /// Lois tab: the bills in progress in Parliament, most recent activity first, each with its path.
-/// Reloads every few minutes while visible; the server re-checks the Assemblée and Sénat at most
-/// every 10 minutes.
+/// Filter pills sit under the header over horizontally swiping pages, one per filter, like the home
+/// page. Reloads every few minutes while visible; the server re-checks the Assemblée and Sénat at
+/// most every 10 minutes.
 struct LawsView: View {
     @State private var viewModel = LawsViewModel()
     @State private var selected: Law?
-    @State private var filter: LawFilter = .all
-    @State private var collapsed: Set<LawSection> = []
+    @State private var position: LawFilter? = .all
     var isActive = true
 
     private static let refreshInterval: Duration = .seconds(300)
 
     var body: some View {
         VStack(spacing: 0) {
-            LawTabs(selection: $filter)
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 0) {
-                    if let checkedAt = viewModel.checkedAt {
-                        Text("Vérifié \(checkedAt.relativeToNowFrench())")
-                            .font(.appCaption)
-                            .foregroundStyle(AppColors.Adaptive.textMeta)
-                            .padding(.top, AppSpacing.m)
+            PillTabs(
+                items: LawFilter.allCases,
+                selection: Binding(get: { position ?? .all }, set: { position = $0 }),
+                title: \.rawValue
+            )
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 0) {
+                    ForEach(LawFilter.allCases) { filter in
+                        LawsFilterPage(filter: filter, viewModel: viewModel) { selected = $0 }
+                            .containerRelativeFrame(.horizontal)
+                            .id(filter)
                     }
-                    content
                 }
-                .padding(.horizontal, AppSpacing.m)
-                .padding(.bottom, AppSpacing.xxl)
+                .scrollTargetLayout()
             }
-            .refreshable { await viewModel.load() }
-            .shrinksTabBarOnScroll()
-            .sensoryFeedback(.selection, trigger: collapsed)
+            .scrollTargetBehavior(.paging)
+            .scrollPosition(id: $position)
         }
         .background(AppColors.Adaptive.background.ignoresSafeArea())
         .appHeaderToolbar()
         .navigationDestination(item: $selected) { law in
             LawDetailView(law: law)
         }
+        .onChange(of: position) { _, _ in Haptics.selection() }
         // Loaded once at launch even while another tab is shown, so the first visit is instant.
         .task { await viewModel.load() }
         .task(id: isActive) {
@@ -89,6 +90,33 @@ struct LawsView: View {
                 try? await Task.sleep(for: Self.refreshInterval)
             }
         }
+    }
+}
+
+/// One filter's list of laws, grouped by what is happening now.
+private struct LawsFilterPage: View {
+    let filter: LawFilter
+    let viewModel: LawsViewModel
+    let onSelect: (Law) -> Void
+    @State private var collapsed: Set<LawSection> = []
+
+    var body: some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 0) {
+                if let checkedAt = viewModel.checkedAt {
+                    Text("Vérifié \(checkedAt.relativeToNowFrench())")
+                        .typeStyle(.meta)
+                        .foregroundStyle(AppColors.Adaptive.textMeta)
+                        .padding(.top, AppSpacing.m)
+                }
+                content
+            }
+            .padding(.horizontal, AppSpacing.m)
+            .padding(.bottom, AppSpacing.xxl)
+        }
+        .refreshable { await viewModel.load() }
+        .shrinksTabBarOnScroll()
+        .sensoryFeedback(.selection, trigger: collapsed)
     }
 
     private var visibleLaws: [Law] { viewModel.laws.filter(filter.includes) }
@@ -107,28 +135,34 @@ struct LawsView: View {
         if viewModel.isLoading {
             SkeletonLines(count: 6)
         } else if let error = viewModel.error {
-            ContentUnavailableView("Lois indisponibles", hero: "scroll", description: Text(error.localizedDescription))
+            ContentUnavailableView("Lois indisponibles", lucide: "scroll-text", description: Text(error.localizedDescription))
         } else if visibleLaws.isEmpty {
-            ContentUnavailableView("Aucun texte", hero: "scroll", description: Text("Aucun texte ne correspond à ce filtre pour le moment."))
+            ContentUnavailableView("Aucun texte", lucide: "scroll-text", description: Text("Aucun texte ne correspond à ce filtre pour le moment."))
         } else {
             // Grouped by what is happening now, the most talked-about texts first in each group.
             ForEach(Array(groups.enumerated()), id: \.element.section) { index, group in
                 let isCollapsed = collapsed.contains(group.section)
-                Button {
+                let toggle = {
                     withAnimation(.app) {
                         if isCollapsed { collapsed.remove(group.section) } else { collapsed.insert(group.section) }
                     }
-                } label: {
-                    HStack(spacing: AppSpacing.s) {
-                        HeroIcon("chevron-right", size: 18)
-                            .foregroundStyle(AppColors.Adaptive.textMeta)
-                            .rotationEffect(.degrees(isCollapsed ? 0 : 90))
-                        SectionHeader(title: group.section.rawValue)
-                        Spacer(minLength: 0)
-                    }
-                    .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                HStack(spacing: 0) {
+                    Button(action: toggle) {
+                        HStack(spacing: AppSpacing.s) {
+                            LucideIcon("chevron-right", size: 18)
+                                .foregroundStyle(AppColors.Adaptive.textMeta)
+                                .rotationEffect(.degrees(isCollapsed ? 0 : 90))
+                            SectionHeader(title: group.section.rawValue)
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .fixedSize(horizontal: true, vertical: false)
+                    InfoBubble(text: group.section.explanation, label: "Ce que veut dire « \(group.section.rawValue) »")
+                    // The rest of the row still folds the section.
+                    Color.clear.contentShape(Rectangle()).onTapGesture(perform: toggle)
+                }
                 .accessibilityAddTraits(.isHeader)
                 .accessibilityValue(isCollapsed ? "Replié" : "Déplié")
                 .padding(.top, index == 0 ? AppSpacing.m : AppSpacing.xl)
@@ -136,7 +170,7 @@ struct LawsView: View {
                 if !isCollapsed {
                     VStack(spacing: AppSpacing.s) {
                         ForEach(group.laws) { law in
-                            Button { selected = law } label: { LawRow(law: law) }
+                            Button { onSelect(law) } label: { LawRow(law: law) }
                                 .buttonStyle(.plain)
                         }
                     }
@@ -173,7 +207,7 @@ struct LawProgressBar: View {
                     segment(index)
                     if showsLabels {
                         Text(LawExplainer.progressStages[index])
-                            .font(.appCaption)
+                            .typeStyle(.meta)
                             .foregroundStyle(index == min(Int(max(lit - 0.001, 0)), 3)
                                              ? AppColors.Adaptive.textPrimary : AppColors.Adaptive.textMeta)
                             .lineLimit(2)
@@ -220,6 +254,16 @@ enum LawSection: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
+    /// What the title means, for the info bubble next to it.
+    var explanation: String {
+        switch self {
+        case .committee: return "Un petit groupe de députés ou de sénateurs étudie le texte et le modifie avant qu'il soit débattu devant tous les élus."
+        case .debate: return "Le texte est discuté et amendé en public, devant tous les députés ou tous les sénateurs, avant d'être soumis au vote."
+        case .filed: return "Le texte vient d'être déposé au Parlement. Personne ne l'a encore examiné : il attend d'être étudié en commission."
+        case .voted: return "Une chambre (Assemblée nationale ou Sénat) a adopté ou rejeté le texte ces dernières semaines, ou la loi vient d'être promulguée."
+        }
+    }
+
     static func of(_ law: Law) -> LawSection {
         guard let step = law.current else { return .filed }
         if law.isPromulgated { return .voted }
@@ -252,25 +296,18 @@ private struct LawRow: View {
                     .frame(width: 24, height: 24)
                     .clipShape(Circle())
                     Text(name)
-                        .font(.appCaption)
+                        .typeStyle(.meta)
                         .foregroundStyle(AppColors.Adaptive.textMeta)
                         .lineLimit(1)
                 }
             }
             VStack(alignment: .leading, spacing: AppSpacing.s) {
                 Text(law.displayTitle)
-                    .font(.geist(.body, .medium))
+                    .typeStyle(.rowTitle)
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
-                if let why = law.whyItMatters, !why.isEmpty {
-                    Text(why)
-                        .font(.appBody)
-                        .foregroundStyle(AppColors.Adaptive.textBody)
-                        .lineLimit(1)
-                        .multilineTextAlignment(.leading)
-                }
                 Text(LawExplainer.headline(for: law))
-                    .font(.appCaption)
+                    .typeStyle(.meta)
                     .foregroundStyle(AppColors.Adaptive.textMeta)
                     .lineLimit(1)
                     .multilineTextAlignment(.leading)
@@ -303,51 +340,6 @@ enum LawFilter: String, CaseIterable, Identifiable {
         case .senat: return law.current?.chamber == "SN"
         case .government: return law.kind == "Projet de loi"
         case .members: return law.kind == "Proposition de loi"
-        }
-    }
-}
-
-/// Sub-tabs under the header, same look and motion as the home page's topic tabs (a line under the
-/// selected tab that slides and resizes), with filters made for laws.
-struct LawTabs: View {
-    @Binding var selection: LawFilter
-    @Namespace private var indicator
-
-    var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 0) {
-                    ForEach(LawFilter.allCases) { filter in
-                        let isSelected = filter == selection
-                        Button {
-                            withAnimation(.app) { selection = filter }
-                        } label: {
-                            Text(filter.rawValue)
-                                .font(.appCaption)
-                                .foregroundStyle(isSelected ? AppColors.Adaptive.textPrimary : AppColors.Adaptive.textMeta)
-                                .padding(.horizontal, AppSpacing.st)
-                                .frame(minHeight: 44)
-                                .overlay(alignment: .bottom) {
-                                    if isSelected {
-                                        Rectangle()
-                                            .fill(AppColors.Adaptive.textPrimary)
-                                            .frame(height: 2)
-                                            .matchedGeometryEffect(id: "indicator", in: indicator)
-                                    }
-                                }
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityAddTraits(isSelected ? .isSelected : [])
-                        .id(filter)
-                    }
-                }
-                .padding(.horizontal, AppSpacing.s)
-            }
-            .onChange(of: selection) { _, new in
-                withAnimation(.app) { proxy.scrollTo(new, anchor: .center) }
-            }
-            .sensoryFeedback(.selection, trigger: selection)
         }
     }
 }

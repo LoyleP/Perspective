@@ -28,7 +28,7 @@ struct SourceAvatarView: View {
             Circle().fill(lean?.spectrumColor ?? AppColors.Adaptive.surfaceElevated)
             if size >= 24 {   // the smallest type size doesn't fit tiny avatars
                 Text(String(source.name.prefix(1)).uppercased())
-                    .font(.appCaption)
+                    .typeStyle(.meta)
                     .foregroundStyle(lean?.tagTextColor ?? AppColors.Adaptive.textSecondary)
             }
         }

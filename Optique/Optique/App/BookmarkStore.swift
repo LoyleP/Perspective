@@ -34,6 +34,12 @@ final class BookmarkStore {
         save()
     }
 
+    /// Forgets every saved story.
+    func reset() {
+        stories = []
+        defaults.removeObject(forKey: storageKey)
+    }
+
     func isBookmarked(_ story: Story) -> Bool {
         stories.contains(where: { $0.id == story.id })
     }

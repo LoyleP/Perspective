@@ -44,7 +44,7 @@ struct DesignSystemGalleryView: View {
         .toolbar {
             if let onHome {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button(action: onHome) { Label("Accueil", hero: "home") }
+                    Button(action: onHome) { Label("Accueil", lucide: "house") }
                 }
             }
         }
@@ -103,12 +103,12 @@ struct DesignSystemGalleryView: View {
         VStack(alignment: .leading, spacing: AppSpacing.st) {
             SectionHeader(title: "Tags de position", subtitle: "LeanTags · teinte OKLCH par position")
             FlowRow {
-                LeanTagPill(lean: .extremeGauche, text: "Surtout relayé à l'extrême gauche")
-                LeanTagPill(lean: .gauche, text: "Surtout relayé à gauche")
-                LeanTagPill(lean: .centre, text: "Surtout relayé au centre", lighter: true)
-                LeanTagPill(lean: .droite, text: "Surtout relayé à droite")
-                LeanTagPill(lean: .extremeDroite, text: "Surtout relayé à l'extrême droite")
-                LeanTagPill(lean: .centre, text: "Relayé par tous les bords")
+                LeanTagPill(lean: .extremeGauche, text: "Surtout extrême gauche")
+                LeanTagPill(lean: .gauche, text: "Surtout à gauche")
+                LeanTagPill(lean: .centre, text: "Surtout au centre", lighter: true)
+                LeanTagPill(lean: .droite, text: "Surtout à droite")
+                LeanTagPill(lean: .extremeDroite, text: "Surtout extrême droite")
+                LeanTagPill(lean: .centre, text: "Tous les bords")
                 LeanTagPill(lean: .centre, text: "Peu de sources")
             }
         }

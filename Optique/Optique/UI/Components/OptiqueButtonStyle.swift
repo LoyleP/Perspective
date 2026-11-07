@@ -12,7 +12,7 @@ struct OptiqueButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.appBodyStrong)
+            .typeStyle(.ui)
             .foregroundStyle(kind == .primary ? AppColors.Brand.onInk : AppColors.Adaptive.textPrimary)
             .padding(.horizontal, AppSpacing.l)
             .frame(minHeight: 50)

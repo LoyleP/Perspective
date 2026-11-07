@@ -257,22 +257,22 @@ extension CoverageStats {
         }
     }
 
-    /// Where the coverage leans, or "Équilibré" when no position is clearly ahead of the next
-    /// one. The single source for every label (cards, tags, story page header).
-    var leanVerdict: (lean: PoliticalLean, text: String) {
+    /// Where the coverage leans, or balanced when no position is clearly ahead of the next one, or
+    /// "too few sources". The single source for every label (cards, tags, story page header).
+    var leanVerdictKind: LeanVerdict {
         let clearLead = 0.10
-        guard totalCount >= 3 else { return (.centre, "Peu de sources") }
+        guard totalCount >= 3 else { return .tooFewSources }
         let ranked = PoliticalLean.allCases.sorted { share(of: $0) > share(of: $1) }
-        guard let first = ranked.first else { return (.centre, "Relayé par tous les bords") }
+        guard let first = ranked.first else { return .balanced }
         let gap = share(of: first) - (ranked.dropFirst().first.map { share(of: $0) } ?? 0)
-        guard gap >= clearLead else { return (.centre, "Relayé par tous les bords") }
-        switch first {
-        case .extremeGauche: return (first, "Surtout relayé à l'extrême gauche")
-        case .gauche: return (first, "Surtout relayé à gauche")
-        case .centre: return (first, "Surtout relayé au centre")
-        case .droite: return (first, "Surtout relayé à droite")
-        case .extremeDroite: return (first, "Surtout relayé à l'extrême droite")
-        }
+        guard gap >= clearLead else { return .balanced }
+        return .leaning(first)
+    }
+
+    /// Long wording, for places with room (story page, accessibility, onboarding sentence).
+    var leanVerdict: (lean: PoliticalLean, text: String) {
+        let kind = leanVerdictKind
+        return (kind.lean, kind.text)
     }
 
     var verdict: String { leanVerdict.text }
@@ -305,6 +305,46 @@ enum BlindspotSide {
         switch self {
         case .gauche: return .gauche
         case .droite: return .droite
+        }
+    }
+}
+
+/// How a story's coverage is spread over the political positions.
+enum LeanVerdict: Equatable {
+    case tooFewSources
+    case balanced
+    case leaning(PoliticalLean)
+
+    var lean: PoliticalLean {
+        if case .leaning(let lean) = self { return lean }
+        return .centre
+    }
+
+    /// Full wording: "Surtout relayé à gauche".
+    var text: String {
+        switch self {
+        case .tooFewSources: return "Peu de sources"
+        case .balanced: return "Relayé par tous les bords"
+        case .leaning(.extremeGauche): return "Surtout relayé à l'extrême gauche"
+        case .leaning(.gauche): return "Surtout relayé à gauche"
+        case .leaning(.centre): return "Surtout relayé au centre"
+        case .leaning(.droite): return "Surtout relayé à droite"
+        case .leaning(.extremeDroite): return "Surtout relayé à l'extrême droite"
+        }
+    }
+
+    /// Short wording for the tag on cards. "Surtout" says it is a share of the coverage, the side says
+    /// whose outlets carry it, so "Surtout à gauche" reads on its own as "mostly covered by left-leaning
+    /// media"; "Tous les bords" is the balanced case.
+    var tag: String {
+        switch self {
+        case .tooFewSources: return "Peu de sources"
+        case .balanced: return "Tous les bords"
+        case .leaning(.extremeGauche): return "Surtout extrême gauche"
+        case .leaning(.gauche): return "Surtout à gauche"
+        case .leaning(.centre): return "Surtout au centre"
+        case .leaning(.droite): return "Surtout à droite"
+        case .leaning(.extremeDroite): return "Surtout extrême droite"
         }
     }
 }

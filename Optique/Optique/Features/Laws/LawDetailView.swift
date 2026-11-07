@@ -7,6 +7,8 @@ struct LawDetailView: View {
     @State private var detail: Law?
     @State private var selectedStory: Story?
     @State private var showsPath = false
+    @State private var follows = LawFollowStore.shared
+    @State private var showsNotificationsOff = false
     @Environment(\.openURL) private var openURL
 
     private var shown: Law { detail ?? law }
@@ -16,7 +18,6 @@ struct LawDetailView: View {
             VStack(alignment: .leading, spacing: AppSpacing.xl) {
                 VStack(alignment: .leading, spacing: AppSpacing.m) {
                     titleBlock
-                    summaryBlock
                 }
                 pathBlock
                 VStack(alignment: .leading, spacing: AppSpacing.l) {
@@ -31,6 +32,22 @@ struct LawDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .appBackButton()
         .toolbarBackground(.hidden, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button(action: toggleFollow) {
+                    NavIcon("bell", filled: follows.isFollowing(law.uid))
+                }
+                .accessibilityLabel(follows.isFollowing(law.uid) ? "Ne plus suivre cette loi" : "Suivre cette loi")
+            }
+        }
+        .alert("Notifications désactivées", isPresented: $showsNotificationsOff) {
+            Button("Ouvrir les réglages") {
+                if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
+            }
+            Button("Annuler", role: .cancel) {}
+        } message: {
+            Text("Activez-les dans les réglages pour être prévenu des avancées de cette loi.")
+        }
         .navigationDestination(isPresented: $showsPath) {
             LawStepsCarousel(law: shown, selectedStep: .constant(nil), vertical: true)
             .background(AppColors.Adaptive.background.ignoresSafeArea())
@@ -45,9 +62,24 @@ struct LawDetailView: View {
             // The law's page as last received (often prefetched by the list) shows at once.
             if detail == nil, let cached = await LawRepository.shared.cachedLaw(uid: law.uid) { detail = cached }
             while !Task.isCancelled {
-                if let fresh = try? await LawRepository.shared.fetchLaw(uid: law.uid) { detail = fresh }
+                if let fresh = try? await LawRepository.shared.fetchLaw(uid: law.uid) { detail = fresh; follows.markSeen(fresh) }
                 try? await Task.sleep(for: .seconds(300))
             }
+        }
+    }
+
+    private func toggleFollow() {
+        Haptics.selection()
+        if follows.isFollowing(law.uid) { follows.unfollow(law.uid); return }
+        Task {
+            let manager = NotificationManager.shared
+            if manager.authorizationStatus == .notDetermined { try? await manager.requestAuthorization() }
+            await manager.checkAuthorizationStatus()
+            guard manager.authorizationStatus == .authorized || manager.authorizationStatus == .provisional else {
+                showsNotificationsOff = true
+                return
+            }
+            follows.follow(shown)
         }
     }
 
@@ -63,35 +95,20 @@ struct LawDetailView: View {
                     .frame(width: 24, height: 24)
                     .clipShape(Circle())
                     Text(name)
-                        .font(.appCaption)
+                        .typeStyle(.meta)
                         .foregroundStyle(AppColors.Adaptive.textMeta)
                 }
             } else {
                 Text(shown.kindLine)
-                    .font(.appCaption)
+                    .typeStyle(.meta)
                     .foregroundStyle(AppColors.Adaptive.textMeta)
             }
             Text(shown.displayTitle)
-                .font(.appTitle)
+                .typeStyle(.display)
                 .foregroundStyle(AppColors.Adaptive.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.horizontal, AppSpacing.m)
-    }
-
-    /// Plain-language summary, shown only once it exists.
-    @ViewBuilder
-    private var summaryBlock: some View {
-        if let summary = shown.summary {
-            VStack(alignment: .leading, spacing: AppSpacing.s) {
-                Text(summary)
-                    .font(.appBody)
-                    .lineSpacing(4)
-                    .foregroundStyle(AppColors.Adaptive.textBody)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(.horizontal, AppSpacing.m)
-        }
     }
 
     /// Parcours: where the law stands in a plain sentence with the four-stage bar, then one card per
@@ -100,18 +117,18 @@ struct LawDetailView: View {
         VStack(alignment: .leading, spacing: AppSpacing.m) {
             VStack(alignment: .leading, spacing: AppSpacing.st) {
                 Text(LawExplainer.headline(for: shown))
-                    .font(.appHeading)
+                    .typeStyle(.section)
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
                 LawProgressBar(law: shown, showsLabels: true)
                 if let next = LawExplainer.next(for: shown) {
                     Text("Prochaine étape : \(next)")
-                        .font(.appBody)
+                        .typeStyle(.body)
                         .foregroundStyle(AppColors.Adaptive.textBody)
                 }
                 Button { showsPath = true } label: {
                     HStack(spacing: AppSpacing.s) {
                         Text("Voir tout le parcours")
-                        HeroIcon("chevron-right", size: 16)
+                        LucideIcon("chevron-right", size: 16)
                     }
                 }
                 .buttonStyle(.grayCTA)
@@ -128,7 +145,6 @@ struct LawDetailView: View {
                 ForEach(stories) { story in
                     Button { selectedStory = story } label: { StoryRow(story: story) }
                         .buttonStyle(.plain)
-                    Divider().overlay(AppColors.Adaptive.divider)
                 }
             }
             .padding(.horizontal, AppSpacing.m)
@@ -147,7 +163,7 @@ struct LawDetailView: View {
                 link("Texte publié sur Légifrance", url)
             }
             Text("Données : Assemblée nationale et Sénat, via l'API Parlement de Tricoteuses.")
-                .font(.appCaption)
+                .typeStyle(.meta)
                 .foregroundStyle(AppColors.Adaptive.textMeta)
         }
         .padding(.horizontal, AppSpacing.m)
@@ -156,9 +172,9 @@ struct LawDetailView: View {
     private func link(_ title: String, _ url: URL) -> some View {
         Button { openURL(url) } label: {
             HStack(spacing: AppSpacing.s) {
-                HeroIcon("link", size: 18)
+                LucideIcon("link", size: 18)
                 Text(title)
-                    .font(.appBody)
+                    .typeStyle(.body)
             }
             .foregroundStyle(AppColors.Adaptive.textPrimary)
         }

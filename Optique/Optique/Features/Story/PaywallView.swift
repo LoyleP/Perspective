@@ -108,12 +108,12 @@ struct PaywallView: View {
 
             VStack(alignment: .leading, spacing: AppSpacing.s) {
                 Text("Tous les angles,\nsans limite")
-                    .font(.appTitle)
+                    .typeStyle(.screenTitle)
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityAddTraits(.isHeader)
                 Text("Lisez autant de sujets que vous voulez, et soutenez une information qui montre tous les points de vue.")
-                    .font(.appBody)
+                    .typeStyle(.body)
                     .foregroundStyle(AppColors.Adaptive.textBody)
                     .lineSpacing(3)
                     .fixedSize(horizontal: false, vertical: true)
@@ -126,7 +126,7 @@ struct PaywallView: View {
         Button {
             dismiss()
         } label: {
-            NavIcon("xmark")
+            NavIcon("x")
                 .foregroundStyle(AppColors.Adaptive.textPrimary)
                 .frame(width: 44, height: 44)
                 .background(AppColors.Adaptive.surfaceElevated, in: Circle())
@@ -144,7 +144,7 @@ struct PaywallView: View {
             Divider().overlay(AppColors.Adaptive.divider).padding(.leading, 68)
             benefit("heart", "Un projet indépendant", "Financé par ses lecteurs, sans groupe de presse derrière.")
             Divider().overlay(AppColors.Adaptive.divider).padding(.leading, 68)
-            benefit("eye-slash", "Sans publicité ni pistage", "Ce que vous lisez reste sur votre iPhone.")
+            benefit("eye-off", "Sans publicité ni pistage", "Ce que vous lisez reste sur votre iPhone.")
         }
         .frame(maxWidth: .infinity)
         .background(AppColors.Adaptive.cardSurface, in: RoundedRectangle(cornerRadius: AppRadius.xl))
@@ -152,17 +152,17 @@ struct PaywallView: View {
 
     private func benefit(_ icon: String, _ title: String, _ detail: String) -> some View {
         HStack(alignment: .top, spacing: AppSpacing.st) {
-            HeroIcon(icon, size: 22)
+            LucideIcon(icon, size: 22)
                 .foregroundStyle(AppColors.Adaptive.textPrimary)
                 .frame(width: 40, height: 40)
                 .background(AppColors.Adaptive.surfaceElevated, in: Circle())
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.appBodyStrong)
+                    .typeStyle(.ui)
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
                 Text(detail)
-                    .font(.appBody)
+                    .typeStyle(.body)
                     .foregroundStyle(AppColors.Adaptive.textMeta)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -226,7 +226,7 @@ struct PaywallView: View {
                             .foregroundStyle(AppColors.Adaptive.textPrimary)
                         if let badge {
                             Text(badge)
-                                .font(.appCaption)
+                                .typeStyle(.meta)
                                 .foregroundStyle(AppColors.Brand.onInk)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 2)
@@ -234,7 +234,7 @@ struct PaywallView: View {
                         }
                     }
                     Text(detail)
-                        .font(.appCaption)
+                        .typeStyle(.meta)
                         .foregroundStyle(AppColors.Adaptive.textMeta)
                 }
 
@@ -243,18 +243,18 @@ struct PaywallView: View {
                 VStack(alignment: .trailing, spacing: 2) {
                     if let strike {
                         Text(strike)
-                            .font(.appCaption)
+                            .typeStyle(.meta)
                             .foregroundStyle(AppColors.Adaptive.textMeta)
                             .strikethrough()
                     }
                     HStack(alignment: .firstTextBaseline, spacing: 3) {
                         Text(price)
-                            .font(.appHeading)
+                            .typeStyle(.section)
                             .foregroundStyle(AppColors.Adaptive.textPrimary)
                             .minimumScaleFactor(0.7)
                             .lineLimit(1)
                         Text(unit)
-                            .font(.appCaption)
+                            .typeStyle(.meta)
                             .foregroundStyle(AppColors.Adaptive.textMeta)
                     }
                 }
@@ -333,7 +333,7 @@ struct PaywallView: View {
             .animation(.spring(duration: 0.35, bounce: 0.1), value: plan)
 
             Text(terms)
-                .font(.appCaption)
+                .typeStyle(.meta)
                 .foregroundStyle(AppColors.Adaptive.textMeta)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
@@ -351,7 +351,7 @@ struct PaywallView: View {
                     Link("Confidentialité", destination: url)
                 }
             }
-            .font(.appCaption)
+            .typeStyle(.meta)
             .foregroundStyle(AppColors.Adaptive.textTertiary)
         }
         .padding(.horizontal, AppSpacing.m)

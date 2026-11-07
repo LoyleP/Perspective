@@ -1,40 +1,41 @@
 import SwiftUI
 
+/// "À la une": a row of topic pills over horizontally swiping pages, one page per topic. Tapping a
+/// pill slides to its page and swiping a page moves the highlighted pill with it.
 struct FeedView: View {
 
-    @State private var viewModel = FeedViewModel()
-    @Environment(BookmarkStore.self) private var bookmarks
-    @Environment(ReadingHistoryStore.self) private var readingHistory
-    @AppStorage("alertsPromptDismissed") private var alertsPromptDismissed = false
-    @AppStorage("notificationsEnabled") private var notificationsEnabled = false
-    @Namespace private var transition
-    @State private var visibleCount = 12
+    @State private var topic: StoryTopic? = .tout
     @State private var deepLinkStory: Story?
-    @State private var topic: StoryTopic = .tout
-    /// True from the tab tap until the new topic has loaded: shows the loader immediately.
-    @State private var isSwitching = false
+    @Namespace private var transition
     private let notificationManager = NotificationManager.shared
-    @Environment(\.scenePhase) private var scenePhase
+
+    private var topics: [StoryTopic] { [.tout] + StoryTopic.selectable }
+    private var current: StoryTopic { topic ?? .tout }
 
     var body: some View {
         VStack(spacing: 0) {
-            TopicTabs(selection: $topic, onWillSwitch: { isSwitching = true }, onSwitchCancelled: { isSwitching = false })
+            TopicPills(topics: topics, selection: Binding(get: { current }, set: { topic = $0 }))
 
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 0) {
-                    content
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 0) {
+                    ForEach(Array(topics.enumerated()), id: \.element) { index, page in
+                        // Only the page on screen and its neighbours load, so a swipe lands on stories.
+                        let currentIndex = topics.firstIndex(of: current) ?? 0
+                        FeedTopicPage(topic: page, isNear: abs(index - currentIndex) <= 1, transition: transition)
+                            .containerRelativeFrame(.horizontal)
+                            .id(page)
+                    }
                 }
-                .padding(.horizontal, AppSpacing.m)
-                .padding(.top, AppSpacing.m)
-                .padding(.bottom, AppSpacing.xxl)
+                .scrollTargetLayout()
             }
-            .refreshable { await viewModel.refresh() }
-            .shrinksTabBarOnScroll()
+            .scrollTargetBehavior(.paging)
+            .scrollPosition(id: $topic)
         }
         .background(AppColors.Adaptive.background.ignoresSafeArea())
         .appHeaderToolbar()
         .navigationDestination(for: Story.self) { story in
             StoryDetailView(story: story)
+                .zoomDestination(id: ZoomID(topic: current, story: story.id), in: transition)
         }
         // Notification tapped: open its story on top of the feed.
         .navigationDestination(item: $deepLinkStory) { story in
@@ -45,20 +46,54 @@ struct FeedView: View {
             notificationManager.pendingStoryID = nil
             Task { deepLinkStory = try? await StoryRepository.shared.fetchStory(id: storyID) }
         }
-        .onChange(of: topic) { _, new in
-            visibleCount = 12
-            Task {
-                await viewModel.select(new)
-                isSwitching = false
+        .onChange(of: topic) { _, _ in Haptics.selection() }
+        .task { await notificationManager.checkAuthorizationStatus() }
+    }
+}
+
+/// One topic's stories.
+private struct FeedTopicPage: View {
+    let topic: StoryTopic
+    let isNear: Bool
+    let transition: Namespace.ID
+
+    @State private var viewModel: FeedViewModel
+    @Environment(BookmarkStore.self) private var bookmarks
+    @Environment(ReadingHistoryStore.self) private var readingHistory
+    @AppStorage("alertsPromptDismissed") private var alertsPromptDismissed = false
+    @AppStorage("notificationsEnabled") private var notificationsEnabled = false
+    @State private var visibleCount = 12
+    /// True once the page has started loading: until then it shows the placeholder, not "no stories".
+    @State private var started = false
+    private let notificationManager = NotificationManager.shared
+    @Environment(\.scenePhase) private var scenePhase
+
+    init(topic: StoryTopic, isNear: Bool, transition: Namespace.ID) {
+        self.topic = topic
+        self.isNear = isNear
+        self.transition = transition
+        _viewModel = State(initialValue: FeedViewModel(topic: topic))
+    }
+
+    var body: some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 0) {
+                content
             }
+            .padding(.horizontal, AppSpacing.m)
+            .padding(.top, AppSpacing.m)
+            .padding(.bottom, AppSpacing.xxl)
         }
-        .task {
+        .refreshable { await viewModel.refresh() }
+        .shrinksTabBarOnScroll()
+        .task(id: isNear) {
+            guard isNear else { return }
+            started = true
             await viewModel.load()
-            await notificationManager.checkAuthorizationStatus()
         }
         // News goes stale fast: coming back to the app reloads a feed older than a few minutes.
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { Task { await viewModel.refreshIfStale() } }
+            if phase == .active, isNear { Task { await viewModel.refreshIfStale() } }
         }
     }
 
@@ -66,13 +101,13 @@ struct FeedView: View {
 
     @ViewBuilder
     private var content: some View {
-        if isSwitching || (viewModel.isLoading && viewModel.allStories.isEmpty) {
+        if !started || (viewModel.isLoading && viewModel.allStories.isEmpty) {
             loadingSkeleton
         } else if let error = viewModel.error, viewModel.allStories.isEmpty {
             unavailable(
                 title: "Impossible de charger",
                 message: error.localizedDescription,
-                icon: "signal-slash",
+                icon: "wifi-off",
                 action: "Réessayer"
             )
         } else if viewModel.stories.isEmpty {
@@ -94,7 +129,7 @@ struct FeedView: View {
         if let hero = viewModel.cetteSemanineHero {
             storyLink(hero) {
                 StoryHeroCard(story: hero)
-                    .zoomSource(id: hero.id, in: transition)
+                    .zoomSource(id: ZoomID(topic: topic, story: hero.id), in: transition)
             }
         }
 
@@ -123,15 +158,13 @@ struct FeedView: View {
             if index > 0 && index.isMultiple(of: 5) && story.leadImageURL != nil {
                 storyLink(story) {
                     StoryHeroCard(story: story, size: .medium)
-                        .zoomSource(id: story.id, in: transition)
+                        .zoomSource(id: ZoomID(topic: topic, story: story.id), in: transition)
                 }
-                .padding(.vertical, AppSpacing.m)
             } else {
                 storyLink(story) {
                     StoryRow(story: story)
-                        .zoomSource(id: story.id, in: transition)
+                        .zoomSource(id: ZoomID(topic: topic, story: story.id), in: transition)
                 }
-                Divider().overlay(AppColors.Adaptive.divider)
             }
         }
 
@@ -149,9 +182,8 @@ struct FeedView: View {
             ForEach(viewModel.lighterStories.prefix(8)) { story in
                 storyLink(story) {
                     StoryRow(story: story)
-                        .zoomSource(id: story.id, in: transition)
+                        .zoomSource(id: ZoomID(topic: topic, story: story.id), in: transition)
                 }
-                Divider().overlay(AppColors.Adaptive.divider)
             }
         }
     }
@@ -164,11 +196,11 @@ struct FeedView: View {
 
     private var alertsPrompt: some View {
         VStack(alignment: .leading, spacing: AppSpacing.st) {
-            Label("Être prévenu des grands sujets ?", hero: "bell")
+            Label("Être prévenu des grands sujets ?", lucide: "bell")
                 .font(.geist(.body, .medium))
                 .foregroundStyle(AppColors.Adaptive.textPrimary)
             Text("Une alerte quand un sujet est repris par plusieurs médias, avec le bord qui en parle le plus. Au plus une par heure.")
-                .font(.appBody)
+                .typeStyle(.body)
                 .foregroundStyle(AppColors.Adaptive.textBody)
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: AppSpacing.s) {
@@ -203,7 +235,7 @@ struct FeedView: View {
                                         BlindspotBadge(side: side).padding(AppSpacing.st)
                                     }
                                 }
-                                .zoomSource(id: story.id, in: transition)
+                                .zoomSource(id: ZoomID(topic: topic, story: story.id), in: transition)
                         }
                         .containerRelativeFrame(.horizontal) { width, _ in width * 0.8 }
                     }
@@ -216,17 +248,13 @@ struct FeedView: View {
     }
 
     private var essentials: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .leading, spacing: AppSpacing.s) {
             SectionHeader(title: "L'essentiel", subtitle: "Les sujets les plus couverts")
-                .padding(.bottom, AppSpacing.s)
+                .padding(.bottom, AppSpacing.xs)
             ForEach(Array(viewModel.essentials.enumerated()), id: \.element.id) { index, story in
                 storyLink(story) {
-                    EssentialRow(rank: index + 1, story: story)
-                        .zoomSource(id: story.id, in: transition)
-                }
-                if index < viewModel.essentials.count - 1 {
-                    // Inset past the rank gutter so the rule lines up with the text.
-                    Divider().overlay(AppColors.Adaptive.divider).padding(.leading, 38)
+                    StoryRow(story: story, rank: index + 1)
+                        .zoomSource(id: ZoomID(topic: topic, story: story.id), in: transition)
                 }
             }
         }
@@ -242,14 +270,14 @@ struct FeedView: View {
                     if wasSaved { Haptics.lightImpact() } else { Haptics.success() }
                 } label: {
                     if bookmarks.isBookmarked(story) {
-                        Label("Retirer des enregistrés", hero: "bookmark-slash")
+                        Label("Retirer des enregistrés", lucide: "bookmark-minus")
                     } else {
-                        Label("Enregistrer", hero: "bookmark")
+                        Label("Enregistrer", lucide: "bookmark")
                     }
                 }
                 if let url = story.articles.first.flatMap({ URL(string: $0.url) }) {
                     ShareLink(item: url, subject: Text(story.title)) {
-                        Label("Partager", hero: "arrow-up-on-square")
+                        Label("Partager", lucide: "share")
                     }
                 }
             }
@@ -272,7 +300,7 @@ struct FeedView: View {
 
     private func unavailable(title: String, message: String, icon: String, action: String) -> some View {
         ContentUnavailableView {
-            Label(title, hero: icon, size: 44)
+            Label(title, lucide: icon, size: 44)
         } description: {
             Text(message)
         } actions: {
@@ -283,52 +311,12 @@ struct FeedView: View {
     }
 }
 
-// MARK: - L'essentiel row
+// MARK: - Zoom transition
 
-private struct EssentialRow: View {
-    let rank: Int
-    let story: Story
-
-    var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: AppSpacing.m) {
-            Text("\(rank)")
-                .font(.appCaption)
-                .monospacedDigit()
-                .foregroundStyle(AppColors.Adaptive.textMeta)
-                .frame(width: 22, alignment: .leading)
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: AppSpacing.s) {
-                    Text(story.timeLine)
-                        .font(.appCaption)
-                        .foregroundStyle(AppColors.Adaptive.textMeta)
-                }
-                Text(story.title)
-                    .font(.geist(.body, .medium))
-                    .foregroundStyle(AppColors.Adaptive.textPrimary)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-                if let dek = story.standfirst {
-                    Text(dek)
-                        .font(.appBody)
-                        .foregroundStyle(AppColors.Adaptive.textMeta)
-                        .lineLimit(1)
-                        .multilineTextAlignment(.leading)
-                }
-                HStack(spacing: AppSpacing.s) {
-                    // The coverage tag only where the left/right lens means something.
-                    if let coverage = story.computedCoverage, story.hasPoliticalAngle {
-                        LeanTags(coverage: coverage)
-                    }
-                    SourceStack(sources: story.sources, size: 18, ringColor: AppColors.Adaptive.background)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .padding(.vertical, AppSpacing.st)
-        .contentShape(Rectangle())
-        .accessibilityElement(children: .combine)
-    }
+/// A story on a given topic page: the same story can sit on several pages, so the topic is part of the id.
+struct ZoomID: Hashable {
+    let topic: StoryTopic
+    let story: UUID
 }
 
 // MARK: - Zoom transition source
@@ -339,6 +327,18 @@ extension View {
     func zoomSource(id: some Hashable, in namespace: Namespace.ID) -> some View {
         if #available(iOS 18.0, *) {
             matchedTransitionSource(id: id, in: namespace)
+        } else {
+            self
+        }
+    }
+}
+
+extension View {
+    /// Opens with the iOS 18 zoom transition from the matching `zoomSource`.
+    @ViewBuilder
+    func zoomDestination(id: some Hashable, in namespace: Namespace.ID) -> some View {
+        if #available(iOS 18.0, *) {
+            navigationTransition(.zoom(sourceID: id, in: namespace))
         } else {
             self
         }

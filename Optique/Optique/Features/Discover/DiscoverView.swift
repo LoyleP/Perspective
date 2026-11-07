@@ -61,7 +61,7 @@ struct DiscoverView: View {
             loadingSkeleton
         } else if let error = viewModel.error, viewModel.stories.isEmpty {
             ContentUnavailableView {
-                Label("Impossible de charger", hero: "signal-slash", size: 44)
+                Label("Impossible de charger", lucide: "wifi-off", size: 44)
             } description: {
                 Text(error.localizedDescription)
             } actions: {
@@ -107,25 +107,15 @@ struct DiscoverView: View {
     }
 
     private var topics: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.xs) {
+        VStack(alignment: .leading, spacing: AppSpacing.m) {
             SectionHeader(title: "Thèmes")
-            ForEach(orderedTopics) { topic in
-                NavigationLink(value: topic) {
-                    HStack {
-                        Text(topic.rawValue)
-                            .font(.appBodyStrong)
-                            .foregroundStyle(AppColors.Adaptive.textPrimary)
-                        Spacer(minLength: AppSpacing.s)
-                        Text("\(viewModel.stories(in: topic).count)")
-                            .font(.appCaption)
-                            .monospacedDigit()
-                            .foregroundStyle(AppColors.Adaptive.textMeta)
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible())], spacing: 12) {
+                ForEach(orderedTopics) { topic in
+                    NavigationLink(value: topic) {
+                        ThemeTile(topic: topic)
                     }
-                    .padding(.vertical, AppSpacing.st)
-                    .contentShape(Rectangle())
+                    .buttonStyle(CardPressStyle())
                 }
-                .buttonStyle(CardPressStyle())
-                Divider().overlay(AppColors.Adaptive.divider)
             }
         }
         .padding(.horizontal, AppSpacing.m)
@@ -156,7 +146,7 @@ struct DiscoverView: View {
                             VStack(spacing: AppSpacing.s) {
                                 SourceAvatarView(source: source, size: 56)
                                 Text(source.name)
-                                    .font(.appCaption)
+                                    .typeStyle(.meta)
                                     .foregroundStyle(AppColors.Adaptive.textTertiary)
                                     .lineLimit(2)
                                     .multilineTextAlignment(.center)
@@ -203,10 +193,57 @@ struct DiscoverView: View {
                             .zoomSource(id: story.id, in: transition)
                     }
                     .buttonStyle(CardPressStyle())
-                    Divider().overlay(AppColors.Adaptive.divider)
                 }
             }
             .padding(.horizontal, AppSpacing.m)
+        }
+    }
+}
+
+// MARK: - Theme tile
+
+/// A coloured card for one theme: its name bottom left, its icon large and cropped at the right.
+private struct ThemeTile: View {
+    let topic: StoryTopic
+
+    var body: some View {
+        let colors = topic.tileColors
+        RoundedRectangle(cornerRadius: AppRadius.xl + 4)
+            .fill(LinearGradient(colors: [Color(hex: colors.top), Color(hex: colors.bottom)], startPoint: .top, endPoint: .bottom))
+            .aspectRatio(1.78, contentMode: .fit)
+            .overlay(alignment: .bottomTrailing) {
+                LucideIcon(topic.lucideIcon, size: 96)
+                    .foregroundStyle(.white.opacity(0.3))
+                    .rotationEffect(.degrees(-8))
+                    .offset(x: 18, y: 14)
+            }
+            .overlay(alignment: .bottomLeading) {
+                Text(topic.rawValue)
+                    .font(.geist(.body, .semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .padding(AppSpacing.m)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: AppRadius.xl + 4))
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(topic.rawValue)
+    }
+}
+
+private extension StoryTopic {
+    /// Gradient of the theme's tile, light at the top.
+    var tileColors: (top: String, bottom: String) {
+        switch self {
+        case .tout:          return ("6B7280", "374151")
+        case .politique:     return ("5B6577", "1F2937")
+        case .economie:      return ("5FA3F5", "2A62D9")
+        case .societe:       return ("F6B26B", "E4742A")
+        case .international: return ("C26BE8", "7E2FD0")
+        case .environnement: return ("6FD6C2", "1C9C8B")
+        case .justice:       return ("B5B1BF", "7C7888")
+        case .culture:       return ("F27A7A", "D93636")
+        case .sport:         return ("7AD184", "2E9E3D")
         }
     }
 }
@@ -224,7 +261,7 @@ struct BlindspotBadge: View {
                 .frame(width: 8, height: 8)
             Text(side.label)
         }
-        .font(.appCaption)
+        .typeStyle(.meta)
         .foregroundStyle(.white)
         .padding(.horizontal, 10)
         .padding(.vertical, 6)

@@ -28,8 +28,8 @@ private struct DebugMenuModifier: ViewModifier {
                 Button {
                     showMenu = true
                 } label: {
-                    Image(systemName: "ladybug.fill")
-                        .font(.appHeading)
+                    LucideIcon("bug", size: 22)
+                        .typeStyle(.section)
                         .foregroundStyle(.black)
                         .frame(width: 44, height: 44)
                         .background(Color.yellow, in: Circle())
@@ -128,7 +128,7 @@ private struct DebugMenuView: View {
             .safeAreaInset(edge: .bottom) {
                 if !message.isEmpty {
                     Text(message)
-                        .font(.appCaption)
+                        .typeStyle(.meta)
                         .padding(10)
                         .frame(maxWidth: .infinity)
                         .background(.regularMaterial)
@@ -350,7 +350,7 @@ private struct DebugMenuView: View {
     private var apiSection: some View {
         Section("API") {
             LabeledContent("Base", value: AppConfig.apiBaseURL.absoluteString)
-                .font(.appCaption)
+                .typeStyle(.meta)
             ForEach(["health", "feed?limit=1", "sources", "notifications?limit=1"], id: \.self) { path in
                 Button {
                     Task { await check(path) }
@@ -412,7 +412,7 @@ private struct CoverHost: View {
         content
             .overlay(alignment: .bottom) {
                 Button("Fermer le debug", action: close)
-                    .font(.appCaption)
+                    .typeStyle(.meta)
                     .foregroundStyle(.black)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 8)

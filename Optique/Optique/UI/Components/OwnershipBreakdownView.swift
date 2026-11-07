@@ -39,12 +39,12 @@ struct OwnershipBreakdownView: View {
                     HStack(spacing: AppSpacing.s) {
                         Circle().fill(item.color).frame(width: 8, height: 8)
                         Text(item.name)
-                            .font(.appBody)
+                            .typeStyle(.body)
                             .foregroundStyle(AppColors.Adaptive.textPrimary)
                             .lineLimit(1)
                         Spacer(minLength: AppSpacing.s)
                         Text(item.fraction, format: .percent.precision(.fractionLength(0)))
-                            .font(.appCaption)
+                            .typeStyle(.meta)
                             .monospacedDigit()
                             .foregroundStyle(AppColors.Adaptive.textMeta)
                     }

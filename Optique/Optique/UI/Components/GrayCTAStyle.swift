@@ -5,12 +5,12 @@ import SwiftUI
 struct GrayCTAStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.appBodyStrong)
+            .typeStyle(.ui)
             .foregroundStyle(AppColors.Adaptive.textPrimary)
             .frame(maxWidth: .infinity)
             .frame(height: 52)
-            .background(Color(light: AppColors.Zinc.Hex.z300, dark: AppColors.Zinc.Hex.z900), in: RoundedRectangle(cornerRadius: AppRadius.xl))
-            .contentShape(RoundedRectangle(cornerRadius: AppRadius.xl))
+            .background(Color(light: AppColors.Zinc.Hex.z200, dark: AppColors.Zinc.Hex.z800), in: Capsule())
+            .contentShape(Capsule())
             .opacity(configuration.isPressed ? 0.7 : 1)
     }
 }

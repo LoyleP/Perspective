@@ -6,6 +6,7 @@ struct SettingsView: View {
 
     @Environment(SessionState.self) private var session
     @Environment(ReadingHistoryStore.self) private var history
+    @Environment(BookmarkStore.self) private var bookmarks
     @Environment(\.dismiss) private var dismiss
     @AppStorage("notificationsEnabled") private var notificationsEnabled = false
 
@@ -14,6 +15,7 @@ struct SettingsView: View {
     @State private var showPaywall = false
     @State private var showManage = false
     @State private var confirmReset = false
+    @State private var confirmNewUser = false
     @State private var isRestoring = false
 
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = true
@@ -49,7 +51,7 @@ struct SettingsView: View {
                         }
                     } label: {
                         HStack {
-                            Label("Restaurer les achats", hero: "arrow-path")
+                            Label("Restaurer les achats", lucide: "refresh-cw")
                             if isRestoring {
                                 Spacer()
                                 ProgressView()
@@ -62,7 +64,7 @@ struct SettingsView: View {
                 // Test builds only: shows the app as a free or as an Optique+ reader sees it.
                 Section {
                     Toggle(isOn: Binding(get: { session.testPremium }, set: { session.testPremium = $0 })) {
-                        Label("Compte Optique+", hero: "sparkles")
+                        Label("Compte Optique+", lucide: "sparkles")
                     }
                     .sensoryFeedback(.selection, trigger: session.testPremium)
                     Button {
@@ -73,7 +75,7 @@ struct SettingsView: View {
                             Text("\(session.storiesOpened) / \(session.freeLimit)")
                                 .monospacedDigit()
                         } label: {
-                            Label("Remettre les sujets gratuits à zéro", hero: "arrow-uturn-left")
+                            Label("Remettre les sujets gratuits à zéro", lucide: "undo-2")
                         }
                     }
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
@@ -81,15 +83,20 @@ struct SettingsView: View {
                         hasCompletedOnboarding = false
                         showOnboarding = true
                     } label: {
-                        Label("Rejouer l'onboarding", hero: "arrow-uturn-left")
+                        Label("Rejouer l'onboarding", lucide: "undo-2")
                     }
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
                     Button {
                         showPaywall = true
                     } label: {
-                        Label("Afficher le paywall", hero: "sparkles")
+                        Label("Afficher le paywall", lucide: "sparkles")
                     }
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
+                    Button(role: .destructive) {
+                        confirmNewUser = true
+                    } label: {
+                        Label("Simuler un nouvel utilisateur", lucide: "circle-user")
+                    }
                 } header: {
                     Text("Version de test")
                 } footer: {
@@ -99,7 +106,7 @@ struct SettingsView: View {
 
             Section {
                 Toggle(isOn: $notificationsEnabled) {
-                    Label("Alertes des grands sujets", hero: "bell")
+                    Label("Alertes des grands sujets", lucide: "bell")
                 }
                 .onChange(of: notificationsEnabled) { oldValue, newValue in
                     guard newValue, !oldValue else { return }
@@ -124,12 +131,12 @@ struct SettingsView: View {
                 NavigationLink {
                     TopicPreferencesView()
                 } label: {
-                    Label("Thèmes préférés", hero: "squares-2x2")
+                    Label("Thèmes préférés", lucide: "layout-grid")
                 }
                 Button(role: .destructive) {
                     confirmReset = true
                 } label: {
-                    Label("Effacer l'historique", hero: "trash")
+                    Label("Effacer l'historique", lucide: "trash-2")
                 }
                 .disabled(history.leans.isEmpty && history.stories.isEmpty)
             }
@@ -138,21 +145,21 @@ struct SettingsView: View {
                 Button {
                     showMethodologie = true
                 } label: {
-                    Label("Méthodologie", hero: "document-text")
+                    Label("Méthodologie", lucide: "file-text")
                 }
                 Button {
                     showOwnership = true
                 } label: {
-                    Label("Propriété des médias", hero: "building-office-2")
+                    Label("Propriété des médias", lucide: "building-2")
                 }
                 if let url = URL(string: "https://loylep.github.io/Perspective/legal/privacy-policy") {
                     Link(destination: url) {
-                        Label("Politique de confidentialité", hero: "hand-raised")
+                        Label("Politique de confidentialité", lucide: "hand")
                     }
                 }
                 if let url = URL(string: "https://loylep.github.io/Perspective/legal/terms-of-service") {
                     Link(destination: url) {
-                        Label("Conditions d'utilisation", hero: "document")
+                        Label("Conditions d'utilisation", lucide: "file")
                     }
                 }
                 LabeledContent("Version", value: appVersion)
@@ -163,16 +170,16 @@ struct SettingsView: View {
                 NavigationLink {
                     DesignSystemGalleryView()
                 } label: {
-                    Label("Design system", hero: "swatch")
+                    Label("Design system", lucide: "swatch-book")
                 }
                 Button {
                     Task { await testNotifications() }
                 } label: {
-                    Label("Tester les notifications", hero: "bell-alert")
+                    Label("Tester les notifications", lucide: "bell-ring")
                 }
                 if !notificationTestMessage.isEmpty {
                     Text(notificationTestMessage)
-                        .font(.appCaption)
+                        .typeStyle(.meta)
                         .foregroundStyle(AppColors.Adaptive.textMeta)
                 }
             }
@@ -193,6 +200,11 @@ struct SettingsView: View {
         } message: {
             Text("Votre historique et votre spectre de lecture seront remis à zéro.")
         }
+        .confirmationDialog("Simuler un nouvel utilisateur ?", isPresented: $confirmNewUser, titleVisibility: .visible) {
+            Button("Tout remettre à zéro", role: .destructive) { resetToNewUser() }
+        } message: {
+            Text("Onboarding, thèmes, historique, enregistrés, lois suivies, sujets gratuits et compte Optique+ de test sont effacés. L'autorisation des notifications, elle, se réinitialise dans les réglages de l'iPhone.")
+        }
         .sheet(isPresented: $showMethodologie) {
             textSheet(title: "Méthodologie", text: methodologieText)
         }
@@ -210,11 +222,30 @@ struct SettingsView: View {
 
     // MARK: - Sheets
 
+    /// Puts the app back in the state of a first launch: onboarding to see again, nothing saved, no
+    /// preferences, a full daily allowance and a free account.
+    private func resetToNewUser() {
+        session.testPremium = false
+        session.resetCounter()
+        history.reset()
+        bookmarks.reset()
+        LawFollowStore.shared.reset()
+        let defaults = UserDefaults.standard
+        for key in ["preferredTopics", "notificationsEnabled", "alertsPromptDismissed", "lastSeenAlertsAt",
+                    "lastNotificationId", "lastStoryCount", "seenFirstStoryHint"] {
+            defaults.removeObject(forKey: key)
+        }
+        notificationsEnabled = false
+        hasCompletedOnboarding = false   // the root shows the onboarding again
+        Haptics.success()
+        dismiss()
+    }
+
     private func textSheet(title: String, text: String) -> some View {
         NavigationStack {
             ScrollView {
                 Text(text)
-                    .font(.appBody)
+                    .typeStyle(.body)
                     .foregroundStyle(AppColors.Adaptive.textBody)
                     .lineSpacing(4)
                     .padding(AppSpacing.m)

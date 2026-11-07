@@ -219,7 +219,7 @@ struct CommentsSheet: View {
                 .padding(.bottom, AppSpacing.m)
         } else {
             Text("Lancez la discussion.")
-                .font(.appBody)
+                .typeStyle(.body)
                 .foregroundStyle(AppColors.Adaptive.textMeta)
                 .frame(maxWidth: .infinity)
                 .padding(.bottom, AppSpacing.m)
@@ -233,10 +233,10 @@ struct CommentsSheet: View {
                 if comments.isEmpty {
                     VStack(spacing: AppSpacing.s) {
                         Text("Aucun commentaire")
-                            .font(.appBodyStrong)
+                            .typeStyle(.ui)
                             .foregroundStyle(AppColors.Adaptive.textPrimary)
                         Text("Lancez la discussion.")
-                            .font(.appBody)
+                            .typeStyle(.body)
                             .foregroundStyle(AppColors.Adaptive.textMeta)
                     }
                     .frame(maxWidth: .infinity)
@@ -275,14 +275,14 @@ struct CommentsSheet: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: AppSpacing.s) {
                     Text(comment.author)
-                        .font(.appCaption)
+                        .typeStyle(.meta)
                         .foregroundStyle(AppColors.Adaptive.textPrimary)
                     Text(comment.createdAt.relativeToNowFrench())
-                        .font(.appCaption)
+                        .typeStyle(.meta)
                         .foregroundStyle(AppColors.Adaptive.textMeta)
                 }
                 Text(comment.text)
-                    .font(.appBody)
+                    .typeStyle(.body)
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
                     .multilineTextAlignment(.leading)
                 Button("Répondre") {
@@ -290,7 +290,7 @@ struct CommentsSheet: View {
                     text = "@\(comment.author) "
                     focused = true
                 }
-                .font(.appCaption)
+                .typeStyle(.meta)
                 .foregroundStyle(AppColors.Adaptive.textMeta)
                 .buttonStyle(.plain)
                 .padding(.top, 2)
@@ -301,11 +301,11 @@ struct CommentsSheet: View {
                 store.toggleLike(comment.id)
             } label: {
                 VStack(spacing: 2) {
-                    HeroIcon("heart", solid: comment.likedByMe, size: 18)
+                    LucideIcon("heart", filled: comment.likedByMe, size: 18)
                         .foregroundStyle(AppColors.Adaptive.textPrimary.opacity(comment.likedByMe ? 1 : 0.62))
                     if comment.likes > 0 {
                         Text("\(comment.likes)")
-                            .font(.appCaption)
+                            .typeStyle(.meta)
                             .monospacedDigit()
                             .foregroundStyle(AppColors.Adaptive.textMeta)
                     }
@@ -335,7 +335,7 @@ struct CommentsSheet: View {
                             .frame(width: 24, height: 1)
                         Text(isOpen ? "Masquer les réponses"
                              : replies.count == 1 ? "Voir 1 réponse" : "Voir \(replies.count) réponses")
-                            .font(.appCaption)
+                            .typeStyle(.meta)
                             .foregroundStyle(AppColors.Adaptive.textMeta)
                     }
                 }
@@ -360,7 +360,7 @@ struct CommentsSheet: View {
                 HStack {
                     ForEach(Array(Self.quickEmojis.enumerated()), id: \.offset) { index, emoji in
                         Button { text += emoji } label: {
-                            Text(emoji).font(.appHeading)
+                            Text(emoji).typeStyle(.section)
                         }
                         .buttonStyle(.plain)
                         .frame(maxWidth: .infinity)
@@ -381,7 +381,7 @@ struct CommentsSheet: View {
 
                 HStack(spacing: AppSpacing.s) {
                     TextField("Ajouter un commentaire…", text: $text, axis: .vertical)
-                        .font(.appBody)
+                        .typeStyle(.body)
                         .foregroundStyle(AppColors.Adaptive.textPrimary)
                         .lineLimit(1...4)
                         .focused($focused)
@@ -389,7 +389,7 @@ struct CommentsSheet: View {
                         .onSubmit(send)
                     if !text.trimmingCharacters(in: .whitespaces).isEmpty {
                         Button(action: send) {
-                            NavIcon("arrow.up", size: 15)
+                            NavIcon("arrow-up", size: 15)
                                 .foregroundStyle(AppColors.Brand.onInk)
                                 .frame(width: 32, height: 32)
                                 .background(AppColors.Brand.accent, in: Circle())

@@ -19,19 +19,22 @@ struct TopicPickerGrid: View {
                     if isOn { selection.remove(topic) } else { selection.insert(topic) }
                 } label: {
                     HStack(spacing: AppSpacing.s) {
-                        HeroIcon(topic.heroIcon, size: 22)
-                            .font(.appBodyStrong)
+                        LucideIcon(topic.lucideIcon, size: 22)
+                            .typeStyle(.ui)
                             .foregroundStyle(isOn ? AppColors.Brand.accent : AppColors.Adaptive.textTertiary)
                             .frame(width: 24)
                         Text(topic.rawValue)
-                            .font(.appBodyStrong)
+                            .typeStyle(.ui)
                             .foregroundStyle(AppColors.Adaptive.textPrimary)
                             .lineLimit(1)
                             .minimumScaleFactor(0.8)
                         Spacer(minLength: 0)
                         Group {
                             if isOn {
-                                HeroIcon("check-circle", solid: true, size: 22)
+                                ZStack {
+                                    Circle().fill(AppColors.Brand.accent).frame(width: 22, height: 22)
+                                    LucideIcon("check", bold: true, size: 13).foregroundStyle(.white)
+                                }
                             } else {
                                 Circle().stroke(AppColors.Adaptive.textMeta, lineWidth: 1.5).frame(width: 20, height: 20)
                             }
@@ -65,7 +68,7 @@ struct TopicPreferencesView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: AppSpacing.m) {
                 Text("Vos thèmes apparaissent en premier dans Explorer.")
-                    .font(.appBody)
+                    .typeStyle(.body)
                     .foregroundStyle(AppColors.Adaptive.textMeta)
                 TopicPickerGrid(selection: Binding(
                     get: { StoryTopic.preferred(from: preferredTopicsRaw) },

@@ -87,3 +87,116 @@ extension View {
             .foregroundStyle(color)
     }
 }
+
+// MARK: - Role-based type styles
+//
+// Two voices: SF Pro Condensed for titles only (like Apple News), Geist for everything else. A `TypeStyle` fixes
+// size, line height and tracking together, and scales all three with Dynamic Type.
+// Use `.typeStyle(.rowTitle)` on text; the older `.appBody`-style fonts remain for screens not migrated yet.
+
+struct TypeStyle {
+    enum Voice { case condensed, sans }
+
+    let voice: Voice
+    /// Weight: 400 regular, 500 medium, 600 semibold.
+    let weight: CGFloat
+    let size: CGFloat
+    let lineHeight: CGFloat
+    /// Letter spacing in em (0.01 = 1 % of the font size).
+    let tracking: CGFloat
+    let textStyle: UIFont.TextStyle
+
+    // Titles: SF Pro Condensed
+    static let display    = TypeStyle(voice: .condensed, weight: 700, size: 34, lineHeight: 38, tracking: 0, textStyle: .title1)
+    static let headline   = TypeStyle(voice: .condensed, weight: 700, size: 26, lineHeight: 30, tracking: 0, textStyle: .title2)
+    static let rowTitle   = TypeStyle(voice: .condensed, weight: 700, size: 20, lineHeight: 24, tracking: 0.003, textStyle: .headline)
+    // Reading text: Geist
+    static let standfirst = TypeStyle(voice: .sans, weight: 400, size: 17, lineHeight: 24, tracking: 0, textStyle: .body)
+    /// Standfirst on compact cards and rows.
+    static let dek        = TypeStyle(voice: .sans, weight: 400, size: 15, lineHeight: 20, tracking: 0, textStyle: .subheadline)
+    static let reading    = TypeStyle(voice: .sans, weight: 400, size: 17, lineHeight: 26, tracking: 0, textStyle: .body)
+
+    // Interface: Geist
+    static let screenTitle = TypeStyle(voice: .sans, weight: 600, size: 28, lineHeight: 32, tracking: -0.004, textStyle: .title1)
+    static let body    = TypeStyle(voice: .sans, weight: 400, size: 15, lineHeight: 22, tracking: 0, textStyle: .subheadline)
+    static let section = TypeStyle(voice: .sans, weight: 600, size: 20, lineHeight: 24, tracking: -0.002, textStyle: .title3)
+    static let ui      = TypeStyle(voice: .sans, weight: 500, size: 15, lineHeight: 20, tracking: 0, textStyle: .subheadline)
+    static let meta    = TypeStyle(voice: .sans, weight: 400, size: 13, lineHeight: 16, tracking: 0.002, textStyle: .footnote)
+    static let metaMedium = TypeStyle(voice: .sans, weight: 500, size: 13, lineHeight: 16, tracking: 0.002, textStyle: .footnote)
+    static let label   = TypeStyle(voice: .sans, weight: 500, size: 12, lineHeight: 14, tracking: 0.02, textStyle: .caption1)
+
+    func scale(for size: DynamicTypeSize) -> CGFloat {
+        let category = size.contentSizeCategory
+        return UIFontMetrics(forTextStyle: textStyle)
+            .scaledValue(for: self.size, compatibleWith: UITraitCollection(preferredContentSizeCategory: category)) / self.size
+    }
+
+    func uiFont(scale: CGFloat) -> UIFont {
+        let points = size * scale
+        switch voice {
+        case .condensed:
+            // SF Pro in its condensed width, the way Apple News sets headlines.
+            let base = UIFont.systemFont(ofSize: points, weight: weight >= 700 ? .bold : .semibold)
+            let descriptor = base.fontDescriptor.addingAttributes([
+                .traits: [UIFontDescriptor.TraitKey.width: -0.2]
+            ])
+            return UIFont(descriptor: descriptor, size: points)
+        case .sans:
+            let name = weight >= 600 ? "Geist-SemiBold" : weight >= 500 ? "Geist-Medium" : "Geist-Regular"
+            return UIFont(name: name, size: points) ?? .systemFont(ofSize: points, weight: .regular)
+        }
+    }
+}
+
+private extension DynamicTypeSize {
+    var contentSizeCategory: UIContentSizeCategory {
+        switch self {
+        case .xSmall: .extraSmall
+        case .small: .small
+        case .medium: .medium
+        case .large: .large
+        case .xLarge: .extraLarge
+        case .xxLarge: .extraExtraLarge
+        case .xxxLarge: .extraExtraExtraLarge
+        case .accessibility1: .accessibilityMedium
+        case .accessibility2: .accessibilityLarge
+        case .accessibility3: .accessibilityExtraLarge
+        case .accessibility4: .accessibilityExtraExtraLarge
+        case .accessibility5: .accessibilityExtraExtraExtraLarge
+        @unknown default: .large
+        }
+    }
+}
+
+private struct TypeStyleModifier: ViewModifier {
+    let style: TypeStyle
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    func body(content: Content) -> some View {
+        let scale = style.scale(for: dynamicTypeSize)
+        let font = style.uiFont(scale: scale)
+        let lineHeight = style.lineHeight * scale
+        content
+            .font(Font(font as CTFont))
+            .tracking(style.tracking * font.pointSize)
+            .exactLineHeight(lineHeight, naturalHeight: font.lineHeight)
+    }
+}
+
+private extension View {
+    /// Sets the line height itself (iOS 26 can go below the font's natural height, which tight headlines
+    /// need); earlier systems can only add space between lines.
+    @ViewBuilder
+    func exactLineHeight(_ height: CGFloat, naturalHeight: CGFloat) -> some View {
+        if #available(iOS 26.0, *) {
+            lineHeight(.exact(points: height))
+        } else {
+            lineSpacing(max(height - naturalHeight, 0))
+        }
+    }
+}
+
+extension View {
+    /// Applies a role of the type scale: font, letter spacing and line height together.
+    func typeStyle(_ style: TypeStyle) -> some View { modifier(TypeStyleModifier(style: style)) }
+}

@@ -1,6 +1,5 @@
 // @ts-nocheck
 import { pool } from "./db.js";
-import { generate, parseJSON } from "./llm.js";
 
 // Laws followed in the "Lois" tab. Source: Tricoteuses "API Parlement" (Assemblée nationale + Sénat
 // open data, cleaned; refreshed daily upstream). We keep every government bill in progress (minus
@@ -14,7 +13,7 @@ const STORY_WINDOW_DAYS = 45;
 const MAX_STORIES_PER_LAW = 6;
 /** Summed rarity (IDF) of the shared words: two words seen in under ~0.5 % of stories each. */
 const MIN_MATCH_WEIGHT = 10.5;
-const SUMMARIES_PER_SYNC = 5;
+const SHORT_TITLES_PER_SYNC = 5;
 
 async function tric(path: string, params: Record<string, string | number> = {}) {
   const url = new URL(path, API);
@@ -244,43 +243,6 @@ export function upcoming(steps: any[], title: string): string[] {
   return ["Adoption définitive", finale];
 }
 
-// ── Summary ───────────────────────────────────────────────────────────────────
-
-/**
- * Plain-language pieces for several laws in one Gemini call (free-tier quota): a title anyone can
- * understand, why it matters to an ordinary reader, and a 2-sentence summary.
- */
-async function explainLaws(laws: { uid: string; title: string; expose: string | null }[]) {
-  if (laws.length === 0) return {};
-  const block = laws
-    .map((l) => `### [${l.uid}] ${l.title}\n${(l.expose ?? "(exposé des motifs non disponible)").slice(0, 2500)}`)
-    .join("\n\n");
-  const prompt = `Tu expliques des textes de loi à des lecteurs qui ne connaissent rien au droit. Pour chaque texte ci-dessous (titre officiel et exposé des motifs), écris en français :
-- "plain_title" : un titre simple de 70 caractères maximum qui dit ce que le texte change concrètement, avec un verbe (ex. « Interdire les réseaux sociaux aux moins de 15 ans »). Pas de jargon (pas de « projet de loi », « relatif à », « portant »).
-- "why" : une phrase de 110 caractères maximum qui dit qui est concerné et comment, dans la vie de tous les jours.
-- "summary" : 2 phrases courtes et simples sur ce que le texte changerait et pour qui.
-Pas d'opinion, pas de guillemets, première lettre en majuscule, pas de point final dans le titre.
-
-Réponds UNIQUEMENT avec du JSON valide : [{ "uid": "...", "plain_title": "...", "why": "...", "summary": "..." }]
-
-Textes :
-
-${block}`;
-  const raw = (await generate(prompt, 4000)) ?? "";
-  const out: Record<string, { plain_title: string; why: string; summary: string }> = {};
-  try {
-    for (const item of parseJSON(raw) ?? []) {
-      const uid = String(item.uid ?? "").replace(/[\[\]\s]/g, "");
-      if (!laws.some((l) => l.uid === uid)) continue;
-      const clean = (v: unknown) => String(v ?? "").replace(/\s+/g, " ").trim();
-      out[uid] = { plain_title: clean(item.plain_title).replace(/[.\s]+$/, ""), why: clean(item.why), summary: clean(item.summary) };
-    }
-  } catch {
-    console.error("Failed to parse law explanations:", raw.slice(0, 300));
-  }
-  return out;
-}
-
 // ── Sync ──────────────────────────────────────────────────────────────────────
 
 const isTreaty = (title: string) =>
@@ -372,27 +334,15 @@ export async function syncLaws({ full = false } = {}): Promise<{ skipped?: boole
   // Members' bills are only listed while the news covers them.
   await pool.query("DELETE FROM laws WHERE kind = 'Proposition de loi' AND cardinality(story_ids) = 0");
 
-  // Plain-language title, "why it matters" line and summary: one Gemini call for a few laws per run (quota).
+  // Short official title from the document (no language model involved).
   const { rows: missing } = await pool.query(
-    `SELECT uid, title, document_uid FROM laws WHERE plain_title IS NULL ORDER BY cardinality(story_ids) DESC, last_act_at DESC LIMIT $1`,
-    [SUMMARIES_PER_SYNC]
+    `SELECT uid, document_uid FROM laws WHERE short_title IS NULL AND document_uid IS NOT NULL ORDER BY cardinality(story_ids) DESC, last_act_at DESC LIMIT $1`,
+    [SHORT_TITLES_PER_SYNC]
   );
-  const docs = await Promise.all(
-    missing.map((law) => (law.document_uid ? tric(`/documents/${law.document_uid}`).catch(() => null) : null))
-  );
-  const explained = await explainLaws(missing.map((law, i) => ({ uid: law.uid, title: law.title, expose: docs[i]?.exposeMotifsTexte ?? null })));
+  const docs = await Promise.all(missing.map((law) => tric(`/documents/${law.document_uid}`).catch(() => null)));
   for (const [i, law] of missing.entries()) {
-    const e = explained[law.uid];
-    await pool.query(
-      `UPDATE laws SET
-         plain_title = COALESCE(NULLIF($2, ''), plain_title),
-         why_it_matters = COALESCE(NULLIF($3, ''), why_it_matters),
-         summary = COALESCE(NULLIF($4, ''), summary),
-         summary_at = CASE WHEN $4 IS NULL OR $4 = '' THEN summary_at ELSE now() END,
-         short_title = COALESCE(short_title, $5)
-       WHERE uid = $1`,
-      [law.uid, e?.plain_title ?? null, e?.why ?? null, e?.summary ?? null, docs[i]?.titrePrincipalCourt ?? null]
-    );
+    if (!docs[i]?.titrePrincipalCourt) continue;
+    await pool.query("UPDATE laws SET short_title = $2 WHERE uid = $1", [law.uid, docs[i].titrePrincipalCourt]);
   }
 
   if (doFull) await pool.query("UPDATE laws_sync SET full_at = now() WHERE id = 1");

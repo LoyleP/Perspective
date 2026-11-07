@@ -22,7 +22,7 @@ struct TopicStoriesView: View {
                     } else {
                         ContentUnavailableView(
                             "Aucun sujet",
-                            hero: topic.heroIcon,
+                            lucide: topic.lucideIcon,
                             description: Text(didFail ? "Impossible de charger ce thème." : "Aucun sujet récent dans ce thème.")
                         )
                         .padding(.top, AppSpacing.xxl)
@@ -33,15 +33,11 @@ struct TopicStoriesView: View {
                     NavigationLink(value: story) {
                         if index == 0 && story.leadImageURL != nil {
                             StoryHeroCard(story: story, size: .medium)
-                                .padding(.vertical, AppSpacing.s)
                         } else {
                             StoryRow(story: story)
                         }
                     }
                     .buttonStyle(CardPressStyle())
-                    if index > 0 || story.leadImageURL == nil {
-                        Divider().overlay(AppColors.Adaptive.divider)
-                    }
                 }
 
                 if hasMore && !stories.isEmpty {

@@ -50,7 +50,7 @@ struct ProfileView: View {
         .toolbarBackground(.hidden, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button { showSettings = true } label: { NavIcon("gearshape") }
+                Button { showSettings = true } label: { NavIcon("settings") }
                     .accessibilityLabel("Réglages")
             }
         }
@@ -91,12 +91,12 @@ struct ProfileView: View {
             VStack(spacing: 4) {
                 HStack(spacing: AppSpacing.s) {
                     Text("Lecteur Optique")
-                        .font(.appTitle)
+                        .typeStyle(.screenTitle)
                         .foregroundStyle(AppColors.Adaptive.textPrimary)
                     if AppConfig.paywallEnabled && session.isPremium {
                         HStack(spacing: 4) {
-                            HeroIcon("sparkles", size: 12)
-                            Text("PLUS").font(.appCaption)
+                            LucideIcon("sparkles", size: 12)
+                            Text("PLUS").typeStyle(.meta)
                         }
                         .foregroundStyle(AppColors.Brand.onInk)
                         .padding(.horizontal, 8)
@@ -107,7 +107,7 @@ struct ProfileView: View {
                 }
                 .animation(.spring(duration: 0.4, bounce: 0.2), value: session.isPremium)
                 Text("Avec Optique depuis \(sinceText)")
-                    .font(.appCaption)
+                    .typeStyle(.meta)
                     .foregroundStyle(AppColors.Adaptive.textMeta)
             }
 
@@ -129,12 +129,12 @@ struct ProfileView: View {
     private func stat(_ value: Int, _ label: String) -> some View {
         VStack(spacing: 2) {
             Text("\(countersShown ? value : 0)")
-                .font(.appTitle)
+                .typeStyle(.screenTitle)
                 .monospacedDigit()
                 .foregroundStyle(AppColors.Adaptive.textPrimary)
                 .contentTransition(.numericText())
             Text(label)
-                .font(.appCaption)
+                .typeStyle(.meta)
                 .foregroundStyle(AppColors.Adaptive.textMeta)
         }
         .frame(maxWidth: .infinity)
@@ -160,7 +160,7 @@ struct ProfileView: View {
     private var spectrumSection: some View {
         VStack(alignment: .leading, spacing: AppSpacing.m) {
             Text("Votre spectre")
-                .font(.appHeading)
+                .typeStyle(.section)
                 .foregroundStyle(AppColors.Adaptive.textPrimary)
                 .padding(.horizontal, AppSpacing.m)
 
@@ -176,12 +176,12 @@ struct ProfileView: View {
                         onSelect: { selectedLean = $0 }
                     )
                     Text(balanceHint(coverage))
-                        .font(.appBody)
+                        .typeStyle(.body)
                         .foregroundStyle(AppColors.Adaptive.textBody)
                         .lineSpacing(3)
                         .fixedSize(horizontal: false, vertical: true)
                     Text(coverage.totalCount == 1 ? "Sur 1 article lu" : "Sur \(coverage.totalCount) articles lus")
-                        .font(.appCaption)
+                        .typeStyle(.meta)
                         .foregroundStyle(AppColors.Adaptive.textMeta)
                 } else {
                     Text("Votre spectre se dessine au fil de vos lectures")
@@ -189,7 +189,7 @@ struct ProfileView: View {
                         .foregroundStyle(AppColors.Adaptive.textPrimary)
                         .fixedSize(horizontal: false, vertical: true)
                     Text("Chaque article ouvert dans Optique compte, selon la position de son média. Lisez quelques sujets pour voir d'où vous venez.")
-                        .font(.appBody)
+                        .typeStyle(.body)
                         .foregroundStyle(AppColors.Adaptive.textBody)
                         .lineSpacing(3)
                         .fixedSize(horizontal: false, vertical: true)
@@ -227,14 +227,14 @@ struct ProfileView: View {
                 } label: {
                     HStack(spacing: AppSpacing.s) {
                         Text(title)
-                            .font(.appHeading)
+                            .typeStyle(.section)
                             .foregroundStyle(AppColors.Adaptive.textPrimary)
                         Text("\(stories.count)")
-                            .font(.appCaption)
+                            .typeStyle(.meta)
                             .monospacedDigit()
                             .foregroundStyle(AppColors.Adaptive.textMeta)
                         Spacer()
-                        HeroIcon("chevron-right", size: 16)
+                        LucideIcon("chevron-right", size: 16)
                             .foregroundStyle(AppColors.Adaptive.textMeta)
                     }
                     .padding(.horizontal, AppSpacing.m)
@@ -339,13 +339,13 @@ struct ProfileStoriesView: View {
                 if list == .saved {
                     ContentUnavailableView(
                         "Aucun sujet enregistré",
-                        hero: "bookmark",
+                        lucide: "bookmark",
                         description: Text("Touchez le signet d'un sujet pour le retrouver ici.")
                     )
                 } else {
                     ContentUnavailableView(
                         "Aucun historique",
-                        hero: "clock",
+                        lucide: "clock",
                         description: Text("Les sujets que vous ouvrez apparaîtront ici.")
                     )
                 }
@@ -356,11 +356,11 @@ struct ProfileStoriesView: View {
                 if list == .history {
                     HStack {
                         Text(stories.count == 1 ? "1 sujet" : "\(stories.count) sujets")
-                            .font(.appCaption)
+                            .typeStyle(.meta)
                             .foregroundStyle(AppColors.Adaptive.textMeta)
                         Spacer()
                         Button("Effacer") { confirmClearHistory = true }
-                            .font(.appCaption)
+                            .typeStyle(.meta)
                             .foregroundStyle(AppColors.Brand.accent)
                     }
                 }
@@ -375,11 +375,10 @@ struct ProfileStoriesView: View {
                         } label: {
                             Label(
                                 list == .saved ? "Retirer des enregistrés" : "Retirer de l'historique",
-                                hero: "trash"
+                                lucide: "trash-2"
                             )
                         }
                     }
-                    Divider().overlay(AppColors.Adaptive.divider)
                 }
             }
         }

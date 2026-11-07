@@ -54,12 +54,12 @@ struct SourceDetailView: View {
         VStack(alignment: .leading, spacing: AppSpacing.st) {
             SourceAvatarView(source: source, size: 72)
             Text(source.name)
-                .font(.appTitle)
+                .typeStyle(.screenTitle)
                 .foregroundStyle(AppColors.Adaptive.textPrimary)
                 .accessibilityAddTraits(.isHeader)
             if let host = URL(string: source.url)?.host() {
                 Text(host.replacingOccurrences(of: "www.", with: ""))
-                    .font(.appCaption)
+                    .typeStyle(.meta)
                     .foregroundStyle(AppColors.Adaptive.textMeta)
             }
         }
@@ -72,7 +72,7 @@ struct SourceDetailView: View {
         VStack(alignment: .leading, spacing: AppSpacing.m) {
             HStack {
                 Text("Positionnement")
-                    .font(.appBodyStrong)
+                    .typeStyle(.ui)
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
                 Spacer()
                 LeanTagView(lean: lean)
@@ -85,7 +85,7 @@ struct SourceDetailView: View {
                             .fill(position.spectrumColor.opacity(isSource ? 1 : 0.2))
                             .frame(height: isSource ? 10 : 6)
                         Text(position.code)
-                            .font(.appCaption)
+                            .typeStyle(.meta)
                             .foregroundStyle(isSource ? AppColors.Adaptive.textPrimary : AppColors.Adaptive.textMeta)
                     }
                     .frame(maxWidth: .infinity)
@@ -105,7 +105,7 @@ struct SourceDetailView: View {
         VStack(alignment: .leading, spacing: AppSpacing.s) {
             HStack {
                 Text("Propriétaire")
-                    .font(.appBodyStrong)
+                    .typeStyle(.ui)
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
                 Spacer()
                 if let type = source.ownerType {
@@ -113,7 +113,7 @@ struct SourceDetailView: View {
                         Circle().fill(type.color).frame(width: 8, height: 8)
                         Text(type.displayName)
                     }
-                    .font(.appCaption)
+                    .typeStyle(.meta)
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
@@ -122,12 +122,12 @@ struct SourceDetailView: View {
             }
             if let owner = source.ownerName {
                 Text(owner)
-                    .font(.appHeading)
+                    .typeStyle(.section)
                     .foregroundStyle(AppColors.Adaptive.textSecondary)
             }
             if let notes = source.ownerNotes {
                 Text(notes)
-                    .font(.appBody)
+                    .typeStyle(.body)
                     .foregroundStyle(AppColors.Adaptive.textBody)
                     .lineSpacing(3)
             }
@@ -148,7 +148,7 @@ struct SourceDetailView: View {
                     .padding(.top, AppSpacing.s)
             } else if articles.isEmpty {
                 Text("Aucun article récent.")
-                    .font(.appBody)
+                    .typeStyle(.body)
                     .foregroundStyle(AppColors.Adaptive.textMeta)
                     .padding(.vertical, AppSpacing.m)
             } else {
@@ -161,7 +161,7 @@ struct SourceDetailView: View {
                                 Text(article.publishedAt.relativeToNowFrench())
                                     .overlineStyle()
                                 Text(article.title)
-                                    .font(.appBodyStrong)
+                                    .typeStyle(.ui)
                                     .foregroundStyle(AppColors.Adaptive.textPrimary)
                                     .lineLimit(3)
                                     .multilineTextAlignment(.leading)

@@ -13,14 +13,19 @@ struct StoryHeroCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.st) {
+        VStack(alignment: .leading, spacing: 0) {
+            // The photo touches the card's top, left and right edges; the card's corners clip it.
             cover
                 .overlay { RemoteImage(url: story.leadImageURL, tint: tint) }
-                .clipShape(RoundedRectangle(cornerRadius: AppRadius.l))
-                .overlay(RoundedRectangle(cornerRadius: AppRadius.l).stroke(AppColors.stroke, lineWidth: 1))
+                .clipped()
                 .accessibilityHidden(true)
             content
+                .padding(AppSpacing.m)
         }
+        .background(AppColors.Adaptive.cardSurface)
+        .clipShape(RoundedRectangle(cornerRadius: AppRadius.xl))
+        .contentShape(RoundedRectangle(cornerRadius: AppRadius.xl))
+        .padding(.vertical, AppSpacing.xs)
         .accessibilityElement(children: .combine)
     }
 
@@ -40,31 +45,12 @@ struct StoryHeroCard: View {
 
     private var content: some View {
         VStack(alignment: .leading, spacing: AppSpacing.s) {
-            HStack(spacing: AppSpacing.s) {
-                Text(story.timeLine)
-                    .font(.appCaption)
-                    .foregroundStyle(AppColors.Adaptive.textMeta)
-                Spacer(minLength: 0)
-            }
             Text(story.title)
-                .font(size == .large ? .appTitle : .geist(.heading, .medium))
+                .typeStyle(size == .large ? .display : .headline)
                 .foregroundStyle(AppColors.Adaptive.textPrimary)
-                .lineLimit(3)
                 .multilineTextAlignment(.leading)
-            if let standfirst = story.standfirst {
-                Text(standfirst)
-                    .font(.appBody)
-                    .foregroundStyle(AppColors.Adaptive.textBody)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-            }
-            HStack(spacing: AppSpacing.s) {
-                // The coverage tag only where the left/right lens means something.
-                if let coverage = story.computedCoverage, story.hasPoliticalAngle {
-                    LeanTags(coverage: coverage)
-                }
-                SourceStack(sources: story.sources, size: 22, ringColor: AppColors.Adaptive.background)
-            }
+                .fixedSize(horizontal: false, vertical: true)
+            StoryMetaLine(story: story)
         }
     }
 

@@ -78,7 +78,7 @@ struct SpectrumBar: View {
                                 .fill(lean.spectrumColor.opacity(present ? 1 : 0.18))
                                 .frame(height: 6)
                             Text(lean.code)
-                                .font(.appCaption)
+                                .typeStyle(.meta)
                                 .lineLimit(1)
                                 .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
                                 .foregroundStyle(present ? AppColors.Adaptive.textTertiary : AppColors.Adaptive.textMeta.opacity(0.6))
@@ -101,7 +101,7 @@ struct SpectrumBar: View {
 
     private var verdict: some View {
         Text(coverage.verdict)
-            .font(.appBodyStrong)
+            .typeStyle(.ui)
             .foregroundStyle(AppColors.Adaptive.textPrimary)
             .fixedSize(horizontal: false, vertical: true)
     }
@@ -109,7 +109,7 @@ struct SpectrumBar: View {
     private var sourceCount: some View {
         let count = sources.isEmpty ? coverage.totalCount : sources.count
         return Text(count == 1 ? "1 source" : "\(count) sources")
-            .font(.appCaption)
+            .typeStyle(.meta)
             .foregroundStyle(AppColors.Adaptive.textMeta)
     }
 
@@ -131,7 +131,7 @@ struct SpectrumBar: View {
             }
             if leanSources.count > 3 {
                 Text("+\(leanSources.count - 3)")
-                    .font(.appCaption)
+                    .typeStyle(.meta)
                     .foregroundStyle(AppColors.Adaptive.textTertiary)
                     .padding(.top, 10)
             }
@@ -147,7 +147,7 @@ struct SpectrumBar: View {
                 .monospacedDigit()
                 .foregroundStyle(AppColors.Adaptive.textPrimary)
         }
-        .font(.appCaption)
+        .typeStyle(.meta)
         .fixedSize()
     }
 

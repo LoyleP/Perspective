@@ -15,7 +15,7 @@ struct AlertesView: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: AppSpacing.l) {
                     Text("Alertes")
-                        .font(.appTitle)
+                        .typeStyle(.screenTitle)
                         .foregroundStyle(AppColors.Adaptive.textPrimary)
                         .accessibilityAddTraits(.isHeader)
                     if viewModel.authorizationStatus != .authorized && viewModel.authorizationStatus != .provisional {
@@ -50,7 +50,7 @@ struct AlertesView: View {
                 .padding(.top, AppSpacing.m)
         } else if let error = viewModel.error, viewModel.notifications.isEmpty {
             ContentUnavailableView {
-                Label("Impossible de charger", hero: "signal-slash", size: 44)
+                Label("Impossible de charger", lucide: "wifi-off", size: 44)
             } description: {
                 Text(error.localizedDescription)
             } actions: {
@@ -60,14 +60,14 @@ struct AlertesView: View {
         } else if viewModel.notifications.isEmpty {
             ContentUnavailableView(
                 "Aucune alerte",
-                hero: "bell",
+                lucide: "bell",
                 description: Text("Les grands sujets du jour apparaîtront ici.")
             )
         } else {
             ForEach(days, id: \.day) { group in
                 VStack(alignment: .leading, spacing: 0) {
                     Text(group.title)
-                        .font(.appHeading)
+                        .typeStyle(.section)
                         .foregroundStyle(AppColors.Adaptive.textPrimary)
                         .accessibilityAddTraits(.isHeader)
                         .padding(.bottom, AppSpacing.xs)
@@ -99,11 +99,11 @@ struct AlertesView: View {
 
     private var permissionCard: some View {
         VStack(alignment: .leading, spacing: AppSpacing.st) {
-            Label("Notifications désactivées", hero: "bell-slash")
-                .font(.appBodyStrong)
+            Label("Notifications désactivées", lucide: "bell-off")
+                .typeStyle(.ui)
                 .foregroundStyle(AppColors.Adaptive.textPrimary)
             Text("Activez-les pour être prévenu quand un grand sujet est couvert par plusieurs médias.")
-                .font(.appBody)
+                .typeStyle(.body)
                 .foregroundStyle(AppColors.Adaptive.textBody)
             Button(viewModel.authorizationStatus == .notDetermined ? "Activer" : "Ouvrir les Réglages") {
                 if viewModel.authorizationStatus == .notDetermined {
@@ -153,18 +153,18 @@ private struct AlertRow: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: AppSpacing.m) {
             Text(notification.sentAt.formatted(.dateTime.hour().minute().locale(Locale(identifier: "fr_FR"))))
-                .font(.appCaption)
+                .typeStyle(.meta)
                 .monospacedDigit()
                 .foregroundStyle(AppColors.Adaptive.textMeta)
                 .frame(width: 44, alignment: .leading)
             VStack(alignment: .leading, spacing: 6) {
                 Text(notification.title)
-                    .font(.geist(.body, .medium))
+                    .typeStyle(.rowTitle)
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
                     .lineLimit(3)
                     .multilineTextAlignment(.leading)
                 Text(notification.body)
-                    .font(.appBody)
+                    .typeStyle(.body)
                     .foregroundStyle(AppColors.Adaptive.textMeta)
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)

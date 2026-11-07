@@ -57,10 +57,10 @@ struct FreeTopicToast: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: AppSpacing.s) {
-                HeroIcon("sparkles", size: 16)
+                LucideIcon("sparkles", size: 16)
                 Text(text)
-                    .font(.appCaption)
-                HeroIcon("chevron-right", size: 12)
+                    .typeStyle(.meta)
+                LucideIcon("chevron-right", size: 12)
                     .opacity(0.6)
             }
             .foregroundStyle(AppColors.Adaptive.textPrimary)
@@ -91,12 +91,12 @@ struct ReadingLimitGate: View {
 
             VStack(alignment: .leading, spacing: AppSpacing.s) {
                 Text("Vous avez lu vos \(total) sujets gratuits")
-                    .font(.appHeading)
+                    .typeStyle(.section)
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityAddTraits(.isHeader)
                 Text("Optique+ lève la limite et soutient une information qui montre tous les points de vue. Vos sujets gratuits reviennent demain.")
-                    .font(.appBody)
+                    .typeStyle(.body)
                     .foregroundStyle(AppColors.Adaptive.textBody)
                     .lineSpacing(3)
                     .fixedSize(horizontal: false, vertical: true)
@@ -111,7 +111,7 @@ struct ReadingLimitGate: View {
 
                 Button(action: onBack) {
                     Text("Revenir au fil")
-                        .font(.appBodyStrong)
+                        .typeStyle(.ui)
                         .foregroundStyle(AppColors.Adaptive.textMeta)
                         .frame(maxWidth: .infinity, minHeight: 44)
                 }
@@ -152,11 +152,11 @@ struct PlanCard: View {
         VStack(alignment: .leading, spacing: AppSpacing.m) {
             HStack {
                 Text("Formule gratuite")
-                    .font(.appBodyStrong)
+                    .typeStyle(.ui)
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
                 Spacer()
                 Text("\(min(used, total)) / \(total) sujets")
-                    .font(.appCaption)
+                    .typeStyle(.meta)
                     .monospacedDigit()
                     .foregroundStyle(AppColors.Adaptive.textMeta)
             }
@@ -164,12 +164,12 @@ struct PlanCard: View {
             Text(used >= total
                  ? "Vous avez utilisé vos sujets gratuits. Ils reviennent demain."
                  : "\(total - used) sujet\(total - used > 1 ? "s" : "") gratuit\(total - used > 1 ? "s" : "") restant\(total - used > 1 ? "s" : "") aujourd'hui.")
-                .font(.appBody)
+                .typeStyle(.body)
                 .foregroundStyle(AppColors.Adaptive.textBody)
                 .fixedSize(horizontal: false, vertical: true)
             Button(action: onUpgrade) {
                 HStack(spacing: AppSpacing.s) {
-                    HeroIcon("sparkles", size: 16)
+                    LucideIcon("sparkles", size: 16)
                     Text("Passer à Optique+")
                 }
             }
@@ -179,20 +179,20 @@ struct PlanCard: View {
 
     private var premium: some View {
         HStack(alignment: .top, spacing: AppSpacing.st) {
-            HeroIcon("check-badge", size: 28)
+            LucideIcon("badge-check", size: 28)
                 .foregroundStyle(AppColors.Brand.accent)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 4) {
                 Text("Optique+")
-                    .font(.appBodyStrong)
+                    .typeStyle(.ui)
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
                 Text("Sujets illimités, sans publicité ni pistage. Merci de soutenir une information indépendante.")
-                    .font(.appBody)
+                    .typeStyle(.body)
                     .foregroundStyle(AppColors.Adaptive.textBody)
                     .fixedSize(horizontal: false, vertical: true)
                 if let onManage {
                     Button("Gérer l'abonnement", action: onManage)
-                        .font(.appBodyStrong)
+                        .typeStyle(.ui)
                         .foregroundStyle(AppColors.Adaptive.textPrimary)
                         .padding(.top, AppSpacing.xs)
                 }

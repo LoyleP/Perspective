@@ -4,12 +4,10 @@ import SwiftUI
 struct LeanTags: View {
     let coverage: CoverageStats
 
-    private var verdict: (lean: PoliticalLean, text: String) { coverage.leanVerdict }
-
     var body: some View {
-        let v = verdict
+        let verdict = coverage.leanVerdictKind
         // The gray centre is lighter than the gray used for balanced / too few sources.
-        LeanTagPill(lean: v.lean, text: v.text, lighter: v.lean == .centre && v.text == "Surtout relayé au centre")
+        LeanTagPill(lean: verdict.lean, text: verdict.tag, lighter: verdict == .leaning(.centre))
     }
 }
 
@@ -22,7 +20,7 @@ struct LeanTagPill: View {
 
     var body: some View {
         Text(text)
-            .font(.appCaption)
+            .typeStyle(.metaMedium)
             .foregroundStyle(lean.tagText)
             .lineLimit(1)
             .padding(.horizontal, 7)

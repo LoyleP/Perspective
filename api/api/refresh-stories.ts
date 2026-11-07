@@ -91,6 +91,8 @@ interface RawArticle {
   url: string;
   summary: string | null;
   image_url: string | null;
+  /** Possible covers, best first; checked against their real pixel size before saving. */
+  image_candidates?: string[];
   published_at: string;
   fetched_at: string;
   story_id: string | null;
@@ -151,6 +153,41 @@ function getAttr(xml: string, tag: string, attr: string): string | null {
   return m ? m[1] : null;
 }
 
+/** A cover fills the screen width on a 3x phone: under this many pixels it looks soft. */
+const MIN_COVER_WIDTH = 900;
+const MIN_COVER_HEIGHT = 450;
+
+/** False for images that are clearly too small or not photos (thumbnails, logos, icons, svg/gif). */
+function isCoverQuality(url: string, width: number | null): boolean {
+  if (!/^https?:\/\//i.test(url)) return false;
+  if (width !== null && width < MIN_COVER_WIDTH) return false;
+  const lower = url.toLowerCase();
+  if (/\.(svg|gif|ico)(\?|$)/.test(lower)) return false;
+  if (/(thumb|thumbnail|small|icon|logo|avatar|sprite|placeholder|default|pixel)/.test(lower)) return false;
+  const size = lower.match(/[-_/](\d{2,4})x(\d{2,4})(?=[-_./?]|$)/);
+  if (size && Number(size[1]) < MIN_COVER_WIDTH) return false;
+  const q = lower.match(/[?&](?:w|width)=(\d{2,4})(?=&|$)/);
+  if (q && Number(q[1]) < MIN_COVER_WIDTH) return false;
+  return true;
+}
+
+/** The sharpest usable picture of an RSS item: the widest of its media tags that passes the checks. */
+function pickImages(item: string): string[] {
+  const candidates: { url: string; width: number | null }[] = [];
+  for (const tag of item.match(/<(?:media:content|media:thumbnail|enclosure)\b[^>]*>/gi) ?? []) {
+    const url = tag.match(/\burl=["']([^"']+)["']/i)?.[1];
+    if (!url) continue;
+    const type = tag.match(/\btype=["']([^"']+)["']/i)?.[1];
+    const medium = tag.match(/\bmedium=["']([^"']+)["']/i)?.[1];
+    if ((type && !type.startsWith("image")) || (medium && medium !== "image")) continue;
+    const w = tag.match(/\bwidth=["'](\d+)["']/i)?.[1];
+    const width = w ? Number(w) : null;
+    if (isCoverQuality(decodeEntities(url), width)) candidates.push({ url: decodeEntities(url), width });
+  }
+  candidates.sort((a, b) => (b.width ?? 0) - (a.width ?? 0));
+  return candidates.map((c) => c.url);
+}
+
 function isoDate(s: string | null): string {
   if (!s) return new Date().toISOString();
   try {
@@ -196,18 +233,15 @@ function parseRSS(xml: string, sourceId: string): RawArticle[] {
           .slice(0, 500) || null
       : null;
 
-    const image =
-      getAttr(item, "media:content", "url") ??
-      getAttr(item, "enclosure", "url") ??
-      getAttr(item, "media:thumbnail", "url") ??
-      null;
+    const images = pickImages(item);
 
     out.push({
       source_id: sourceId,
       title: title.slice(0, 500),
       url,
       summary,
-      image_url: image,
+      image_url: images[0] ?? null,
+      image_candidates: images.slice(0, 3),
       published_at: isoDate(
         getTag(item, "pubDate") ??
           getTag(item, "published") ??
@@ -394,6 +428,89 @@ function batchArray<T>(array: T[], size: number): T[][] {
   return batches;
 }
 
+// ── Cover image checks ────────────────────────────────────────────────────────
+
+/** Pixel size read from the first bytes of a JPEG, PNG or WebP file. */
+function imageSize(b: Uint8Array): { width: number; height: number } | null {
+  const v = new DataView(b.buffer, b.byteOffset, b.byteLength);
+  if (b.length > 24 && b[0] === 0x89 && b[1] === 0x50) {
+    return { width: v.getUint32(16), height: v.getUint32(20) };
+  }
+  if (b.length > 4 && b[0] === 0xff && b[1] === 0xd8) {
+    let i = 2;
+    while (i + 9 < b.length) {
+      if (b[i] !== 0xff) { i++; continue; }
+      const marker = b[i + 1];
+      if (marker === 0xff) { i++; continue; }
+      if (marker >= 0xc0 && marker <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(marker)) {
+        return { height: v.getUint16(i + 5), width: v.getUint16(i + 7) };
+      }
+      i += 2 + v.getUint16(i + 2);
+    }
+    return null;
+  }
+  if (b.length > 30 && b[0] === 0x52 && b[8] === 0x57) {
+    const kind = String.fromCharCode(b[12], b[13], b[14], b[15]);
+    if (kind === "VP8X") {
+      return { width: 1 + (b[24] | (b[25] << 8) | (b[26] << 16)), height: 1 + (b[27] | (b[28] << 8) | (b[29] << 16)) };
+    }
+    if (kind === "VP8 ") {
+      return { width: v.getUint16(26, true) & 0x3fff, height: v.getUint16(28, true) & 0x3fff };
+    }
+    if (kind === "VP8L") {
+      const bits = v.getUint32(21, true);
+      return { width: 1 + (bits & 0x3fff), height: 1 + ((bits >> 14) & 0x3fff) };
+    }
+  }
+  return null;
+}
+
+/** Downloads just the start of the image and measures it; null when it can't be read. */
+async function measureImage(url: string): Promise<{ width: number; height: number } | null> {
+  try {
+    const res = await fetch(url, {
+      headers: { "User-Agent": "Mozilla/5.0", Range: "bytes=0-131071" },
+      signal: AbortSignal.timeout(5_000),
+    });
+    if (!res.ok || !res.body) return null;
+    const chunks: Uint8Array[] = [];
+    let total = 0;
+    const reader = res.body.getReader();
+    while (total < 131072) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      total += value.length;
+    }
+    reader.cancel().catch(() => {});
+    const bytes = new Uint8Array(total);
+    let at = 0;
+    for (const c of chunks) { bytes.set(c, at); at += c.length; }
+    return imageSize(bytes);
+  } catch {
+    return null;
+  }
+}
+
+/** Keeps a cover only when its real size is at least MIN_COVER_WIDTH x MIN_COVER_HEIGHT, trying each candidate. */
+async function verifyCovers(articles: RawArticle[]): Promise<void> {
+  const queue = articles.filter((a) => a.image_candidates?.length);
+  for (const a of articles) if (!a.image_candidates?.length) a.image_url = null;
+  const worker = async () => {
+    for (let a = queue.pop(); a; a = queue.pop()) {
+      a.image_url = null;
+      for (const url of a.image_candidates ?? []) {
+        const size = await measureImage(url);
+        if (size && size.width >= MIN_COVER_WIDTH && size.height >= MIN_COVER_HEIGHT) {
+          a.image_url = url;
+          break;
+        }
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: 8 }, worker));
+}
+
 // ── Phase 1: RSS Ingest ───────────────────────────────────────────────────────
 
 async function ingestRSS(): Promise<{ new_articles: number; log: { source: string; count: number; error?: string }[] }> {
@@ -442,6 +559,8 @@ async function ingestRSS(): Promise<{ new_articles: number; log: { source: strin
   if (!newArts.length) {
     return { new_articles: 0, log };
   }
+
+  await verifyCovers(newArts);
 
   for (const batch of batchArray(newArts, 200)) {
     await pool.query(
@@ -777,7 +896,7 @@ async function handle(req: Request): Promise<Response> {
     // Phase 2: Cluster unclustered articles into stories
     const clusterResult = await clusterStories();
 
-    // Phase 3: briefs (one-line dek, reliable topic, per-side summaries) for every feed story,
+    // Phase 3: briefs (reworded title and description, reliable topic) for every feed story,
     // so no story opens on an empty or loading summary.
     let briefsWritten = 0;
     try { briefsWritten = await writeBriefs(); } catch (e) { console.error("briefs failed:", e); }

@@ -187,7 +187,7 @@ struct LawStepsCarousel: View {
         VStack(alignment: .leading, spacing: AppSpacing.st) {
             // Date and place on one line, split by a dot.
             Text([dateBeside(item), item.place].compactMap { $0 }.joined(separator: " · "))
-                .font(.appCaption)
+                .typeStyle(.meta)
                 .foregroundStyle(AppColors.Adaptive.textMeta)
                 .lineLimit(1)
 
@@ -208,7 +208,7 @@ struct LawStepsCarousel: View {
                     voteBlock(vote)
                 } else {
                     step.stage == "vote"
-                        ? iconNote(icon: "hand-raised", text: "Vote à main levée, sans décompte par député.", muted: false)
+                        ? iconNote(icon: "hand", text: "Vote à main levée, sans décompte par député.", muted: false)
                         : iconNote(icon: "calendar", text: "Le vote n'a pas encore eu lieu.", muted: true)
                 }
             } else {
@@ -238,15 +238,15 @@ struct LawStepsCarousel: View {
         if item.id == "deposit" { return nil }
         if item.kind == .upcoming { return ("À venir", "calendar", .neutral) }
         if let step = item.step {
-            if step.code == "PROM" { return ("Promulguée", "check-badge", .success) }
+            if step.code == "PROM" { return ("Promulguée", "badge-check", .success) }
             if let decision = step.decision?.lowercased() {
-                if decision.hasPrefix("adopt") { return ("Adopté", "check-circle", .success) }
-                if decision.hasPrefix("rejet") { return ("Rejeté", "x-circle", .danger) }
+                if decision.hasPrefix("adopt") { return ("Adopté", "circle-check", .success) }
+                if decision.hasPrefix("rejet") { return ("Rejeté", "circle-x", .danger) }
                 if decision.hasPrefix("modif") { return ("Modifié", "pencil", .info) }
-                return (decision.capitalizedFirst, "check-circle", .neutral)
+                return (decision.capitalizedFirst, "circle-check", .neutral)
             }
         }
-        return item.kind == .current ? ("En cours", "clock", .progress) : ("Terminé", "check-circle", .neutral)
+        return item.kind == .current ? ("En cours", "clock", .progress) : ("Terminé", "circle-check", .neutral)
     }
 
     /// Date shown above the small title on every card that has one: the filing date on the deposit
@@ -274,11 +274,11 @@ struct LawStepsCarousel: View {
                         .fill(moment.2 ? AppColors.Adaptive.textPrimary : AppColors.Adaptive.divider)
                         .frame(height: 4)
                     Text(moment.0)
-                        .font(.appCaption)
+                        .typeStyle(.meta)
                         .foregroundStyle(moment.2 ? AppColors.Adaptive.textPrimary : AppColors.Adaptive.textMeta)
                         .lineLimit(1)
                     Text(LawDates.shortDay(moment.1) ?? " ")
-                        .font(.appCaption)
+                        .typeStyle(.meta)
                         .foregroundStyle(AppColors.Adaptive.textMeta)
                         .lineLimit(1)
                 }
@@ -291,7 +291,7 @@ struct LawStepsCarousel: View {
     /// Text filling the card's lower slot, aligned left.
     private func slotText(_ text: String, muted: Bool = false) -> some View {
         Text(text)
-            .font(.appBody)
+            .typeStyle(.body)
             .foregroundStyle(muted ? AppColors.Adaptive.textMeta : AppColors.Adaptive.textBody)
             .multilineTextAlignment(.leading)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -310,7 +310,7 @@ struct LawStepsCarousel: View {
             }
             .frame(maxWidth: .infinity, alignment: .center)
             Text("Couleur : bord politique du groupe")
-                .font(.appCaption)
+                .typeStyle(.meta)
                 .foregroundStyle(AppColors.Adaptive.textMeta)
                 .frame(maxWidth: .infinity, alignment: .center)
         }
@@ -321,7 +321,7 @@ struct LawStepsCarousel: View {
         HStack(spacing: 5) {
             dot.frame(width: 8, height: 8)
             Text(text)
-                .font(.appCaption)
+                .typeStyle(.meta)
                 .foregroundStyle(AppColors.Adaptive.textMeta)
         }
     }
@@ -334,10 +334,10 @@ struct LawStepsCarousel: View {
 
     private func iconNote(icon: String, text: String, muted: Bool) -> some View {
         VStack(spacing: AppSpacing.st) {
-            HeroIcon(icon, size: 36)
+            LucideIcon(icon, size: 36)
                 .foregroundStyle(muted ? AppColors.Adaptive.textMeta : AppColors.Adaptive.textBody)
             Text(text)
-                .font(.appBody)
+                .typeStyle(.body)
                 .foregroundStyle(muted ? AppColors.Adaptive.textMeta : AppColors.Adaptive.textBody)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
@@ -346,20 +346,20 @@ struct LawStepsCarousel: View {
     }
 
     private func noteContent(_ item: Item) -> (icon: String, text: String) {
-        if item.id == "deposit" { return ("document-text", "Le texte est déposé, puis envoyé en commission.") }
+        if item.id == "deposit" { return ("file-text", "Le texte est déposé, puis envoyé en commission.") }
         if let step = item.step {
             switch step.code {
-            case "CMP": return ("arrow-path", "Députés et sénateurs cherchent un accord.")
+            case "CMP": return ("refresh-cw", "Députés et sénateurs cherchent un accord.")
             case "CC": return ("scale", "Le Conseil constitutionnel a vérifié le texte.")
-            case "PROM": return ("check-badge", "La loi est publiée au Journal officiel.")
+            case "PROM": return ("badge-check", "La loi est publiée au Journal officiel.")
             default: break
             }
         }
         switch item.label {
-        case "Adoption définitive": return ("check-circle", "Les deux chambres votent le même texte.")
-        case "Promulgation": return ("check-badge", "Le président promulgue la loi.")
-        case "Congrès ou référendum": return ("building-library", "Le Congrès ou le peuple valide la révision.")
-        default: return ("building-library", "Examen par \(item.place == "Sénat" ? "le Sénat" : "l'Assemblée").")
+        case "Adoption définitive": return ("circle-check", "Les deux chambres votent le même texte.")
+        case "Promulgation": return ("badge-check", "Le président promulgue la loi.")
+        case "Congrès ou référendum": return ("landmark", "Le Congrès ou le peuple valide la révision.")
+        default: return ("landmark", "Examen par \(item.place == "Sénat" ? "le Sénat" : "l'Assemblée").")
         }
     }
 }
@@ -369,7 +369,7 @@ private struct StatusTag: View {
     enum Tone { case success, danger, progress, info, neutral }
 
     let text: String
-    /// Heroicon shown to the left of the text.
+    /// Lucide icon shown to the left of the text.
     let icon: String
     let tone: Tone
 
@@ -385,9 +385,9 @@ private struct StatusTag: View {
 
     var body: some View {
         HStack(spacing: 5) {
-            HeroIcon(icon, size: 14)
+            LucideIcon(icon, size: 14)
             Text(text)
-                .font(.appCaption)
+                .typeStyle(.meta)
         }
         .foregroundStyle(color)
         .lineLimit(1)
@@ -406,7 +406,7 @@ private struct JargonHelp: View {
 
     var body: some View {
         Button { shown = true } label: {
-            HeroIcon("information-circle", size: 18)
+            LucideIcon("info", size: 18)
                 .foregroundStyle(AppColors.Adaptive.textMeta)
                 .frame(width: 28, height: 28)
                 .contentShape(Rectangle())
@@ -415,7 +415,7 @@ private struct JargonHelp: View {
         .accessibilityLabel("Qu'est-ce que « \(term) » ?")
         .popover(isPresented: $shown) {
             Text(text)
-                .font(.appBody)
+                .typeStyle(.body)
                 .foregroundStyle(AppColors.Adaptive.textBody)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(width: 260, alignment: .leading)

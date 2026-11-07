@@ -3,7 +3,7 @@ import SwiftUI
 /// First launch, four steps with one idea each (Apple News, Particle, Ground News and NYT patterns).
 /// Every step starts with its title and description, then its visual:
 /// 1. what Optique is: the French media, left to right, around one mark;
-/// 2. the idea on a real story of the day: who covers it and what each side keeps;
+/// 2. the idea on a real story of the day: the half-donut of who covers it and what each side keeps, playing by itself;
 /// 3. topics to put first;
 /// 4. the big-story alerts, shown as the notification itself before the system asks.
 /// A back chevron, a progress bar and "Passer" stay at the top; one main button at the bottom.
@@ -62,7 +62,7 @@ struct OnboardingView: View {
     private var header: some View {
         HStack(spacing: AppSpacing.st) {
             Button { go(to: step - 1) } label: {
-                HeroIcon("chevron-left", size: 20)
+                LucideIcon("chevron-left", size: 20)
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
                     .frame(width: 32, height: 32)
                     .contentShape(Rectangle())
@@ -93,7 +93,7 @@ struct OnboardingView: View {
             .accessibilityLabel("Étape \(step + 1) sur \(stepCount)")
 
             Button("Passer") { finish() }
-                .font(.appCaption)
+                .typeStyle(.meta)
                 .foregroundStyle(AppColors.Adaptive.textMeta)
                 .opacity(step == stepCount - 1 ? 0 : 1)
                 .animation(.app, value: step == stepCount - 1)
@@ -117,7 +117,7 @@ struct OnboardingView: View {
             // The alerts step can be declined; the others are a plain "next".
             if step == stepCount - 1 && alertsCanBeAsked {
                 Button("Plus tard") { finish() }
-                    .font(.appBodyStrong)
+                    .typeStyle(.ui)
                     .foregroundStyle(AppColors.Adaptive.textMeta)
                     .frame(maxWidth: .infinity, minHeight: 44)
                     .transition(.blurRise)
@@ -178,7 +178,11 @@ struct OnboardingView: View {
                     "Pour chaque sujet, voyez quels médias en parlent et ce que chaque bord en retient.")
             Group {
                 if let example {
-                    ExampleStoryCard(story: example, sides: Self.sides(of: example))
+                    // The real half-donut and side cards on a real story, moving by themselves; a touch takes over.
+                    SideCarouselView(story: example, isSummaryUnavailable: false, autoPlays: true)
+                        .frame(height: 430, alignment: .top)
+                        .clipped()
+                        .mask(LinearGradient(stops: [.init(color: .black, location: 0.8), .init(color: .clear, location: 1)], startPoint: .top, endPoint: .bottom))
                 } else {
                     RoundedRectangle(cornerRadius: AppRadius.xl)
                         .fill(AppColors.Adaptive.placeholder)
@@ -232,7 +236,7 @@ struct OnboardingView: View {
 
     private func title(_ text: String) -> some View {
         Text(text)
-            .font(.appTitle)
+            .typeStyle(.screenTitle)
             .foregroundStyle(AppColors.Adaptive.textPrimary)
             .fixedSize(horizontal: false, vertical: true)
             .accessibilityAddTraits(.isHeader)
@@ -240,7 +244,7 @@ struct OnboardingView: View {
 
     private func paragraph(_ text: String) -> some View {
         Text(text)
-            .font(.appBody)
+            .typeStyle(.body)
             .foregroundStyle(AppColors.Adaptive.textBody)
             .lineSpacing(3)
             .fixedSize(horizontal: false, vertical: true)
@@ -409,7 +413,7 @@ private struct SourceArc: View {
                     Spacer()
                     Text("Droite")
                 }
-                .font(.appCaption)
+                .typeStyle(.meta)
                 .foregroundStyle(AppColors.Adaptive.textMeta)
                 .padding(.horizontal, 4)
                 .position(x: geo.size.width / 2, y: height - 8)
@@ -430,66 +434,6 @@ private struct SourceArc: View {
 
 // MARK: - Example card
 
-/// A real story of the day: how many outlets cover it, how the coverage splits, and one line from
-/// each side, the way a story page shows it.
-private struct ExampleStoryCard: View {
-    let story: Story
-    let sides: [(lean: PoliticalLean, label: String, line: String)]
-    @State private var barDrawn = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.m) {
-            Text("Un sujet du jour")
-                .overlineStyle()
-            Text(story.title)
-                .font(.geist(.heading, .medium))
-                .foregroundStyle(AppColors.Adaptive.textPrimary)
-                .lineLimit(3)
-                .fixedSize(horizontal: false, vertical: true)
-
-            if let coverage = story.computedCoverage {
-                VStack(alignment: .leading, spacing: AppSpacing.s) {
-                    SpectrumBar(coverage: coverage, barHeight: 8)
-                        .mask(alignment: .leading) {
-                            Rectangle().scaleEffect(x: barDrawn ? 1 : 0.001, anchor: .leading)
-                        }
-                    HStack(spacing: AppSpacing.s) {
-                        SourceStack(sources: story.sources, size: 22, ringColor: AppColors.Adaptive.cardSurface)
-                        Text(story.sources.count == 1 ? "1 média" : "\(story.sources.count) médias")
-                            .font(.appCaption)
-                            .foregroundStyle(AppColors.Adaptive.textMeta)
-                        Spacer(minLength: 0)
-                        LeanTags(coverage: coverage)
-                    }
-                }
-            }
-
-            Divider().overlay(AppColors.Adaptive.divider)
-
-            ForEach(Array(sides.enumerated()), id: \.element.label) { index, side in
-                VStack(alignment: .leading, spacing: 6) {
-                    LeanTagPill(lean: side.lean, text: side.label)
-                    Text(side.line)
-                        .font(.appBody)
-                        .foregroundStyle(AppColors.Adaptive.textBody)
-                        .lineLimit(3)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .staggerIn(delay: 0.55 + Double(index) * 0.12)
-            }
-        }
-        .padding(AppSpacing.m)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(AppColors.Adaptive.cardSurface, in: RoundedRectangle(cornerRadius: AppRadius.xl))
-        .accessibilityElement(children: .combine)
-        .onAppear {
-            if reduceMotion { barDrawn = true; return }
-            withAnimation(.easeInOut(duration: 0.7).delay(0.35)) { barDrawn = true }
-        }
-    }
-}
-
 // MARK: - Topic chips
 
 private struct TopicChip: View {
@@ -500,9 +444,9 @@ private struct TopicChip: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 6) {
-                HeroIcon(isOn ? "check-circle" : topic.heroIcon, solid: isOn, size: 18)
+                LucideIcon(isOn ? "circle-check" : topic.lucideIcon, bold: isOn, size: 18)
                 Text(topic.rawValue)
-                    .font(.appBodyStrong)
+                    .typeStyle(.ui)
                     .lineLimit(1)
             }
             .foregroundStyle(isOn ? AppColors.Brand.onInk : AppColors.Adaptive.textPrimary)
@@ -554,7 +498,13 @@ private struct NotificationPreview: View {
     let story: Story?
     @State private var olderIn = false
     @State private var newIn = false
+    /// Tapping the stack, like on the lock screen, spreads the notifications out so both can be read.
+    @State private var expanded = false
+    @State private var newHeight: CGFloat = 0
+    @State private var olderHeight: CGFloat = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private let gap: CGFloat = 8
 
     private var line: String {
         guard let story else { return "Un sujet repris par de nombreux médias" }
@@ -563,19 +513,37 @@ private struct NotificationPreview: View {
     }
 
     var body: some View {
-        ZStack(alignment: .top) {
-            banner(title: "Optique", line: "Un autre grand sujet du jour", headline: nil)
-                .scaleEffect(newIn ? 0.92 : 1, anchor: .top)
-                .offset(y: newIn ? -14 : 0)
-                .opacity(olderIn ? (newIn ? 0.45 : 1) : 0)
-                .blur(radius: olderIn ? 0 : 6)
-            banner(title: "Optique", line: line, headline: story?.title ?? "Le sujet du moment, dès qu'il éclate")
-                .offset(y: newIn ? 0 : -60)
-                .scaleEffect(newIn ? 1 : 0.94, anchor: .top)
-                .opacity(newIn ? 1 : 0)
-                .blur(radius: newIn ? 0 : 8)
+        VStack(alignment: .leading, spacing: AppSpacing.s) {
+            ZStack(alignment: .top) {
+                banner(title: "Optique", line: "Un autre grand sujet du jour", headline: nil, lines: expanded ? nil : 2)
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { olderHeight = $0 }
+                    .scaleEffect(expanded ? 1 : (newIn ? 0.92 : 1), anchor: .top)
+                    .offset(y: expanded ? newHeight + gap : (newIn ? -14 : 0))
+                    .opacity(olderIn ? (expanded || !newIn ? 1 : 0.45) : 0)
+                    .blur(radius: olderIn ? 0 : 6)
+                banner(title: "Optique", line: line, headline: story?.title ?? "Le sujet du moment, dès qu'il éclate", lines: expanded ? nil : 2)
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { newHeight = $0 }
+                    .offset(y: newIn ? 0 : -60)
+                    .scaleEffect(newIn ? 1 : 0.94, anchor: .top)
+                    .opacity(newIn ? 1 : 0)
+                    .blur(radius: newIn ? 0 : 8)
+            }
+            .frame(maxWidth: .infinity, alignment: .top)
+            // The stack takes the room of what it shows: one banner with a peek, or both banners.
+            .frame(height: expanded ? newHeight + gap + olderHeight : newHeight + 14, alignment: .top)
+            .padding(.top, 14)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                guard newIn else { return }
+                Haptics.selection()
+                withAnimation(.spring(duration: 0.5, bounce: 0.2)) { expanded.toggle() }
+            }
+            Text(expanded ? "Touchez pour replier" : "Touchez la notification pour voir les deux")
+                .typeStyle(.meta)
+                .foregroundStyle(AppColors.Adaptive.textMeta)
+                .contentTransition(.opacity)
+                .animation(.app, value: expanded)
         }
-        .padding(.top, 14)
         .onAppear {
             if reduceMotion { olderIn = true; newIn = true; return }
             withAnimation(.spring(duration: 0.5, bounce: 0.15).delay(0.25)) { olderIn = true }
@@ -583,9 +551,11 @@ private struct NotificationPreview: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Exemple d'alerte : \(line)")
+        .accessibilityHint("Touchez pour afficher les deux notifications")
+        .accessibilityAddTraits(.isButton)
     }
 
-    private func banner(title: String, line: String, headline: String?) -> some View {
+    private func banner(title: String, line: String, headline: String?, lines: Int?) -> some View {
         HStack(alignment: .top, spacing: AppSpacing.st) {
             Image("AppLogo")
                 .resizable()
@@ -596,21 +566,23 @@ private struct NotificationPreview: View {
                 .background(AppColors.Brand.accent, in: RoundedRectangle(cornerRadius: 9))
             VStack(alignment: .leading, spacing: 2) {
                 HStack {
-                    Text(title).font(.appBodyStrong)
+                    Text(title).typeStyle(.ui)
                     Spacer()
-                    Text("maintenant").font(.appCaption).foregroundStyle(AppColors.Adaptive.textMeta)
+                    Text("maintenant").typeStyle(.meta).foregroundStyle(AppColors.Adaptive.textMeta)
                 }
                 .foregroundStyle(AppColors.Adaptive.textPrimary)
                 if let headline {
                     Text(headline)
-                        .font(.appBody)
+                        .typeStyle(.body)
                         .foregroundStyle(AppColors.Adaptive.textPrimary)
-                        .lineLimit(2)
+                        .lineLimit(lines)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 Text(line)
-                    .font(.appCaption)
+                    .typeStyle(.meta)
                     .foregroundStyle(AppColors.Adaptive.textMeta)
-                    .lineLimit(1)
+                    .lineLimit(lines == nil ? nil : 1)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
         .padding(AppSpacing.st)

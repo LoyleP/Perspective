@@ -28,14 +28,14 @@ enum StoryTopic: String, CaseIterable, Identifiable {
         }
     }
 
-    /// Heroicon name (see `HeroIcon`).
-    var heroIcon: String {
+    /// Lucide icon name (see `LucideIcon`).
+    var lucideIcon: String {
         switch self {
-        case .tout:          return "squares-2x2"
-        case .politique:     return "building-library"
-        case .economie:      return "arrow-trending-up"
+        case .tout:          return "layout-grid"
+        case .politique:     return "landmark"
+        case .economie:      return "trending-up"
         case .societe:       return "users"
-        case .international: return "globe-europe-africa"
+        case .international: return "globe"
         case .environnement: return "sun"
         case .justice:       return "scale"
         case .culture:       return "film"

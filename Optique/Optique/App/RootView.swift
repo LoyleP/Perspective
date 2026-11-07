@@ -17,6 +17,8 @@ struct RootView: View {
     /// Home-indicator inset: the tab bar sits 24pt from the screen edge, so content only needs the rest.
     @State private var bottomSafeInset: CGFloat = 0
     @State private var lastAlertCheck = Date()
+    /// The paywall that opens once, right after the onboarding.
+    @State private var showsWelcomePaywall = false
     @AppStorage("lastSeenAlertsAt") private var lastSeenAlertsAt: Double = 0
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     private let notificationManager = NotificationManager.shared
@@ -62,11 +64,11 @@ struct RootView: View {
         .overlay(alignment: .bottom) {
             FloatingTabBar(
                 items: [
-                    .init(id: 0, accessibilityLabel: "À la une", icon: "home", hasSolid: true),
-                    .init(id: 3, accessibilityLabel: "Lois", icon: "scroll"),
-                    .init(id: 1, accessibilityLabel: "Explorer", icon: "magnifying-glass"),
+                    .init(id: 0, accessibilityLabel: "À la une", icon: "house"),
+                    .init(id: 3, accessibilityLabel: "Lois", icon: "scroll-text"),
+                    .init(id: 1, accessibilityLabel: "Explorer", icon: "search"),
                     .init(id: 2, accessibilityLabel: hasUnreadAlerts ? "Alertes, nouvelles alertes" : "Alertes",
-                          icon: "bell", hasSolid: true, showsBadge: hasUnreadAlerts)
+                          icon: "bell", showsBadge: hasUnreadAlerts)
                 ],
                 selection: $selectedTab,
                 onTap: tapped
@@ -92,6 +94,17 @@ struct RootView: View {
         .fullScreenCover(isPresented: .constant(!hasCompletedOnboarding)) {
             OnboardingView()
         }
+        .sheet(isPresented: $showsWelcomePaywall) {
+            PaywallView()
+        }
+        .onChange(of: hasCompletedOnboarding) { wasDone, isDone in
+            // Entering the app after the onboarding: the plan comes up first, for readers who aren't Optique+ yet.
+            guard isDone, !wasDone, AppConfig.paywallEnabled, !session.isPremium else { return }
+            Task {
+                try? await Task.sleep(for: .milliseconds(650))   // lets the onboarding finish closing
+                showsWelcomePaywall = true
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in keyboardVisible = true }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in keyboardVisible = false }
         .task { latestAlertAt = await notificationManager.latestNotificationDate() }
@@ -112,6 +125,8 @@ struct RootView: View {
     /// Any tap on a tab button brings that tab to its first page (even from a sub page); Explorer
     /// also opens the search keyboard.
     private func tapped(_ tab: Int) {
+        // A tap on the shrunken bar brings it back to full size.
+        if tabBarState.isCompact { tabBarState.isCompact = false }
         let alreadyThere = selectedTab == tab
         let popped = navRegistry.popToRoot(tab)
         if popped { Haptics.lightImpact() }

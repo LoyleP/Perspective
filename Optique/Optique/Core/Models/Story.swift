@@ -122,10 +122,17 @@ struct Story: Codable, Identifiable, Hashable {
         case isPolitical = "is_political"
     }
 
+    /// Read-only keys: the reworded headline is folded into `title` and never encoded back.
+    private enum BriefKeys: String, CodingKey { case briefTitle = "brief_title" }
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(UUID.self, forKey: .id)
-        title = Self.cleanedTitle(try container.decode(String.self, forKey: .title))
+        // The reworded headline (fits three lines) wins over the wire headline when the refresh wrote one.
+        let original = try container.decode(String.self, forKey: .title)
+        let reworded = try decoder.container(keyedBy: BriefKeys.self)
+            .decodeIfPresent(String.self, forKey: .briefTitle).flatMap { $0.isEmpty ? nil : $0 }
+        title = Self.cleanedTitle(reworded ?? original)
         summary = try container.decodeIfPresent(String.self, forKey: .summary)
         firstPublishedAt = try container.decode(Date.self, forKey: .firstPublishedAt)
         lastUpdatedAt = try container.decode(Date.self, forKey: .lastUpdatedAt)
@@ -213,8 +220,26 @@ struct Story: Codable, Identifiable, Hashable {
             .compactMap(\.source)
             .filter { seen.insert($0.id).inserted }
             .sorted { $0.politicalLean < $1.politicalLean }
-        let lead = articles.lazy.compactMap { $0.imageURL.flatMap(URL.init) }.first
+        let lead = articles.lazy.compactMap { $0.imageURL.flatMap(URL.init) }.first(where: Self.isCoverQuality)
         return (CoverageStats.from(storyID: id, articles: articles) ?? coverage, sources, lead)
+    }
+
+    /// Covers must be sharp photos: no thumbnails, logos, icons, vector or animated images, and
+    /// nothing whose URL announces a width under 600 px.
+    static func isCoverQuality(_ url: URL) -> Bool {
+        let lower = url.absoluteString.lowercased()
+        guard url.scheme == "http" || url.scheme == "https" else { return false }
+        if lower.range(of: #"\.(svg|gif|ico)(\?|$)"#, options: .regularExpression) != nil { return false }
+        if lower.range(of: "thumb|small|icon|logo|avatar|sprite|placeholder|default|pixel", options: .regularExpression) != nil { return false }
+        if let m = lower.range(of: #"[-_/](\d{2,4})x\d{2,4}(?=[-_./?]|$)"#, options: .regularExpression) {
+            let digits = lower[m].dropFirst().prefix(while: \.isNumber)
+            if let w = Int(digits), w < 600 { return false }
+        }
+        if let m = lower.range(of: #"[?&](?:w|width)=(\d{2,4})(?=&|$)"#, options: .regularExpression) {
+            let digits = lower[m].split(separator: "=").last.map { $0.prefix(while: \.isNumber) } ?? ""
+            if let w = Int(digits), w < 600 { return false }
+        }
+        return true
     }
 
     // Identity + the fields that change after load; hashing every article is needlessly slow.
@@ -231,10 +256,4 @@ struct Story: Codable, Identifiable, Hashable {
 extension Story {
     /// "il y a 2 h" (cards: the source logos already show who covers it)
     var timeLine: String { lastUpdatedAt.relativeToNowFrench() }
-
-    /// "8 sources · il y a 2 h"
-    var metaLine: String {
-        let count = sources.count == 1 ? "1 source" : "\(sources.count) sources"
-        return "\(count) · \(lastUpdatedAt.relativeToNowFrench())"
-    }
 }

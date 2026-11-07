@@ -34,7 +34,7 @@ struct StoryThreadSection: View {
                     withAnimation(.app) { visibleCount += pageSize }
                 } label: {
                     HStack(spacing: AppSpacing.s) {
-                        HeroIcon("plus", size: 16)
+                        LucideIcon("plus", size: 16)
                         Text("Voir plus")
                     }
                 }
@@ -86,13 +86,13 @@ struct StoryThreadSection: View {
                         LeanTagPill(lean: lean, text: lean.shortLabel)
                     }
                     Text(article.publishedAt.relativeToNowFrench())
-                        .font(.appCaption)
+                        .typeStyle(.meta)
                         .foregroundStyle(AppColors.Adaptive.textMeta)
                         .lineLimit(1)
                     Spacer(minLength: 0)
                 }
                 Text(article.title)
-                    .font(.appBody)
+                    .typeStyle(.body)
                     .foregroundStyle(AppColors.Adaptive.textBody)
                     .lineLimit(4)
                     .multilineTextAlignment(.leading)
@@ -100,7 +100,7 @@ struct StoryThreadSection: View {
             .padding(.bottom, AppSpacing.l)
 
             // Opens the article in the in-app browser.
-            HeroIcon("chevron-right", size: 22)
+            LucideIcon("chevron-right", size: 22)
                 .foregroundStyle(AppColors.Adaptive.textMeta)
                 .frame(maxHeight: .infinity)
                 .padding(.bottom, AppSpacing.l)

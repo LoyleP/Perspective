@@ -7,10 +7,8 @@ struct FloatingTabBar: View {
     struct Item: Identifiable {
         let id: Int
         let accessibilityLabel: String
-        /// Heroicon name, or an asset name when `isAsset` is true.
+        /// Lucide icon name, or an asset name when `isAsset` is true.
         let icon: String
-        /// Whether a solid variant of the Heroicon exists, shown when selected.
-        var hasSolid = false
         var isAsset = false
         /// Shows a small dot on the icon (unread alerts).
         var showsBadge = false
@@ -89,7 +87,7 @@ struct FloatingTabBar: View {
                     .scaledToFit()
                     .frame(width: iconSize, height: iconSize)
             } else {
-                HeroIcon(item.icon, solid: isSelected && item.hasSolid, size: iconSize)
+                LucideIcon(item.icon, size: iconSize)
             }
         }
         .foregroundStyle(color)
@@ -117,9 +115,9 @@ struct FloatingTabBar: View {
         AppColors.Adaptive.background.ignoresSafeArea()
         FloatingTabBar(
             items: [
-                .init(id: 0, accessibilityLabel: "À la une", icon: "home", hasSolid: true),
-                .init(id: 1, accessibilityLabel: "Explorer", icon: "magnifying-glass"),
-                .init(id: 2, accessibilityLabel: "Alertes", icon: "bell", hasSolid: true)
+                .init(id: 0, accessibilityLabel: "À la une", icon: "house"),
+                .init(id: 1, accessibilityLabel: "Explorer", icon: "search"),
+                .init(id: 2, accessibilityLabel: "Alertes", icon: "bell")
             ],
             selection: $selection
         )

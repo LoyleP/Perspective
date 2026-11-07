@@ -11,19 +11,19 @@ struct SectionHeader: View {
         HStack(alignment: .firstTextBaseline) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.appHeading)
+                    .typeStyle(.section)
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
                     .accessibilityAddTraits(.isHeader)
                 if let subtitle {
                     Text(subtitle)
-                        .font(.appCaption)
+                        .typeStyle(.meta)
                         .foregroundStyle(AppColors.Adaptive.textMeta)
                 }
             }
             Spacer()
             if let actionTitle, let action {
                 Button(actionTitle, action: action)
-                    .font(.appCaption)
+                    .typeStyle(.ui)
                     .foregroundStyle(AppColors.Brand.accent)
             }
         }

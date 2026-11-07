@@ -61,10 +61,10 @@ struct CoverageDial: View {
 
                 VStack(spacing: 2) {
                     Text(selectedLabel)
-                        .font(.appCaption)
+                        .typeStyle(.meta)
                         .foregroundStyle(AppColors.Adaptive.textMeta)
                     Text(selectedShare)
-                        .font(.appTitle)
+                        .typeStyle(.screenTitle)
                         .monospacedDigit()
                         .foregroundStyle(AppColors.Adaptive.textPrimary)
                 }

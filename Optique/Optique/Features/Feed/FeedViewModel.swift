@@ -8,15 +8,16 @@ final class FeedViewModel {
     private(set) var isLoading = false
     private(set) var error: AppError?
     private(set) var allStories: [Story] = []
-    /// Topic tab selected under the header; `.tout` is the unfiltered feed.
-    private(set) var topic: StoryTopic = .tout
+    /// The topic this page shows; `.tout` is the unfiltered feed.
+    let topic: StoryTopic
 
     /// News moves fast: refetch when the feed is older than this (the server refreshes hourly).
     private let cacheDuration: TimeInterval = 5 * 60
     private var lastFetchedAt: Date?
     private let repository: any StoryRepositoryProtocol
 
-    init(repository: any StoryRepositoryProtocol = StoryRepository.shared) {
+    init(topic: StoryTopic = .tout, repository: any StoryRepositoryProtocol = StoryRepository.shared) {
+        self.topic = topic
         self.repository = repository
     }
 
@@ -79,72 +80,23 @@ final class FeedViewModel {
         guard !isLoading else { return }
         isLoading = true
         error = nil
-        let loadingTopic = topic
         // Show the last feed received at once (memory, then disk) while the network catches up.
-        if allStories.isEmpty, let cached = await cachedStories(for: loadingTopic), topic == loadingTopic, allStories.isEmpty {
+        if allStories.isEmpty,
+           let cached = await repository.cachedFeed(topic: topic.filterValue, limit: 30, offset: 0),
+           allStories.isEmpty {
             allStories = cached
             rebuild()
         }
         do {
-            let page = try await repository.fetchFeed(
-                topic: loadingTopic.filterValue,
-                limit: 30,
-                offset: 0
-            )
-            topicCache[loadingTopic] = page
-            if topic == loadingTopic {
-                allStories = page
-                rebuild()
-                lastFetchedAt = Date()
-            }
+            let page = try await repository.fetchFeed(topic: topic.filterValue, limit: 30, offset: 0)
+            allStories = page
+            rebuild()
+            lastFetchedAt = Date()
         } catch {
             Log.feed.error("Load failed: \(error)")
-            if topic == loadingTopic, allStories.isEmpty { self.error = AppError.from(error) }
+            if allStories.isEmpty { self.error = AppError.from(error) }
         }
         isLoading = false
-        prefetchTopicsOnce()
-    }
-
-    /// Stories already received for a topic in this session, else the last ones saved on disk.
-    private func cachedStories(for topic: StoryTopic) async -> [Story]? {
-        if let hit = topicCache[topic], !hit.isEmpty { return hit }
-        return await repository.cachedFeed(topic: topic.filterValue, limit: 30, offset: 0)
-    }
-
-    /// Per-topic stories from this session, so switching back to a tab is instant.
-    private var topicCache: [StoryTopic: [Story]] = [:]
-    private var didPrefetchTopics = false
-
-    /// After the first load, quietly fetch every other topic tab so switching to it shows stories at once.
-    private func prefetchTopicsOnce() {
-        guard !didPrefetchTopics else { return }
-        didPrefetchTopics = true
-        let topics = StoryTopic.selectable.filter { $0 != topic }
-        Task(priority: .utility) { [repository] in
-            for t in topics {
-                if let page = try? await repository.fetchFeed(topic: t.filterValue, limit: 30, offset: 0) {
-                    await MainActor.run { self.topicCache[t] = page }
-                }
-            }
-        }
-    }
-
-    /// Switches the topic tab: shows that topic's known stories at once, then refreshes them.
-    func select(_ newTopic: StoryTopic) async {
-        guard newTopic != topic else { return }
-        topic = newTopic
-        lastFetchedAt = nil
-        isLoading = false
-        if let cached = await cachedStories(for: newTopic), topic == newTopic {
-            allStories = cached
-            rebuild()
-            Task { await self.load() }
-            return
-        }
-        // Nothing known yet: show the loading placeholder until the network answers.
-        allStories = []
-        rebuild()
-        await load()
     }
 
     /// Back from the background: reload if the feed is stale.

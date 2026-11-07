@@ -15,7 +15,7 @@ struct CommentAvatar: View {
                 ZStack {
                     Circle().fill(AppColors.Adaptive.surfaceElevated)
                     Text(String(author.prefix(1)).uppercased())
-                        .font(.appCaption)
+                        .typeStyle(.meta)
                         .foregroundStyle(AppColors.Adaptive.textSecondary)
                 }
             }

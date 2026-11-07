@@ -30,7 +30,7 @@ struct SideArticlesSheet: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button { dismiss() } label: {
-                        NavIcon("xmark")
+                        NavIcon("x")
                             .foregroundStyle(AppColors.Adaptive.textPrimary)
                     }
                     .accessibilityLabel("Fermer")
@@ -43,7 +43,7 @@ struct SideArticlesSheet: View {
                 if articles.isEmpty {
                     ContentUnavailableView(
                         "Aucun article",
-                        hero: "newspaper",
+                        lucide: "newspaper",
                         description: Text("Aucun média de ce bord n'a couvert ce sujet.")
                     )
                 }
@@ -69,21 +69,21 @@ struct ArticleSourceRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
                     Text(article.source?.name ?? "Source")
-                        .font(.appCaption)
+                        .typeStyle(.meta)
                         .foregroundStyle(AppColors.Adaptive.textPrimary)
                     if let lean = article.source?.lean {
                         Circle().fill(lean.spectrumColor).frame(width: 6, height: 6)
                         Text(lean.shortLabel)
-                            .font(.appCaption)
+                            .typeStyle(.meta)
                             .foregroundStyle(AppColors.Adaptive.textMeta)
                     }
                     Spacer(minLength: AppSpacing.s)
                     Text(article.publishedAt.relativeToNowFrench())
-                        .font(.appCaption)
+                        .typeStyle(.meta)
                         .foregroundStyle(AppColors.Adaptive.textMeta)
                 }
                 Text(article.title)
-                    .font(.appBody)
+                    .typeStyle(.body)
                     .foregroundStyle(AppColors.Adaptive.textBody)
                     .lineLimit(3)
                     .multilineTextAlignment(.leading)

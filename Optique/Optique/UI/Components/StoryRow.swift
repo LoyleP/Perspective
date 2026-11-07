@@ -1,105 +1,119 @@
 import SwiftUI
 
-/// Compact list row: meta, headline and spectrum line on the left; on the right a square photo
-/// as tall as the text (so it fills the row's height without ever stretching).
+/// Compact list card: headline and meta line on the left; on the right a photo that touches the
+/// card's top, right and bottom edges, the same width on every card.
 struct StoryRow: View {
     let story: Story
+    /// Position in a ranked list ("L'essentiel"), shown left of the headline.
+    var rank: Int? = nil
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         let showsImage = story.leadImageURL != nil && !dynamicTypeSize.isAccessibilitySize
-        SquareTrailingLayout(spacing: AppSpacing.m) {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: AppSpacing.s) {
-                    Text(story.timeLine)
-                        .font(.appCaption)
+        PhotoTrailingLayout(padding: AppSpacing.m, photoWidth: 108) {
+            HStack(alignment: .firstTextBaseline, spacing: AppSpacing.s) {
+                if let rank {
+                    Text("\(rank)")
+                        .typeStyle(.meta)
+                        .monospacedDigit()
                         .foregroundStyle(AppColors.Adaptive.textMeta)
+                        .frame(width: 14, alignment: .leading)
+                        .accessibilityHidden(true)
                 }
-                Text(story.title)
-                    .font(.geist(.body, .medium))
-                    .foregroundStyle(AppColors.Adaptive.textPrimary)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-                if let dek = story.standfirst, !dynamicTypeSize.isAccessibilitySize {
-                    Text(dek)
-                        .font(.appBody)
-                        .foregroundStyle(AppColors.Adaptive.textMeta)
-                        .lineLimit(1)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(story.title)
+                        .typeStyle(.rowTitle)
+                        .foregroundStyle(AppColors.Adaptive.textPrimary)
                         .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                    StoryMetaLine(story: story)
                 }
-                HStack(spacing: AppSpacing.s) {
-                    // The coverage tag only where the left/right lens means something.
-                    if let coverage = story.computedCoverage, story.hasPoliticalAngle {
-                        LeanTags(coverage: coverage)
-                    }
-                    SourceStack(sources: story.sources, size: 18, ringColor: AppColors.Adaptive.background)
-                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
 
             if showsImage {
                 Color.clear
                     .overlay { RemoteImage(url: story.leadImageURL, maxPixel: 360) }
-                    .clipShape(RoundedRectangle(cornerRadius: AppRadius.ml))
+                    .clipped()
                     .accessibilityHidden(true)
             }
         }
-        .padding(.vertical, AppSpacing.m)
-        .contentShape(Rectangle())
+        .background(AppColors.Adaptive.cardSurface)
+        .clipShape(RoundedRectangle(cornerRadius: AppRadius.xl))
+        .contentShape(RoundedRectangle(cornerRadius: AppRadius.xl))
+        .padding(.vertical, AppSpacing.xs)
         .accessibilityElement(children: .combine)
     }
 }
 
-/// Lays out a text block and an optional trailing photo. The photo is a square whose side
-/// equals the text block's height (clamped), so it fills the row's height; the text takes the
-/// remaining width. With one subview the text uses the full width.
-private struct SquareTrailingLayout: Layout {
-    var spacing: CGFloat
-    private let minSide: CGFloat = 64
-    private let maxSide: CGFloat = 120
+/// Lays out a text block and an optional trailing photo that touches the card's top, right and
+/// bottom edges. The photo has the same width on every card (`photoWidth`) and the row's full height;
+/// the text is inset by `padding` and takes the width left, so it never runs under the photo.
+private struct PhotoTrailingLayout: Layout {
+    var padding: CGFloat
+    var photoWidth: CGFloat
+    private let minHeight: CGFloat = 96
 
-    /// Finds the photo side and text height for a row `width` wide. Text height depends on the
-    /// width left after the photo, which depends on the text height, so a few passes settle it.
-    private func solve(width: CGFloat, text: LayoutSubview, hasImage: Bool) -> (side: CGFloat, textHeight: CGFloat) {
-        guard hasImage else {
-            return (0, text.sizeThatFits(ProposedViewSize(width: width, height: nil)).height)
-        }
-        var side: CGFloat = 88
-        var height: CGFloat = 0
-        for _ in 0..<4 {
-            height = text.sizeThatFits(ProposedViewSize(width: max(width - side - spacing, 0), height: nil)).height
-            let next = min(max(height, minSide), maxSide)
-            if abs(next - side) < 0.5 { side = next; break }
-            side = next
-        }
-        height = text.sizeThatFits(ProposedViewSize(width: max(width - side - spacing, 0), height: nil)).height
-        return (side, height)
+    private func textWidth(_ width: CGFloat, hasImage: Bool) -> CGFloat {
+        max(width - (hasImage ? photoWidth : 0) - 2 * padding, 0)
+    }
+
+    private func rowHeight(width: CGFloat, text: LayoutSubview, hasImage: Bool) -> (row: CGFloat, text: CGFloat) {
+        let h = text.sizeThatFits(ProposedViewSize(width: textWidth(width, hasImage: hasImage), height: nil)).height
+        return (max(h + 2 * padding, hasImage ? minHeight : 0), h)
     }
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         guard let text = subviews.first else { return .zero }
         let width = proposal.width ?? 320
-        let (side, textHeight) = solve(width: width, text: text, hasImage: subviews.count > 1)
-        return CGSize(width: width, height: max(textHeight, side))
+        return CGSize(width: width, height: rowHeight(width: width, text: text, hasImage: subviews.count > 1).row)
     }
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
         guard let text = subviews.first else { return }
         let hasImage = subviews.count > 1
-        let (side, textHeight) = solve(width: bounds.width, text: text, hasImage: hasImage)
-        let rowHeight = max(textHeight, side)
-        let textWidth = hasImage ? bounds.width - side - spacing : bounds.width
+        let (row, textHeight) = rowHeight(width: bounds.width, text: text, hasImage: hasImage)
         text.place(
-            at: CGPoint(x: bounds.minX, y: bounds.minY + (rowHeight - textHeight) / 2),
+            at: CGPoint(x: bounds.minX + padding, y: bounds.minY + (row - textHeight) / 2),
             anchor: .topLeading,
-            proposal: ProposedViewSize(width: textWidth, height: textHeight)
+            proposal: ProposedViewSize(width: textWidth(bounds.width, hasImage: hasImage), height: textHeight)
         )
         if hasImage {
             subviews[1].place(
-                at: CGPoint(x: bounds.maxX, y: bounds.minY + (rowHeight - side) / 2),
+                at: CGPoint(x: bounds.maxX, y: bounds.minY),
                 anchor: .topTrailing,
-                proposal: ProposedViewSize(width: side, height: side)
+                proposal: ProposedViewSize(width: photoWidth, height: row)
             )
+        }
+    }
+}
+
+/// The line under a story card's text: the coverage tag (where the left/right lens means something) and
+/// the time. When both don't fit side by side the time drops under the tag instead of running out of the card.
+struct StoryMetaLine: View {
+    let story: Story
+
+    private var time: some View {
+        Text(story.timeLine)
+            .typeStyle(.meta)
+            .foregroundStyle(AppColors.Adaptive.textMeta)
+            .lineLimit(1)
+    }
+
+    var body: some View {
+        if let coverage = story.computedCoverage, story.hasPoliticalAngle {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: AppSpacing.s) {
+                    LeanTags(coverage: coverage)
+                    time
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    LeanTags(coverage: coverage)
+                    time
+                }
+            }
+        } else {
+            time
         }
     }
 }
