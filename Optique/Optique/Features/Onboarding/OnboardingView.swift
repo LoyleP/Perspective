@@ -1,11 +1,13 @@
 import SwiftUI
 
-/// First launch, four steps with one idea each (Apple News, Particle, Ground News and NYT patterns).
-/// Every step starts with its title and description, then its visual:
-/// 1. what Optique is: the French media, left to right, around one mark;
-/// 2. the idea on a real story of the day: the half-donut of who covers it and what each side keeps, playing by itself;
-/// 3. topics to put first;
-/// 4. the big-story alerts, shown as the notification itself before the system asks.
+/// First launch, six steps with one idea each (Apple News, Particle, Ground News and NYT patterns). Each step
+/// puts its visual first and its title and description centred under it:
+/// 1. what Optique is: the media, left to right, around one mark;
+/// 2. one story of the day: the coverage bar with its colour key, and one card per media;
+/// 3. blind spots: a story covered by one side only;
+/// 4. laws: a law card with its four stages;
+/// 5. topics to put first;
+/// 6. the big-story alerts, shown as the notification itself before the system asks.
 /// A back chevron, a progress bar and "Passer" stay at the top; one main button at the bottom.
 struct OnboardingView: View {
 
@@ -19,36 +21,35 @@ struct OnboardingView: View {
     @State private var forward = true
     @State private var topics: Set<StoryTopic> = []
     @State private var example: Story?
+    @State private var feed: [Story] = []
+    @State private var laws: [Law] = []
     @State private var sources: [Source] = []
     @State private var isAskingForAlerts = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private let stepCount = 4
+    private let stepCount = 6
 
     var body: some View {
         VStack(spacing: 0) {
             header
 
-            ScrollView {
-                Group {
-                    switch step {
-                    case 0: welcomeStep
-                    case 1: exampleStep
-                    case 2: topicsStep
-                    default: alertsStep
-                    }
+            Group {
+                switch step {
+                case 0: welcomeStep
+                case 1: exampleStep
+                case 2: blindspotStep
+                case 3: loisStep
+                case 4: topicsStep
+                default: alertsStep
                 }
-                .padding(.horizontal, AppSpacing.m)
-                .padding(.top, AppSpacing.l)
-                .padding(.bottom, AppSpacing.xl)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .id(step)
-                .transition(.asymmetric(
-                    insertion: .identity,
-                    removal: .stepExit(forward: forward, reduceMotion: reduceMotion)
-                ))
             }
-            .scrollBounceBehavior(.basedOnSize)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(.top, AppSpacing.m)
+            .id(step)
+            .transition(.asymmetric(
+                insertion: .identity,
+                removal: .stepExit(forward: forward, reduceMotion: reduceMotion)
+            ))
 
             footer
         }
@@ -132,7 +133,7 @@ struct OnboardingView: View {
     private var primaryTitle: String {
         switch step {
         case 0: return "Commencer"
-        case 2: return topics.isEmpty ? "Continuer sans choisir" : "Continuer"
+        case 4: return topics.isEmpty ? "Continuer sans choisir" : "Continuer"
         case stepCount - 1: return alertsCanBeAsked ? "Activer les alertes" : "C'est parti"
         default: return "Continuer"
         }
@@ -158,49 +159,89 @@ struct OnboardingView: View {
     // MARK: - Step 1: welcome
 
     private var welcomeStep: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.l) {
-            heading("L'actualité,\nsous tous les angles",
-                    sources.count >= 10
-                    ? "Optique réunit les articles de \(sources.count) médias, de la gauche à la droite, et les rassemble par sujet."
-                    : "Optique réunit les articles des médias français, de la gauche à la droite, et les rassemble par sujet.")
-            SourceArc(sources: sources)
-                .frame(maxWidth: .infinity)
-                .padding(.top, AppSpacing.l)
-                .staggerIn(2)
+        visualStep(
+            "L'actualité,\nsous tous les angles",
+            sources.count >= 10
+            ? "Optique réunit \(sources.count) médias, de la gauche à la droite, et les rassemble par sujet."
+            : "Optique réunit les médias, de la gauche à la droite, et les rassemble par sujet."
+        ) {
+            ZStack {
+                Circle()
+                    .fill(RadialGradient(colors: [AppColors.Adaptive.surfaceElevated, AppColors.Adaptive.background],
+                                         center: .center, startRadius: 20, endRadius: 190))
+                    .frame(width: 380, height: 380)
+                SourceArc(sources: sources)
+                    .padding(.horizontal, AppSpacing.m)
+            }
+            .staggerIn(2)
         }
     }
 
-    // MARK: - Step 2: a real story
+    // MARK: - Step 2: one story, every colour explained
 
     private var exampleStep: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.l) {
-            heading("Un sujet,\ntous les points de vue",
-                    "Pour chaque sujet, voyez quels médias en parlent et ce que chaque bord en retient.")
+        visualStep(
+            "Un sujet,\ntous les points de vue",
+            "Rouge à gauche, gris au centre, bleu à droite. Chaque carte montre ce qu'un média en dit.",
+            fadesEdges: true
+        ) {
             Group {
-                if let example {
-                    // The real half-donut and side cards on a real story, moving by themselves; a touch takes over.
-                    SideCarouselView(story: example, isSummaryUnavailable: false, autoPlays: true)
-                        .frame(height: 430, alignment: .top)
-                        .clipped()
-                        .mask(LinearGradient(stops: [.init(color: .black, location: 0.8), .init(color: .clear, location: 1)], startPoint: .top, endPoint: .bottom))
+                if feed.count >= 3 {
+                    MarqueeGrid(items: feed, cardWidth: 300) { StoryRow(story: $0) }
                 } else {
-                    RoundedRectangle(cornerRadius: AppRadius.xl)
-                        .fill(AppColors.Adaptive.placeholder)
-                        .frame(height: 300)
-                        .shimmering()
+                    gridPlaceholder
                 }
             }
             .staggerIn(2)
         }
     }
 
-    // MARK: - Step 3: topics
+    // MARK: - Step 3: blind spots
+
+    private var blindspotStep: some View {
+        visualStep(
+            "Les angles morts",
+            "Un sujet repris par un seul bord est signalé : c'est ce que l'autre camp voit à peine.",
+            fadesEdges: true
+        ) {
+            Group {
+                if blindspots.count >= 3 {
+                    MarqueeGrid(items: blindspots, cardWidth: 230) { StoryHeroCard(story: $0, size: .medium) }
+                } else {
+                    gridPlaceholder
+                }
+            }
+            .staggerIn(2)
+        }
+    }
+
+    // MARK: - Step 4: laws
+
+    private var loisStep: some View {
+        visualStep(
+            "Suivez les lois\nen cours",
+            "Où en est chaque texte, ce qui vient ensuite et les articles qui en parlent.",
+            fadesEdges: true
+        ) {
+            Group {
+                if laws.count >= 3 {
+                    MarqueeGrid(items: laws, cardWidth: 300) { LawRow(law: $0) }
+                } else {
+                    gridPlaceholder
+                }
+            }
+            .staggerIn(2)
+        }
+    }
+
+    // MARK: - Step 5: topics
 
     private var topicsStep: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.l) {
-            heading("Qu'est-ce qui\nvous intéresse ?",
-                    "Ces thèmes passeront en premier dans votre fil. Vous pourrez les changer dans les Réglages.")
-            ChipFlow(spacing: AppSpacing.s) {
+        visualStep(
+            "Qu'est-ce qui\nvous intéresse ?",
+            "Ces thèmes passent en premier dans votre fil, modifiables dans les Réglages."
+        ) {
+            ChipFlow(spacing: AppSpacing.s, trailing: true) {
                 // The chips cascade in, one after the other.
                 ForEach(Array(StoryTopic.selectable.enumerated()), id: \.element) { index, topic in
                     TopicChip(topic: topic, isOn: topics.contains(topic)) {
@@ -210,17 +251,68 @@ struct OnboardingView: View {
                 }
             }
             .sensoryFeedback(.selection, trigger: topics)
+            .padding(.horizontal, AppSpacing.m)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
         }
     }
 
-    // MARK: - Step 4: alerts
+    // MARK: - Step 6: alerts
 
     private var alertsStep: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.l) {
-            heading("Les grands sujets,\ndès qu'ils éclatent",
-                    "Une alerte quand un sujet est repris par de nombreux médias, avec le bord qui en parle le plus. Au plus une par heure.")
+        visualStep(
+            "Les grands sujets,\ndès qu'ils éclatent",
+            "Une alerte quand un sujet est repris par de nombreux médias. Au plus une par heure."
+        ) {
             NotificationPreview(story: example)
-                .padding(.top, AppSpacing.l)
+                .padding(.horizontal, AppSpacing.m)
+        }
+    }
+
+    /// Stories one side covers almost alone; falls back to the day's stories when there are too few.
+    private var blindspots: [Story] {
+        let alone = feed.filter { $0.computedCoverage?.blindspotSide != nil && $0.leadImageURL != nil }
+        return alone.count >= 6 ? alone : feed.filter { $0.leadImageURL != nil }
+    }
+
+    private var gridPlaceholder: some View {
+        RoundedRectangle(cornerRadius: AppRadius.xl)
+            .fill(AppColors.Adaptive.placeholder)
+            .frame(height: 280)
+            .padding(.horizontal, AppSpacing.m)
+            .shimmering()
+    }
+
+    /// The common layout: the visual fills the room above, title and description sit left-aligned under it, at the same place on every step.
+    private func visualStep<V: View>(_ titleText: String, _ descriptionText: String, fadesEdges: Bool = false, @ViewBuilder visual: () -> V) -> some View {
+        VStack(spacing: AppSpacing.l) {
+            // Clipped to its own area: a moving backdrop must never run under the title, the description or the header.
+            // The visual lives in an overlay of an empty box, so however tall it is it cannot push the text away.
+            Color.clear
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .overlay { visual().frame(maxWidth: .infinity, maxHeight: .infinity) }
+                .clipped()
+                .mask {
+                    if fadesEdges {
+                        LinearGradient(stops: [
+                            .init(color: .clear, location: 0),
+                            .init(color: .black, location: 0.14),
+                            .init(color: .black, location: 0.86),
+                            .init(color: .clear, location: 1)
+                        ], startPoint: .top, endPoint: .bottom)
+                    } else {
+                        Rectangle()
+                    }
+                }
+                .layoutPriority(-1)
+            VStack(alignment: .leading, spacing: AppSpacing.s) {
+                title(titleText).multilineTextAlignment(.leading).staggerIn(0)
+                paragraph(descriptionText).multilineTextAlignment(.leading).staggerIn(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, AppSpacing.m)
+            .padding(.bottom, AppSpacing.m)
+            .layoutPriority(1)
+            .zIndex(1)
         }
     }
 
@@ -236,7 +328,7 @@ struct OnboardingView: View {
 
     private func title(_ text: String) -> some View {
         Text(text)
-            .typeStyle(.screenTitle)
+            .typeStyle(.display)
             .foregroundStyle(AppColors.Adaptive.textPrimary)
             .fixedSize(horizontal: false, vertical: true)
             .accessibilityAddTraits(.isHeader)
@@ -270,9 +362,22 @@ struct OnboardingView: View {
         await NotificationManager.shared.checkAuthorizationStatus()
         async let story = Self.loadExample()
         async let list = Self.loadSources()
-        let (s, l) = await (story, list)
+        async let stories = Self.loadFeed()
+        async let lawList = Self.loadLaws()
+        let (s, l, f, w) = await (story, list, stories, lawList)
         example = s
+        feed = f
+        laws = w
         withAnimation(.app) { sources = l }
+    }
+
+    private static func loadFeed() async -> [Story] {
+        (try? await StoryRepository.shared.fetchFeed(topic: nil, limit: 30, offset: 0)) ?? []
+    }
+
+    private static func loadLaws() async -> [Law] {
+        if let cached = await LawRepository.shared.cachedLaws(), !cached.laws.isEmpty { return cached.laws }
+        return (try? await LawRepository.shared.fetchLaws())?.laws ?? []
     }
 
     private static func loadSources() async -> [Source] {
@@ -355,7 +460,7 @@ private struct SourceArc: View {
     @State private var shown = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private let height: CGFloat = 230
+    private let height: CGFloat = 280
 
     /// An even pick along the spectrum, sorted left to right.
     private var picked: [Source] {
@@ -465,6 +570,8 @@ private struct TopicChip: View {
 /// Wraps its children onto as many rows as needed.
 private struct ChipFlow: Layout {
     var spacing: CGFloat = 8
+    /// Pushes every row to the right edge.
+    var trailing = false
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         let width = proposal.width ?? .infinity
@@ -479,13 +586,24 @@ private struct ChipFlow: Layout {
     }
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        var x = bounds.minX, y = bounds.minY, rowHeight: CGFloat = 0
-        for subview in subviews {
+        // Rows first, so each can be pushed to the right edge when asked.
+        var rows: [[(index: Int, size: CGSize)]] = [[]]
+        var x: CGFloat = 0
+        for (index, subview) in subviews.enumerated() {
             let size = subview.sizeThatFits(.unspecified)
-            if x + size.width > bounds.maxX, x > bounds.minX { x = bounds.minX; y += rowHeight + spacing; rowHeight = 0 }
-            subview.place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
+            if x + size.width > bounds.width, x > 0 { rows.append([]); x = 0 }
+            rows[rows.count - 1].append((index, size))
             x += size.width + spacing
-            rowHeight = max(rowHeight, size.height)
+        }
+        var y = bounds.minY
+        for row in rows {
+            let rowWidth = row.reduce(0) { $0 + $1.size.width } + spacing * CGFloat(max(row.count - 1, 0))
+            var cursor = trailing ? bounds.maxX - rowWidth : bounds.minX
+            for item in row {
+                subviews[item.index].place(at: CGPoint(x: cursor, y: y), proposal: ProposedViewSize(item.size))
+                cursor += item.size.width + spacing
+            }
+            y += (row.map(\.size.height).max() ?? 0) + spacing
         }
     }
 }

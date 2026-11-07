@@ -85,24 +85,11 @@ struct DiscoverView: View {
     }
 
     private var blindspots: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.m) {
-            SectionHeader(title: "Angles morts", subtitle: "Des sujets couverts surtout par un seul bord")
-                .padding(.horizontal, AppSpacing.m)
-            ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(spacing: AppSpacing.st) {
-                    ForEach(viewModel.blindspots) { story in
-                        NavigationLink(value: story) {
-                            StoryHeroCard(story: story, size: .medium)
-                                .zoomSource(id: story.id, in: transition)
-                        }
-                        .buttonStyle(CardPressStyle())
-                        .containerRelativeFrame(.horizontal) { width, _ in width * 0.86 }
-                    }
-                }
-                .scrollTargetLayout()
+        BlindspotCarousel(stories: viewModel.blindspots, subtitle: "Des sujets couverts surtout par un seul bord") { story, card in
+            NavigationLink(value: story) {
+                card.zoomSource(id: story.id, in: transition)
             }
-            .contentMargins(.horizontal, AppSpacing.m, for: .scrollContent)
-            .scrollTargetBehavior(.viewAligned)
+            .buttonStyle(CardPressStyle())
         }
     }
 
@@ -245,27 +232,6 @@ private extension StoryTopic {
         case .culture:       return ("F27A7A", "D93636")
         case .sport:         return ("7AD184", "2E9E3D")
         }
-    }
-}
-
-// MARK: - Blind spot badge
-
-/// "Surtout à gauche"-style badge on a blind-spot story card.
-struct BlindspotBadge: View {
-    let side: BlindspotSide
-
-    var body: some View {
-        HStack(spacing: 6) {
-            Circle()
-                .fill(side.lean.spectrumColor)
-                .frame(width: 8, height: 8)
-            Text(side.label)
-        }
-        .typeStyle(.meta)
-        .foregroundStyle(.white)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(.black.opacity(0.6), in: Capsule())
     }
 }
 

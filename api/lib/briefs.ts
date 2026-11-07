@@ -4,7 +4,7 @@ import { generate, parseJSON } from "./llm.js";
 
 // Story briefs, written ahead of time so a story never opens on a raw wire headline:
 //   - title: the story's headline reworded to fit three lines in the app (TITLE_MAX characters),
-//   - dek: the description under it, reworded to fit six lines (DEK_MAX characters),
+//   - dek: the description under it, written as four short bullet points (one per line, BULLET_MAX characters each),
 //   - topic + political: a reliable topic and whether the political lens means anything for it.
 // Runs inside the refresh cron. Many stories per model call (Gemini free tier: about 20 requests a day),
 // with a short prompt, numbered stories and one-letter JSON keys to keep tokens low.
@@ -12,7 +12,7 @@ import { generate, parseJSON } from "./llm.js";
 const BATCH = 12;
 const MIN_SOURCES = 3;
 const WINDOW_HOURS = 72;
-const BRIEF_VERSION = 2;
+const BRIEF_VERSION = 3;
 const TOPICS = ["politique", "economie", "societe", "international", "environnement", "justice", "culture", "sport"];
 
 // What fits in the app: the story headline (34 pt condensed, ~26 characters a line) stays on 3 lines up to
@@ -20,8 +20,9 @@ const TOPICS = ["politique", "economie", "societe", "international", "environnem
 // for less (62 / 200) because it counts characters badly; anything over the hard limit is dropped.
 const TITLE_ASK = 62;
 const TITLE_MAX = 68;
-const DEK_ASK = 200;
-const DEK_MAX = 220;
+const BULLET_ASK = 50;
+const BULLET_MAX = 62;
+const BULLETS = 4;
 
 export async function ensureBriefColumns() {
   await pool.query(`ALTER TABLE stories
@@ -42,10 +43,10 @@ function promptFor(stories: Input[]): string {
 
   return `Éditeur d'une app d'actualité française. Pour chaque sujet (#n, titre, extraits d'articles), écris en français :
 t : titre neutre et factuel, ${TITLE_ASK} caractères MAXIMUM espaces compris (compte-les), sans guillemets ni point final.
-d : description de 2 à 3 phrases courtes, ${DEK_ASK} caractères MAXIMUM espaces compris, qui complète t sans le répéter (contexte, cause, conséquence).
+d : description en ${BULLETS} puces courtes (tableau de ${BULLETS} chaînes), ${BULLET_ASK} caractères MAXIMUM espaces compris chacune, qui complètent t sans le répéter (faits, contexte, cause, conséquence), sans tiret ni puce au début.
 c : thème parmi ${TOPICS.join(",")}.
 p : 1 si la gauche et la droite peuvent diverger sur ce sujet, 0 sinon (sport, faits divers, météo…).
-Réponds par du JSON seul : [{"n":1,"t":"","d":"","c":"","p":1}]
+Réponds par du JSON seul : [{"n":1,"t":"","d":["","","",""],"c":"","p":1}]
 
 ${blocks}`;
 }
@@ -82,13 +83,14 @@ async function loadInputs(limit: number): Promise<Input[]> {
 
 const clean = (v: unknown) => String(v ?? "").replace(/\s+/g, " ").replace(/[«»"“”]/g, "").trim();
 
-/** The reworded description, cut back to its last full sentence if it runs over; null when unusable. */
-function fitDek(text: string): string | null {
-  if (!text) return null;
-  if (text.length <= DEK_MAX) return text;
-  const cut = text.slice(0, DEK_MAX);
-  const end = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("."));
-  return end > 60 ? cut.slice(0, end + 1) : null;
+/** The description as bullets, one per line: each cleaned and kept under the hard limit; null when unusable. */
+function fitDek(value: unknown): string | null {
+  const list = Array.isArray(value) ? value : String(value ?? "").split(/\n|(?<=[.!?])\s+/);
+  const bullets = list
+    .map((b) => clean(b).replace(/^[-•·\s]+/, "").replace(/[.\s]+$/, ""))
+    .filter((b) => b.length > 0 && b.length <= BULLET_MAX)
+    .slice(0, BULLETS);
+  return bullets.length >= 2 ? bullets.join("\n") : null;
 }
 
 /** Writes briefs for recent feed stories that don't have a current one yet. Returns how many were written. */
@@ -109,7 +111,7 @@ export async function writeBriefs(limit = 24): Promise<number> {
       const story = batch[Number(item.n) - 1];
       if (!story) continue;
       const title = clean(item.t).replace(/[.\s]+$/, "");
-      const dek = fitDek(clean(item.d));
+      const dek = fitDek(item.d);
       const topic = TOPICS.includes(item.c) ? item.c : null;
       await pool.query(
         `UPDATE stories SET

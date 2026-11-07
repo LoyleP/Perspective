@@ -118,6 +118,7 @@ struct TypeStyle {
 
     // Interface: Geist
     static let screenTitle = TypeStyle(voice: .sans, weight: 600, size: 28, lineHeight: 32, tracking: -0.004, textStyle: .title1)
+    static let figure = TypeStyle(voice: .sans, weight: 600, size: 48, lineHeight: 52, tracking: -0.01, textStyle: .largeTitle)
     static let body    = TypeStyle(voice: .sans, weight: 400, size: 15, lineHeight: 22, tracking: 0, textStyle: .subheadline)
     static let section = TypeStyle(voice: .sans, weight: 600, size: 20, lineHeight: 24, tracking: -0.002, textStyle: .title3)
     static let ui      = TypeStyle(voice: .sans, weight: 500, size: 15, lineHeight: 20, tracking: 0, textStyle: .subheadline)

@@ -15,7 +15,7 @@ struct LawDetailView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: AppSpacing.xl) {
+            VStack(alignment: .leading, spacing: AppSpacing.xxl) {
                 VStack(alignment: .leading, spacing: AppSpacing.m) {
                     titleBlock
                 }

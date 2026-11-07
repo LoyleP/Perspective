@@ -163,13 +163,21 @@ private struct AlertRow: View {
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
                     .lineLimit(3)
                     .multilineTextAlignment(.leading)
-                Text(notification.body)
-                    .typeStyle(.body)
-                    .foregroundStyle(AppColors.Adaptive.textMeta)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
                 if let coverage = notification.coverage {
-                    LeanTags(coverage: coverage)
+                    // One source of truth: the tag and the count both come from the story's current coverage,
+                    // not from the sentence the push carried when it was sent.
+                    HStack(spacing: AppSpacing.s) {
+                        LeanTags(coverage: coverage)
+                        Text(coverage.totalCount == 1 ? "1 source" : "\(coverage.totalCount) sources")
+                            .typeStyle(.meta)
+                            .foregroundStyle(AppColors.Adaptive.textMeta)
+                    }
+                } else {
+                    Text(notification.body)
+                        .typeStyle(.body)
+                        .foregroundStyle(AppColors.Adaptive.textMeta)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
                 }
             }
         }

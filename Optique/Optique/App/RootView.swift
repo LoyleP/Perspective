@@ -87,15 +87,15 @@ struct RootView: View {
         // Must come before the .environment calls: the debug menu sheet reads those objects,
         // and a sheet only inherits the environment of the view it is attached to.
         .debugMenu()
+        .sheet(isPresented: $showsWelcomePaywall) {
+            PaywallView()
+        }
         .environment(session)
         .environment(bookmarks)
         .environment(readingHistory)
         .environment(\.tabBarState, tabBarState)
         .fullScreenCover(isPresented: .constant(!hasCompletedOnboarding)) {
             OnboardingView()
-        }
-        .sheet(isPresented: $showsWelcomePaywall) {
-            PaywallView()
         }
         .onChange(of: hasCompletedOnboarding) { wasDone, isDone in
             // Entering the app after the onboarding: the plan comes up first, for readers who aren't Optique+ yet.

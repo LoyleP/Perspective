@@ -223,32 +223,16 @@ private struct FeedTopicPage: View {
 
     /// Stories one side barely covers: what each camp's readers don't see.
     private var blindspots: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.m) {
-            SectionHeader(title: "Angles morts", subtitle: "Ce qu'un bord ne vous montre pas")
-            ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(alignment: .top, spacing: AppSpacing.st) {
-                    ForEach(viewModel.blindspots) { story in
-                        storyLink(story) {
-                            StoryHeroCard(story: story, size: .medium)
-                                .overlay(alignment: .topLeading) {
-                                    if let side = story.computedCoverage?.blindspotSide {
-                                        BlindspotBadge(side: side).padding(AppSpacing.st)
-                                    }
-                                }
-                                .zoomSource(id: ZoomID(topic: topic, story: story.id), in: transition)
-                        }
-                        .containerRelativeFrame(.horizontal) { width, _ in width * 0.8 }
-                    }
-                }
-                .scrollTargetLayout()
+        BlindspotCarousel(stories: viewModel.blindspots, subtitle: "Des sujets couverts surtout par un seul bord") { story, card in
+            storyLink(story) {
+                card.zoomSource(id: ZoomID(topic: topic, story: story.id), in: transition)
             }
-            .scrollTargetBehavior(.viewAligned)
-            .scrollClipDisabled()
         }
+        .padding(.horizontal, -AppSpacing.m)
     }
 
     private var essentials: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.s) {
+        VStack(alignment: .leading, spacing: 0) {
             SectionHeader(title: "L'essentiel", subtitle: "Les sujets les plus couverts")
                 .padding(.bottom, AppSpacing.xs)
             ForEach(Array(viewModel.essentials.enumerated()), id: \.element.id) { index, story in

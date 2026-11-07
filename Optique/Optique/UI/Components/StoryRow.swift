@@ -20,7 +20,7 @@ struct StoryRow: View {
                         .frame(width: 14, alignment: .leading)
                         .accessibilityHidden(true)
                 }
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: AppSpacing.st) {
                     Text(story.title)
                         .typeStyle(.rowTitle)
                         .foregroundStyle(AppColors.Adaptive.textPrimary)
@@ -41,7 +41,7 @@ struct StoryRow: View {
         .background(AppColors.Adaptive.cardSurface)
         .clipShape(RoundedRectangle(cornerRadius: AppRadius.xl))
         .contentShape(RoundedRectangle(cornerRadius: AppRadius.xl))
-        .padding(.vertical, AppSpacing.xs)
+        .padding(.vertical, 5)
         .accessibilityElement(children: .combine)
     }
 }
@@ -88,10 +88,10 @@ private struct PhotoTrailingLayout: Layout {
     }
 }
 
-/// The line under a story card's text: the coverage tag (where the left/right lens means something) and
-/// the time. When both don't fit side by side the time drops under the tag instead of running out of the card.
+/// The lines under a story card's text: the coverage bar (where the left/right lens means something) and the time.
 struct StoryMetaLine: View {
     let story: Story
+    var showsTag = true
 
     private var time: some View {
         Text(story.timeLine)
@@ -101,16 +101,10 @@ struct StoryMetaLine: View {
     }
 
     var body: some View {
-        if let coverage = story.computedCoverage, story.hasPoliticalAngle {
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: AppSpacing.s) {
-                    LeanTags(coverage: coverage)
-                    time
-                }
-                VStack(alignment: .leading, spacing: 4) {
-                    LeanTags(coverage: coverage)
-                    time
-                }
+        if showsTag, let coverage = story.computedCoverage, story.hasPoliticalAngle {
+            VStack(alignment: .leading, spacing: AppSpacing.s) {
+                SpectrumBar(coverage: coverage, barHeight: 6)
+                time
             }
         } else {
             time

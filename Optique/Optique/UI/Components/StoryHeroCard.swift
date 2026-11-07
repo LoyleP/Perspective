@@ -4,6 +4,8 @@ import SwiftUI
 struct StoryHeroCard: View {
     let story: Story
     var size: Size = .large
+    /// Fills the height it is given and keeps the tag and time at the bottom (carousels of equal cards).
+    var compact = false
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
@@ -19,13 +21,18 @@ struct StoryHeroCard: View {
                 .overlay { RemoteImage(url: story.leadImageURL, tint: tint) }
                 .clipped()
                 .accessibilityHidden(true)
+            // Apple Music: the text sits close under the artwork and the lines are tight.
             content
-                .padding(AppSpacing.m)
+                .padding(.horizontal, AppSpacing.m)
+                .padding(.top, AppSpacing.st)
+                .padding(.bottom, AppSpacing.m)
+                .frame(maxHeight: compact ? .infinity : nil, alignment: .top)
         }
+        .frame(maxHeight: compact ? .infinity : nil, alignment: .top)
         .background(AppColors.Adaptive.cardSurface)
         .clipShape(RoundedRectangle(cornerRadius: AppRadius.xl))
         .contentShape(RoundedRectangle(cornerRadius: AppRadius.xl))
-        .padding(.vertical, AppSpacing.xs)
+        .padding(.vertical, 5)
         .accessibilityElement(children: .combine)
     }
 
@@ -44,12 +51,13 @@ struct StoryHeroCard: View {
     }
 
     private var content: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.s) {
+        VStack(alignment: .leading, spacing: AppSpacing.st) {
             Text(story.title)
                 .typeStyle(size == .large ? .display : .headline)
                 .foregroundStyle(AppColors.Adaptive.textPrimary)
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
+            if compact { Spacer(minLength: 0) }
             StoryMetaLine(story: story)
         }
     }

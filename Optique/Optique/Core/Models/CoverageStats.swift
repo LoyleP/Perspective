@@ -340,11 +340,11 @@ enum LeanVerdict: Equatable {
         switch self {
         case .tooFewSources: return "Peu de sources"
         case .balanced: return "Tous les bords"
-        case .leaning(.extremeGauche): return "Surtout extrême gauche"
+        case .leaning(.extremeGauche): return "Surtout e. gauche"
         case .leaning(.gauche): return "Surtout à gauche"
         case .leaning(.centre): return "Surtout au centre"
         case .leaning(.droite): return "Surtout à droite"
-        case .leaning(.extremeDroite): return "Surtout extrême droite"
+        case .leaning(.extremeDroite): return "Surtout e. droite"
         }
     }
 }

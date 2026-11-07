@@ -281,7 +281,7 @@ enum LawSection: String, CaseIterable, Identifiable {
 /// List row: a plain title, who it concerns in one line, and its status in a plain sentence. The
 /// section header above already says what stage the row is at, and the full path (progress bar
 /// included) is on the law's own page, so the row itself doesn't repeat either.
-private struct LawRow: View {
+struct LawRow: View {
     let law: Law
 
     var body: some View {

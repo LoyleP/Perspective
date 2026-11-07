@@ -18,6 +18,7 @@ struct ProfileView: View {
     @State private var selectedLean: PoliticalLean?
     @State private var countersShown = false
     @AppStorage("profileSince") private var since: Double = 0
+    @AppStorage("preferredTopics") private var preferredTopicsRaw = ""
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -36,6 +37,7 @@ struct ProfileView: View {
                         .padding(.horizontal, AppSpacing.m)
                     }
                     spectrumSection
+                    themesSection
                     shelf("Récemment lu", stories: history.stories, list: .history)
                     shelf("Enregistrés", stories: bookmarks.stories, list: .saved)
                 }
@@ -111,11 +113,9 @@ struct ProfileView: View {
                     .foregroundStyle(AppColors.Adaptive.textMeta)
             }
 
-            HStack(spacing: 0) {
+            HStack(spacing: AppSpacing.st) {
                 stat(history.leans.count, "articles lus")
-                divider
                 stat(history.stories.count, "sujets ouverts")
-                divider
                 stat(bookmarks.stories.count, "enregistrés")
             }
             .padding(.top, AppSpacing.s)
@@ -138,11 +138,9 @@ struct ProfileView: View {
                 .foregroundStyle(AppColors.Adaptive.textMeta)
         }
         .frame(maxWidth: .infinity)
+        .padding(.vertical, AppSpacing.m)
+        .background(AppColors.Adaptive.cardSurface, in: RoundedRectangle(cornerRadius: AppRadius.xl))
         .accessibilityElement(children: .combine)
-    }
-
-    private var divider: some View {
-        Rectangle().fill(AppColors.Adaptive.divider).frame(width: 1, height: 32)
     }
 
     private var sinceText: String {
@@ -151,6 +149,9 @@ struct ProfileView: View {
     }
 
     // MARK: - Spectrum
+
+    /// Readings needed before the spectrum says anything.
+    private static let minimumReads = 5
 
     private var dominantLean: PoliticalLean? {
         guard let coverage = history.coverage, coverage.totalCount > 0 else { return nil }
@@ -165,7 +166,7 @@ struct ProfileView: View {
                 .padding(.horizontal, AppSpacing.m)
 
             VStack(alignment: .leading, spacing: AppSpacing.m) {
-                if let coverage = history.coverage, coverage.totalCount > 0 {
+                if let coverage = history.coverage, coverage.totalCount >= Self.minimumReads {
                     Text(history.insight)
                         .font(.geist(.heading, .medium))
                         .foregroundStyle(AppColors.Adaptive.textPrimary)
@@ -184,11 +185,19 @@ struct ProfileView: View {
                         .typeStyle(.meta)
                         .foregroundStyle(AppColors.Adaptive.textMeta)
                 } else {
-                    Text("Votre spectre se dessine au fil de vos lectures")
+                    // Too little reading to say anything: a locked state with progress, not a misleading chart.
+                    let read = history.coverage?.totalCount ?? 0
+                    HStack(spacing: 4) {
+                        ForEach(0..<Self.minimumReads, id: \.self) { index in
+                            Capsule()
+                                .fill(index < read ? AppColors.Brand.accent : AppColors.Adaptive.surfaceElevated)
+                                .frame(height: 6)
+                        }
+                    }
+                    Text(read == 0 ? "Pas encore de spectre" : "\(read) sur \(Self.minimumReads) articles lus")
                         .font(.geist(.heading, .medium))
                         .foregroundStyle(AppColors.Adaptive.textPrimary)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Text("Chaque article ouvert dans Optique compte, selon la position de son média. Lisez quelques sujets pour voir d'où vous venez.")
+                    Text("Lisez \(Self.minimumReads) articles pour découvrir de quel bord vous lisez le plus. Chaque article compte selon la position de son média.")
                         .typeStyle(.body)
                         .foregroundStyle(AppColors.Adaptive.textBody)
                         .lineSpacing(3)
@@ -214,6 +223,44 @@ struct ProfileView: View {
             return "Vous lisez peu la gauche. Un sujet vu depuis l'autre bord élargit le tableau."
         }
         return "Vos lectures sont réparties des deux côtés. Continuez ainsi."
+    }
+
+    // MARK: - Themes
+
+    /// The topics put first in the feed, with a way to change them.
+    @ViewBuilder
+    private var themesSection: some View {
+        let chosen = StoryTopic.preferred(from: preferredTopicsRaw)
+        let topics = StoryTopic.selectable.filter(chosen.contains)
+        if !topics.isEmpty {
+            VStack(alignment: .leading, spacing: AppSpacing.m) {
+                HStack {
+                    Text("Vos thèmes")
+                        .typeStyle(.section)
+                        .foregroundStyle(AppColors.Adaptive.textPrimary)
+                    Spacer()
+                    Button("Modifier") { showSettings = true }
+                        .typeStyle(.ui)
+                        .foregroundStyle(AppColors.Adaptive.textMeta)
+                }
+                .padding(.horizontal, AppSpacing.m)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: AppSpacing.s) {
+                        ForEach(topics) { topic in
+                            HStack(spacing: 6) {
+                                LucideIcon(topic.lucideIcon, size: 16)
+                                Text(topic.rawValue).typeStyle(.ui)
+                            }
+                            .foregroundStyle(AppColors.Adaptive.textPrimary)
+                            .padding(.horizontal, 14)
+                            .frame(minHeight: 40)
+                            .background(AppColors.Adaptive.cardSurface, in: Capsule())
+                        }
+                    }
+                }
+                .contentMargins(.horizontal, AppSpacing.m, for: .scrollContent)
+            }
+        }
     }
 
     // MARK: - Shelves

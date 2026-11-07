@@ -103,12 +103,11 @@ struct DesignSystemGalleryView: View {
         VStack(alignment: .leading, spacing: AppSpacing.st) {
             SectionHeader(title: "Tags de position", subtitle: "LeanTags · teinte OKLCH par position")
             FlowRow {
-                LeanTagPill(lean: .extremeGauche, text: "Surtout extrême gauche")
+                LeanTagPill(lean: .extremeGauche, text: "Surtout e. gauche")
                 LeanTagPill(lean: .gauche, text: "Surtout à gauche")
                 LeanTagPill(lean: .centre, text: "Surtout au centre", lighter: true)
                 LeanTagPill(lean: .droite, text: "Surtout à droite")
-                LeanTagPill(lean: .extremeDroite, text: "Surtout extrême droite")
-                LeanTagPill(lean: .centre, text: "Tous les bords")
+                LeanTagPill(lean: .extremeDroite, text: "Surtout e. droite")
                 LeanTagPill(lean: .centre, text: "Peu de sources")
             }
         }
@@ -117,8 +116,8 @@ struct DesignSystemGalleryView: View {
     /// The story page's per-position carousel, on a mock story.
     private var carousel: some View {
         VStack(alignment: .leading, spacing: AppSpacing.st) {
-            SectionHeader(title: "Carrousel des positions", subtitle: "SideCarouselView · s'ouvre sur la majorité")
-            SideCarouselView(story: Fixtures.stories[0], isSummaryUnavailable: false)
+            SectionHeader(title: "Couverture", subtitle: "CoverageSummaryView · s'ouvre sur la majorité")
+            CoverageSummaryView(story: Fixtures.stories[0])
         }
     }
 

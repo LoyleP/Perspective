@@ -4,9 +4,17 @@ import SwiftUI
 struct LeanTags: View {
     let coverage: CoverageStats
 
+    /// A balanced story is tagged with the position holding the most coverage.
+    private var verdict: LeanVerdict {
+        let kind = coverage.leanVerdictKind
+        guard kind == .balanced, let lean = PoliticalLean(rawValue: coverage.dominantLean) else { return kind }
+        return .leaning(lean)
+    }
+
+    static func isShown(for coverage: CoverageStats) -> Bool { true }
+
     var body: some View {
-        let verdict = coverage.leanVerdictKind
-        // The gray centre is lighter than the gray used for balanced / too few sources.
+        // The gray centre is lighter than the gray used for too few sources.
         LeanTagPill(lean: verdict.lean, text: verdict.tag, lighter: verdict == .leaning(.centre))
     }
 }
@@ -21,11 +29,11 @@ struct LeanTagPill: View {
     var body: some View {
         Text(text)
             .typeStyle(.metaMedium)
-            .foregroundStyle(lean.tagText)
+            .foregroundStyle(lean.pillText)
             .lineLimit(1)
             .padding(.horizontal, 7)
             .padding(.vertical, 2)
-            .background(lean.tagBackground(lighter: lighter), in: Capsule())
+            .background(lean.pillBackground(lighter: lighter), in: Capsule())
     }
 }
 
@@ -35,6 +43,15 @@ extension PoliticalLean {
 
     /// Dark mode: pale text on a deep (L 0.30) background of the same hue. Light mode: inverted.
     var tagText: Color { oklch(dark: Self.paleL, light: Self.deepL) }
+    /// The pill is the tag inverted: pale text on the deep tone.
+    var pillText: Color { .white }
+    /// A solid, saturated fill in the position's own hue (the gray centre stays neutral): the
+    /// extremes are deeper than gauche / droite.
+    func pillBackground(lighter: Bool = false) -> Color {
+        let extreme = self == .extremeGauche || self == .extremeDroite
+        if lighter { return oklch(dark: 0.62, light: 0.60, chroma: 0) }
+        return oklch(dark: extreme ? 0.46 : 0.56, light: extreme ? 0.46 : 0.56, chroma: extreme ? 0.15 : 0.15)
+    }
     /// The two extremes sit slightly darker than the other positions.
     func tagBackground(lighter: Bool = false) -> Color {
         let extreme = self == .extremeGauche || self == .extremeDroite
@@ -50,7 +67,7 @@ extension PoliticalLean {
         }
     }
 
-    fileprivate func oklch(dark: Double, light: Double) -> Color {
+    fileprivate func oklch(dark: Double, light: Double, chroma chromaOverride: Double? = nil) -> Color {
         // The pale value is swapped for the hand-picked one when there is one.
         let pale = tint?.paleL ?? Self.paleL
         let dark = dark == Self.paleL ? pale : dark
@@ -70,7 +87,7 @@ extension PoliticalLean {
             let chroma = (okA * okA + okB * okB).squareRoot()
             let hue = fixedHue ?? atan2(okB, okA)
             // Neutral positions (the gray centre) stay neutral.
-            let c = (chroma < 0.02 && fixedHue == nil) ? 0 : Self.tintChroma
+            let c = (chroma < 0.02 && fixedHue == nil) ? 0 : (chromaOverride ?? Self.tintChroma)
             let L = traits.userInterfaceStyle == .dark ? dark : light
             let a2 = c * cos(hue), b2 = c * sin(hue)
             let l3 = pow(L + 0.3963377774 * a2 + 0.2158037573 * b2, 3)

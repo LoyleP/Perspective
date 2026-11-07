@@ -14,7 +14,6 @@ struct StoryDetailView: View {
     /// Free topics left, shown for a few seconds when the allowance is nearly used.
     @State private var toastRemaining: Int?
     /// Side whose articles are shown in the sheet (opened by tapping a card).
-    @State private var sheetSide: PoliticalLean?
     /// Set to open the comments sheet; carries whether to start with the keyboard up.
     @State private var commentsRequest: CommentsRequest?
 
@@ -78,32 +77,27 @@ struct StoryDetailView: View {
 
                 // What happened, in one sentence, right under the headline.
                 if let summary = story.standfirst {
-                    ExpandableText(text: summary)
+                    DescriptionBullets(text: summary)
                         .padding(.horizontal, AppSpacing.m)
                         .padding(.top, AppSpacing.st)
                 }
 
                 gated {
                 if story.computedCoverage != nil {
-                    SideCarouselView(
-                        story: story,
-                        isSummaryUnavailable: viewModel.summaryUnavailable
-                    ) { side in
-                        Analytics.track(.sideArticlesOpen, ["story": story.id.uuidString, "side": side.label])
-                        sheetSide = side
-                    }
-                    .padding(.top, AppSpacing.l)
+                    CoverageSummaryView(story: story)
+                        .padding(.top, AppSpacing.l)
+                }
+
+                if !story.articles.isEmpty {
+                    MediaCardsSection(articles: story.articles)
+                        .padding(.top, AppSpacing.xxl)
                 }
 
                 if AppConfig.commentsEnabled {
                     discussion
                         .padding(.horizontal, AppSpacing.m)
-                        .padding(.top, AppSpacing.xl)
+                        .padding(.top, AppSpacing.xxl)
                 }
-
-                StoryThreadSection(articles: story.articles)
-                    .padding(.horizontal, AppSpacing.m)
-                    .padding(.top, AppSpacing.xl)
 
                 let sourced = story.articles.filter { $0.source != nil }
                 if !sourced.isEmpty {
@@ -112,7 +106,7 @@ struct StoryDetailView: View {
                             .padding(.horizontal, AppSpacing.m)
                         OwnershipBreakdownView(articles: sourced)
                     }
-                    .padding(.top, AppSpacing.xl)
+                    .padding(.top, AppSpacing.xxl)
                 }
                 }
             }
@@ -183,9 +177,6 @@ struct StoryDetailView: View {
                 .id(request.id)
                 .transition(.identity)
             }
-        }
-        .sheet(item: $sheetSide) { side in
-            SideArticlesSheet(side: side, articles: articles(for: side))
         }
         .onAppear {
             session.registerOpen(story.id)
@@ -365,6 +356,43 @@ private extension View {
             }
         } else {
             self
+        }
+    }
+}
+
+/// The description as bullet points, one per line. Descriptions written before the bullet format are
+/// split into sentences instead.
+private struct DescriptionBullets: View {
+    let text: String
+
+    private var bullets: [String] {
+        let lines = text.components(separatedBy: "\n")
+            .map { $0.trimmingCharacters(in: CharacterSet(charactersIn: "•-– ").union(.whitespaces)) }
+            .filter { !$0.isEmpty }
+        if lines.count > 1 { return Array(lines.prefix(4)) }
+        var sentences: [String] = []
+        text.enumerateSubstrings(in: text.startIndex..., options: .bySentences) { sub, _, _, _ in
+            if let sub = sub?.trimmingCharacters(in: .whitespacesAndNewlines), !sub.isEmpty { sentences.append(sub) }
+        }
+        return Array(sentences.prefix(4))
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.s) {
+            ForEach(Array(bullets.enumerated()), id: \.offset) { _, bullet in
+                HStack(alignment: .firstTextBaseline, spacing: AppSpacing.s) {
+                    Circle()
+                        .fill(AppColors.Adaptive.textMeta)
+                        .frame(width: 5, height: 5)
+                        .alignmentGuide(.firstTextBaseline) { $0[.bottom] + 5 }
+                        .accessibilityHidden(true)
+                    Text(bullet)
+                        .typeStyle(.standfirst)
+                        .foregroundStyle(AppColors.Adaptive.textBody)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
         }
     }
 }
