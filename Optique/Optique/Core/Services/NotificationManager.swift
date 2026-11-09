@@ -34,6 +34,7 @@ final class NotificationManager: NSObject {
     func checkAuthorizationStatus() async {
         let settings = await center.notificationSettings()
         authorizationStatus = settings.authorizationStatus
+        PushRegistration.registerIfAuthorized(status: settings.authorizationStatus)
     }
 
     // MARK: - Local Notification Scheduling

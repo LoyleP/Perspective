@@ -6,6 +6,11 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		157E68E2762FE9B6799D75FD /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B16F1310B208BE6560D9CD45 /* NotificationService.swift */; };
+		598D19778E6EDE57C4AC3C22 /* OptiqueNotificationService.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C179958C0CB5903E58DA1523 /* OptiqueNotificationService.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		8E871BF52F6EA117000C6A81 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -21,33 +26,71 @@
 			remoteGlobalIDString = 8E871BE42F6EA115000C6A81;
 			remoteInfo = Optique;
 		};
+		9FA7C4472279646A520E8023 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8E871BDD2F6EA115000C6A81 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8F1F6F0833307CC3224A91F3;
+			remoteInfo = OptiqueNotificationService;
+		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		30314699FC47A6F86D2E94A0 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				598D19778E6EDE57C4AC3C22 /* OptiqueNotificationService.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		4741E1F95A500880C0733D95 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		8E871BE52F6EA115000C6A81 /* Optique.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Optique.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		8E871BF42F6EA117000C6A81 /* OptiqueTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OptiqueTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		8E871BFE2F6EA117000C6A81 /* OptiqueUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OptiqueUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B16F1310B208BE6560D9CD45 /* NotificationService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
+		C179958C0CB5903E58DA1523 /* OptiqueNotificationService.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = OptiqueNotificationService.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		E8FD425958DC5D1AB97ED2BC /* Optique.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = Optique.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		8E871BE72F6EA115000C6A81 /* Optique */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = Optique;
 			sourceTree = "<group>";
 		};
 		8E871BF72F6EA117000C6A81 /* OptiqueTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = OptiqueTests;
 			sourceTree = "<group>";
 		};
 		8E871C012F6EA117000C6A81 /* OptiqueUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = OptiqueUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		39E7E0F4EB1A7E44DB4D56C0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		8E871BE22F6EA115000C6A81 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -79,6 +122,8 @@
 				8E871BF72F6EA117000C6A81 /* OptiqueTests */,
 				8E871C012F6EA117000C6A81 /* OptiqueUITests */,
 				8E871BE62F6EA115000C6A81 /* Products */,
+				C356BA31B721CC4CB0555CF2 /* OptiqueNotificationService */,
+				E8FD425958DC5D1AB97ED2BC /* Optique.entitlements */,
 			);
 			sourceTree = "<group>";
 		};
@@ -88,8 +133,19 @@
 				8E871BE52F6EA115000C6A81 /* Optique.app */,
 				8E871BF42F6EA117000C6A81 /* OptiqueTests.xctest */,
 				8E871BFE2F6EA117000C6A81 /* OptiqueUITests.xctest */,
+				C179958C0CB5903E58DA1523 /* OptiqueNotificationService.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		C356BA31B721CC4CB0555CF2 /* OptiqueNotificationService */ = {
+			isa = PBXGroup;
+			children = (
+				B16F1310B208BE6560D9CD45 /* NotificationService.swift */,
+				4741E1F95A500880C0733D95 /* Info.plist */,
+			);
+			name = OptiqueNotificationService;
+			path = OptiqueNotificationService;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -102,10 +158,12 @@
 				8E871BE12F6EA115000C6A81 /* Sources */,
 				8E871BE22F6EA115000C6A81 /* Frameworks */,
 				8E871BE32F6EA115000C6A81 /* Resources */,
+				30314699FC47A6F86D2E94A0 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				33CFB4CB8977738B947A5A31 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				8E871BE72F6EA115000C6A81 /* Optique */,
@@ -157,6 +215,23 @@
 			productReference = 8E871BFE2F6EA117000C6A81 /* OptiqueUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		8F1F6F0833307CC3224A91F3 /* OptiqueNotificationService */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BBDA850C03BC1DF28499760F /* Build configuration list for PBXNativeTarget "OptiqueNotificationService" */;
+			buildPhases = (
+				84DB151A4D633752D8DB164D /* Sources */,
+				39E7E0F4EB1A7E44DB4D56C0 /* Frameworks */,
+				F85AC61D6FBCC7FF9F872A14 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = OptiqueNotificationService;
+			productName = OptiqueNotificationService;
+			productReference = C179958C0CB5903E58DA1523 /* OptiqueNotificationService.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -198,6 +273,7 @@
 				8E871BE42F6EA115000C6A81 /* Optique */,
 				8E871BF32F6EA117000C6A81 /* OptiqueTests */,
 				8E871BFD2F6EA117000C6A81 /* OptiqueUITests */,
+				8F1F6F0833307CC3224A91F3 /* OptiqueNotificationService */,
 			);
 		};
 /* End PBXProject section */
@@ -224,9 +300,24 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F85AC61D6FBCC7FF9F872A14 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		84DB151A4D633752D8DB164D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				157E68E2762FE9B6799D75FD /* NotificationService.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		8E871BE12F6EA115000C6A81 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -251,6 +342,12 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		33CFB4CB8977738B947A5A31 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = OptiqueNotificationService;
+			target = 8F1F6F0833307CC3224A91F3 /* OptiqueNotificationService */;
+			targetProxy = 9FA7C4472279646A520E8023 /* PBXContainerItemProxy */;
+		};
 		8E871BF62F6EA117000C6A81 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 8E871BE42F6EA115000C6A81 /* Optique */;
@@ -264,6 +361,31 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		841F982FE2A175A6629365CB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = BJ66V252MG;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = OptiqueNotificationService/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.flow.optique.NotificationService;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
 		8E871C062F6EA117000C6A81 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -389,6 +511,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Optique.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = BJ66V252MG;
@@ -427,6 +550,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Optique.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = BJ66V252MG;
@@ -536,6 +660,32 @@
 			};
 			name = Release;
 		};
+		F3D5892792EEA3DE81D3800B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = BJ66V252MG;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = OptiqueNotificationService/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.flow.optique.NotificationService;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -571,6 +721,15 @@
 			buildConfigurations = (
 				8E871C0F2F6EA117000C6A81 /* Debug */,
 				8E871C102F6EA117000C6A81 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		BBDA850C03BC1DF28499760F /* Build configuration list for PBXNativeTarget "OptiqueNotificationService" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F3D5892792EEA3DE81D3800B /* Release */,
+				841F982FE2A175A6629365CB /* Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
