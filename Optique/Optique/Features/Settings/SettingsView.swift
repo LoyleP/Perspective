@@ -9,6 +9,7 @@ struct SettingsView: View {
     @Environment(BookmarkStore.self) private var bookmarks
     @Environment(\.dismiss) private var dismiss
     @AppStorage("notificationsEnabled") private var notificationsEnabled = false
+    @AppStorage("preferredTopics") private var preferredTopicsRaw = ""
 
     @State private var showMethodologie = false
     @State private var showOwnership = false
@@ -75,27 +76,22 @@ struct SettingsView: View {
                         }
                     }
                 }
+                NavigationLink {
+                    TopicPreferencesView()
+                } label: {
+                    LabeledContent {
+                        Text(preferredTopicsSummary)
+                    } label: {
+                        Label("Thèmes préférés", lucide: "layout-grid")
+                    }
+                }
             } header: {
-                Text("Notifications")
+                Text("Préférences")
             } footer: {
                 Text("Au plus une alerte par heure, quand un sujet est couvert par plusieurs médias.")
             }
 
-            Section("Lecture") {
-                NavigationLink {
-                    TopicPreferencesView()
-                } label: {
-                    Label("Thèmes préférés", lucide: "layout-grid")
-                }
-                Button(role: .destructive) {
-                    confirmReset = true
-                } label: {
-                    Label("Effacer l'historique", lucide: "trash-2")
-                }
-                .disabled(history.leans.isEmpty && history.stories.isEmpty)
-            }
-
-            Section("À propos") {
+            Section("Transparence") {
                 Button {
                     showMethodologie = true
                 } label: {
@@ -106,16 +102,20 @@ struct SettingsView: View {
                 } label: {
                     Label("Propriété des médias", lucide: "building-2")
                 }
-                if let url = URL(string: "https://loylep.github.io/Perspective/legal/privacy-policy") {
-                    Link(destination: url) {
-                        Label("Politique de confidentialité", lucide: "hand")
-                    }
+            }
+
+            Section("Données et légal") {
+                NavigationLink {
+                    LegalView()
+                } label: {
+                    Label("Informations légales", lucide: "scale")
                 }
-                if let url = URL(string: "https://loylep.github.io/Perspective/legal/terms-of-service") {
-                    Link(destination: url) {
-                        Label("Conditions d'utilisation", lucide: "file")
-                    }
+                Button(role: .destructive) {
+                    confirmReset = true
+                } label: {
+                    Label("Effacer l'historique", lucide: "trash-2")
                 }
+                .disabled(history.leans.isEmpty && history.stories.isEmpty)
                 LabeledContent("Version", value: appVersion)
             }
 
@@ -193,6 +193,12 @@ struct SettingsView: View {
         .presentationDetents([.medium, .large])
     }
 
+    /// Right-hand value of the "Thèmes préférés" row: how many topics are followed.
+    private var preferredTopicsSummary: String {
+        let count = StoryTopic.preferred(from: preferredTopicsRaw).count
+        return count == 0 ? "Aucun" : "\(count)"
+    }
+
     private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
     }
@@ -263,3 +269,27 @@ struct SettingsView: View {
         .environment(ReadingHistoryStore())
 }
 #endif
+
+/// Privacy policy and terms of service, grouped off the main settings list.
+struct LegalView: View {
+    var body: some View {
+        Form {
+            if let url = URL(string: "https://loylep.github.io/Perspective/legal/privacy-policy") {
+                Link(destination: url) {
+                    Label("Politique de confidentialité", lucide: "hand")
+                }
+            }
+            if let url = URL(string: "https://loylep.github.io/Perspective/legal/terms-of-service") {
+                Link(destination: url) {
+                    Label("Conditions d'utilisation", lucide: "file")
+                }
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .background(AppColors.Adaptive.background.ignoresSafeArea())
+        .tint(AppColors.Adaptive.textPrimary)
+        .navigationTitle("Informations légales")
+        .navigationBarTitleDisplayMode(.inline)
+        .appBackButton()
+    }
+}
