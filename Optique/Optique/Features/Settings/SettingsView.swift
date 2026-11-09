@@ -236,6 +236,7 @@ struct SettingsView: View {
             defaults.removeObject(forKey: key)
         }
         notificationsEnabled = false
+        PushRegistration.unregister()
         hasCompletedOnboarding = false   // the root shows the onboarding again
         Haptics.success()
         dismiss()
