@@ -16,7 +16,10 @@ enum PushRegistration {
     }
 
     /// Safe to call often: iOS answers with the same token until it changes.
+    /// A reader who hasn't finished the onboarding (first launch, or after "Nouvel utilisateur") isn't registered,
+    /// even when iOS permission was granted earlier: the phone joins the push list when the onboarding ends.
     static func registerIfAuthorized(status: UNAuthorizationStatus) {
+        guard UserDefaults.standard.bool(forKey: "hasCompletedOnboarding") else { return }
         guard status == .authorized || status == .provisional || status == .ephemeral else { return }
         #if DEBUG
         if Fixtures.isActive { return }
@@ -24,8 +27,20 @@ enum PushRegistration {
         UIApplication.shared.registerForRemoteNotifications()
     }
 
+    private static let tokenKey = "pushDeviceToken"
+
+    /// Takes this phone off the push list (used by the "new user" reset). iOS keeps its own permission switch,
+    /// which an app can't turn off: only deleting the app or the Réglages toggle resets it.
+    static func unregister() {
+        UIApplication.shared.unregisterForRemoteNotifications()
+        guard let token = UserDefaults.standard.string(forKey: tokenKey) else { return }
+        UserDefaults.standard.removeObject(forKey: tokenKey)
+        Task { try? await APIClient.shared.post("devices", body: ["token": token], method: "DELETE") }
+    }
+
     static func upload(deviceToken: Data) {
         let token = deviceToken.map { String(format: "%02x", $0) }.joined()
+        UserDefaults.standard.set(token, forKey: tokenKey)
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
         Task {
             do {

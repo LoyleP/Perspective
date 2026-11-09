@@ -101,6 +101,8 @@ struct RootView: View {
             // Finishing the onboarding always lands on the home feed, even when it was started from a page
             // deep in the app (the "new user" test setting restarts it from the profile).
             if isDone, !wasDone {
+                // The phone joins the push list once the onboarding is done (permission may already be granted).
+                Task { await NotificationManager.shared.checkAuthorizationStatus() }
                 for tab in 0...3 { _ = navRegistry.popToRoot(tab) }
                 selectedTab = 0
             }

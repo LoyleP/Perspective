@@ -54,9 +54,9 @@ final class APIClient: Sendable {
         error is CancellationError || (error as? URLError)?.code == .cancelled
     }
 
-    func post(_ path: String, body: [String: String]) async throws {
+    func post(_ path: String, body: [String: String], method: String = "POST") async throws {
         var request = URLRequest(url: baseURL.appendingPathComponent(path))
-        request.httpMethod = "POST"
+        request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         let (_, response) = try await session.data(for: request)
