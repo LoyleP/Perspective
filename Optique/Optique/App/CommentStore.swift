@@ -73,13 +73,13 @@ final class CommentStore {
         ]
         save()
     }
+    #endif
 
-    /// Removes every comment (debug menu).
+    /// Removes every comment (debug menu, settings reset).
     func clearAll() {
         comments = []
         save()
     }
-    #endif
 
     private func save() {
         if let data = try? JSONEncoder().encode(comments) { defaults.set(data, forKey: storageKey) }
