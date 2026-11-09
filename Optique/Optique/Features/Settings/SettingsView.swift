@@ -15,11 +15,7 @@ struct SettingsView: View {
     @State private var showPaywall = false
     @State private var showManage = false
     @State private var confirmReset = false
-    @State private var confirmNewUser = false
     @State private var isRestoring = false
-
-    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = true
-    @State private var showOnboarding = false
 
     #if DEBUG
     @State private var notificationTestMessage = ""
@@ -59,48 +55,6 @@ struct SettingsView: View {
                         }
                     }
                     .disabled(isRestoring)
-                }
-
-                // Test builds only: shows the app as a free or as an Optique+ reader sees it.
-                Section {
-                    Toggle(isOn: Binding(get: { session.testPremium }, set: { session.testPremium = $0 })) {
-                        Label("Compte Optique+", lucide: "sparkles")
-                    }
-                    .sensoryFeedback(.selection, trigger: session.testPremium)
-                    Button {
-                        session.resetCounter()
-                        Haptics.lightImpact()
-                    } label: {
-                        LabeledContent {
-                            Text("\(session.storiesOpened) / \(session.freeLimit)")
-                                .monospacedDigit()
-                        } label: {
-                            Label("Remettre les sujets gratuits à zéro", lucide: "undo-2")
-                        }
-                    }
-                    .foregroundStyle(AppColors.Adaptive.textPrimary)
-                    Button {
-                        hasCompletedOnboarding = false
-                        showOnboarding = true
-                    } label: {
-                        Label("Rejouer l'onboarding", lucide: "undo-2")
-                    }
-                    .foregroundStyle(AppColors.Adaptive.textPrimary)
-                    Button {
-                        showPaywall = true
-                    } label: {
-                        Label("Afficher le paywall", lucide: "sparkles")
-                    }
-                    .foregroundStyle(AppColors.Adaptive.textPrimary)
-                    Button(role: .destructive) {
-                        confirmNewUser = true
-                    } label: {
-                        Label("Simuler un nouvel utilisateur", lucide: "circle-user")
-                    }
-                } header: {
-                    Text("Version de test")
-                } footer: {
-                    Text("Bascule entre la vue d'un compte gratuit (\(session.freeLimit) sujets par jour) et celle d'un compte Optique+. Ce réglage disparaîtra de la version publique.")
                 }
             }
 
@@ -200,11 +154,6 @@ struct SettingsView: View {
         } message: {
             Text("Votre historique et votre spectre de lecture seront remis à zéro.")
         }
-        .confirmationDialog("Simuler un nouvel utilisateur ?", isPresented: $confirmNewUser, titleVisibility: .visible) {
-            Button("Tout remettre à zéro", role: .destructive) { resetToNewUser() }
-        } message: {
-            Text("Onboarding, thèmes, historique, enregistrés, lois suivies, sujets gratuits et compte Optique+ de test sont effacés. L'autorisation des notifications, elle, se réinitialise dans les réglages de l'iPhone.")
-        }
         .sheet(isPresented: $showMethodologie) {
             textSheet(title: "Méthodologie", text: methodologieText)
         }
@@ -215,31 +164,9 @@ struct SettingsView: View {
             PaywallView(isReplay: true)
         }
         .manageSubscriptionsSheet(isPresented: $showManage)
-        .fullScreenCover(isPresented: $showOnboarding) {
-            OnboardingView()
-        }
     }
 
     // MARK: - Sheets
-
-    /// Puts the app back in the state of a first launch: onboarding to see again, nothing saved, no
-    /// preferences, a full daily allowance and a free account.
-    private func resetToNewUser() {
-        session.testPremium = false
-        session.resetCounter()
-        history.reset()
-        bookmarks.reset()
-        LawFollowStore.shared.reset()
-        let defaults = UserDefaults.standard
-        for key in ["preferredTopics", "notificationsEnabled", "alertsPromptDismissed", "lastSeenAlertsAt",
-                    "lastNotificationId", "lastStoryCount", "seenFirstStoryHint"] {
-            defaults.removeObject(forKey: key)
-        }
-        notificationsEnabled = false
-        hasCompletedOnboarding = false   // the root shows the onboarding again
-        Haptics.success()
-        dismiss()
-    }
 
     private func textSheet(title: String, text: String) -> some View {
         NavigationStack {

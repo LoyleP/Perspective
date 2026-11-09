@@ -14,10 +14,6 @@ struct AlertesView: View {
         VStack(spacing: 0) {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: AppSpacing.l) {
-                    Text("Alertes")
-                        .typeStyle(.screenTitle)
-                        .foregroundStyle(AppColors.Adaptive.textPrimary)
-                        .accessibilityAddTraits(.isHeader)
                     if viewModel.authorizationStatus != .authorized && viewModel.authorizationStatus != .provisional {
                         permissionCard
                     }

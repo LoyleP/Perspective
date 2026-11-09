@@ -100,6 +100,7 @@ private struct DebugMenuView: View {
     @State private var message = ""
     @State private var ping: [String: String] = [:]
     @State private var confirmWipe = false
+    @State private var confirmNewUser = false
 
     private let notifications = NotificationManager.shared
 
@@ -146,6 +147,11 @@ private struct DebugMenuView: View {
                 Button("Tout effacer", role: .destructive) { wipeEverything() }
             } message: {
                 Text("Préférences, historique, enregistrés, onboarding… L'app se recharge.")
+            }
+            .confirmationDialog("Simuler un nouvel utilisateur ?", isPresented: $confirmNewUser, titleVisibility: .visible) {
+                Button("Tout remettre à zéro", role: .destructive) { resetToNewUser() }
+            } message: {
+                Text("Onboarding, thèmes, historique, enregistrés, lois suivies, sujets gratuits et compte Optique+ de test sont effacés. L'autorisation des notifications, elle, se réinitialise dans les réglages de l'iPhone.")
             }
         }
     }
@@ -220,6 +226,9 @@ private struct DebugMenuView: View {
                     await refreshAuthStatus()
                 }
             }
+            Button("Simuler une alerte") {
+                Task { await simulateAlert() }
+            }
             Button("Notification dans 5 s (ouvre un sujet)") {
                 Task { await schedule(withStory: true) }
             }
@@ -269,6 +278,33 @@ private struct DebugMenuView: View {
         }
     }
 
+    /// Adds a fake alert built from the latest story at the top of the Alertes tab (with the unread
+    /// badge on the bell) and shows its banner, like a real alert from the server would.
+    private func simulateAlert() async {
+        guard let story = await sampleStory() else { return done("Aucun sujet disponible.") }
+        let counts = story.computedCoverage.map {
+            [$0.lean1Count, $0.lean2Count, $0.lean3Count, $0.lean4Count, $0.lean5Count, $0.lean6Count, $0.lean7Count]
+        }
+        let sourceCount = story.sources.count
+        let alert = PushNotification(
+            id: UUID(),
+            title: story.title,
+            body: "Alerte simulée · \(sourceCount) \(sourceCount == 1 ? "source" : "sources")",
+            storyCount: 1,
+            storyId: story.id,
+            sentAt: Date(),
+            createdAt: Date(),
+            leanCounts: counts
+        )
+        notifications.debugAlerts.insert(alert, at: 0)
+        await refreshAuthStatus()
+        try? await notifications.debugSchedule(title: alert.title, body: alert.body, storyID: story.id, after: 1)
+        DebugMenu.reloadApp()
+        done(notifications.authorizationStatus == .authorized
+             ? "Alerte ajoutée en tête de l'onglet Alertes, bannière dans 1 s."
+             : "Alerte ajoutée en tête de l'onglet Alertes (pas de bannière : notifications non autorisées).")
+    }
+
     private func sampleStory() async -> Story? {
         try? await StoryRepository.shared.fetchFeed(topic: nil, limit: 1, offset: 0).first
     }
@@ -288,10 +324,21 @@ private struct DebugMenuView: View {
     // MARK: Abonnement
 
     private var subscriptionSection: some View {
-        Section("Abonnement") {
-            Toggle("Forcer Optique+ (premium)", isOn: Binding(get: { session.testPremium }, set: { session.testPremium = $0 }))
-            LabeledContent("Sujets ouverts (session)", value: "\(session.storiesOpened)")
-            Button("Remettre le compteur à 0") { session.resetCounter() }
+        Section {
+            Toggle("Compte Optique+ (test)", isOn: Binding(get: { session.testPremium }, set: { session.testPremium = $0 }))
+                .sensoryFeedback(.selection, trigger: session.testPremium)
+            Button {
+                session.resetCounter()
+                Haptics.lightImpact()
+                done("Sujets gratuits remis à zéro.")
+            } label: {
+                LabeledContent {
+                    Text("\(session.storiesOpened) / \(session.freeLimit)")
+                        .monospacedDigit()
+                } label: {
+                    Text("Remettre les sujets gratuits à zéro")
+                }
+            }
             Button("Restaurer les achats") {
                 Task {
                     await session.storeManager.restorePurchases()
@@ -299,6 +346,10 @@ private struct DebugMenuView: View {
                 }
             }
             LabeledContent("Produits StoreKit", value: "\(session.storeManager.products.count)")
+        } header: {
+            Text("Abonnement")
+        } footer: {
+            Text("Bascule entre la vue d'un compte gratuit (\(session.freeLimit) sujets par jour) et celle d'un compte Optique+.")
         }
     }
 
@@ -331,8 +382,30 @@ private struct DebugMenuView: View {
                 UserDefaults.standard.removeObject(forKey: "preferredTopics")
                 done("Thèmes réinitialisés.")
             }
+            Button("Simuler un nouvel utilisateur", role: .destructive) { confirmNewUser = true }
             Button("Tout effacer (UserDefaults + historique)", role: .destructive) { confirmWipe = true }
         }
+    }
+
+    /// Puts the app back in the state of a first launch: onboarding to see again, nothing saved, no
+    /// preferences, a full daily allowance and a free account.
+    private func resetToNewUser() {
+        session.testPremium = false
+        session.resetCounter()
+        history.reset()
+        bookmarks.reset()
+        LawFollowStore.shared.reset()
+        CommentStore.shared.clearAll()
+        notifications.debugAlerts = []
+        let defaults = UserDefaults.standard
+        for key in ["preferredTopics", "notificationsEnabled", "alertsPromptDismissed", "lastSeenAlertsAt",
+                    "lastNotificationId", "lastStoryCount", "seenFirstStoryHint", "profileSince"] {
+            defaults.removeObject(forKey: key)
+        }
+        notificationsEnabled = false
+        hasCompletedOnboarding = false   // the root shows the onboarding again
+        Haptics.success()
+        dismiss()
     }
 
     private func wipeEverything() {

@@ -106,6 +106,9 @@ final class NotificationManager: NSObject {
     }
 
     #if DEBUG
+    /// Alerts simulated from the debug menu: listed first in the Alertes tab until the app quits.
+    var debugAlerts: [PushNotification] = []
+
     /// Schedules a local notification that opens `storyID` when tapped (debug menu).
     func debugSchedule(title: String, body: String, storyID: UUID?, after seconds: TimeInterval) async throws {
         let content = UNMutableNotificationContent()
@@ -127,6 +130,7 @@ final class NotificationManager: NSObject {
     /// Send date of the most recent notification, for the unread badge.
     func latestNotificationDate() async -> Date? {
         #if DEBUG
+        if let simulated = debugAlerts.first?.sentAt { return simulated }
         if Fixtures.isActive { return Fixtures.notifications.first?.sentAt }
         #endif
         let latest: [PushNotification]? = try? await APIClient.shared.get("notifications", query: ["limit": "1"])
@@ -135,17 +139,27 @@ final class NotificationManager: NSObject {
 
     func cachedNotifications() async -> [PushNotification]? {
         #if DEBUG
-        if Fixtures.isActive { return nil }
-        #endif
+        if Fixtures.isActive { return debugAlerts.isEmpty ? nil : debugAlerts }
+        let cached: [PushNotification]? = await APIClient.shared.cached("notifications", query: ["limit": "50"])
+        return debugAlerts.isEmpty ? cached : debugAlerts + (cached ?? [])
+        #else
         return await APIClient.shared.cached("notifications", query: ["limit": "50"])
+        #endif
     }
 
     func fetchNotifications() async throws -> [PushNotification] {
         #if DEBUG
-        if Fixtures.isActive { return try await Fixtures.apply(Fixtures.notifications) }
+        if Fixtures.isActive {
+            let fixtures = try await Fixtures.apply(Fixtures.notifications)
+            return debugAlerts + fixtures
+        }
         #endif
         let notifications: [PushNotification] = try await APIClient.shared.get("notifications", query: ["limit": "50"])
+        #if DEBUG
+        return debugAlerts + notifications
+        #else
         return notifications
+        #endif
     }
 }
 
