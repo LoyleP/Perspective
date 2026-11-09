@@ -2,6 +2,7 @@
 import { pool } from "../lib/db.js";
 import { topicTags } from "../lib/topics.js";
 import { writeBriefs } from "../lib/briefs.js";
+import { sendPendingPush } from "../lib/push.js";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -901,9 +902,15 @@ async function handle(req: Request): Promise<Response> {
     let briefsWritten = 0;
     try { briefsWritten = await writeBriefs(); } catch (e) { console.error("briefs failed:", e); }
 
+    // Phase 4: push the newest alert to registered devices (once briefs exist, so the push carries the
+    // reworded title and the description). Respects quiet hours and a minimum gap.
+    let push: Record<string, unknown> = {};
+    try { push = await sendPendingPush(); } catch (e) { console.error("push failed:", e); push = { error: String(e) }; }
+
     return new Response(
       JSON.stringify({
         ok: true,
+        push,
         ingest: {
           new_articles: ingestResult.new_articles,
           source_log: ingestResult.log,

@@ -6,7 +6,7 @@ Backend = Vercel serverless functions (`api/` folder at the repo root) + Neon Po
 
 - **Vercel project:** `optique-api` (team scope `arthurs-projects-3082f163`), root directory `api`, git-linked to `LoyleP/Perspective` (branch `main`). Production URL: `https://api-chi-henna-92.vercel.app`.
 - **Database:** Neon Postgres, Vercel resource `optique-db`. Env vars injected by the integration (`DATABASE_URL` pooled, `DATABASE_URL_UNPOOLED` for migrations/psql).
-- **Other env vars (Production):** `GEMINI_API_KEY`, `CRON_SECRET`. Local copy in `api/.env.local` (gitignored).
+- **Other env vars (Production):** `GEMINI_API_KEY`, `CRON_SECRET`, `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_KEY` (contents of the .p8), optional `APNS_BUNDLE_ID`, `PUSH_MIN_GAP_HOURS` (default 3). Local copy in `api/.env.local` (gitignored).
 - **Deploy:** from the repo root `vercel deploy --prod` (root dir is `api`), or push to `main`.
 
 ## API Routes (`api/api/*.ts`)
@@ -19,6 +19,8 @@ Backend = Vercel serverless functions (`api/` folder at the repo root) + Neon Po
 | `/api/sources` | GET `[id]` | Active sources by `political_lean`, or one source |
 | `/api/source-articles` | GET `source_id, limit` | Recent articles of a source |
 | `/api/notifications` | GET `limit` | Latest notifications |
+| `/api/devices` | POST `{token, environment, app_version}` / DELETE `{token}` | Registers or forgets an APNs device token (`push_devices`) |
+| `/api/devices?test=1` | POST `{token?, notification_id?}`, `Bearer $CRON_SECRET` | Sends the latest alert now, to one device or all, ignoring quiet hours |
 | `/api/generate-spectrum-summary` | POST `{story_id}` | Idempotent. Groups articles by 5-bucket lean, calls Gemini 2.5 Flash-Lite, stores `stories.spectrum_summary`. Always French. |
 | `/api/refresh-stories` | GET/POST, `Authorization: Bearer $CRON_SECRET` | Phase 1 RSS ingest, Phase 2 clustering, then featured story + notification |
 
@@ -84,3 +86,12 @@ TF-IDF + named-entity (NER) clustering over the last `WINDOW_HOURS=72` of unclus
 4. **Feed cache:** In-memory only (48h TTL in FeedViewModel, 6h in DiscoverViewModel). Cold launches always hit the network (edge-cached 60s).
 5. **Clustering only reprocesses unclustered articles:** Phase 2 selects `story_id IS NULL`. Once an article joins a story it is never re-evaluated, so a bad merge persists until the story is deleted.
 6. **Unauthenticated API:** read routes and the summary route are public. Only `refresh-stories` is protected (`CRON_SECRET`).
+
+## Push Notifications (APNs)
+
+- `refresh-stories` Phase 4 calls `sendPendingPush()` (`api/lib/push.ts`) after briefs are written. It pushes the newest unpushed `notifications` row, only between 08:00 and 22:00 Paris time, at least `PUSH_MIN_GAP_HOURS` after the previous push, never for a row older than 12 h; older unpushed rows are marked superseded. Nothing happens until the `APNS_*` env vars exist.
+- Payload: alert title = story brief title, alert body = description (dek bullets joined, else summary), `story_id`, `lean_counts` (7 ints), `mutable-content: 1`. `api/lib/apns.ts` signs an ES256 JWT with the .p8 and posts over HTTP/2 (sandbox and production hosts, per device `environment`). Dead tokens (410, BadDeviceToken) are deleted.
+- Tables: `push_devices(token, environment, app_version, ...)`, `notifications.pushed_at/push_sent`. Created on first use (`ensurePushSchema`) and listed in `schema.sql`.
+- iOS: `PushRegistration` + `AppDelegate` register the token whenever permission is authorized (each foreground). Target `OptiqueNotificationService` (UNNotificationServiceExtension, bundle `com.flow.optique.NotificationService`) draws the coverage bar PNG from `lean_counts` and attaches it. The old in-app polling (`checkForNewStories` on foreground) no longer runs automatically; the in-app Alertes list is unchanged.
+
+Vercel Hobby allows at most 12 serverless functions per project: `api/api/` has 12 files, so a new route needs merging into an existing one.

@@ -116,3 +116,14 @@ ALTER TABLE stories ADD COLUMN IF NOT EXISTS brief_at timestamptz;
 -- Plain-language explanation of a law (lib/laws.ts).
 ALTER TABLE laws ADD COLUMN IF NOT EXISTS plain_title text;
 ALTER TABLE laws ADD COLUMN IF NOT EXISTS why_it_matters text;
+
+-- Push alerts (lib/push.ts). Created on first use too; kept here as the reference.
+CREATE TABLE IF NOT EXISTS push_devices (
+  token text PRIMARY KEY,
+  environment text NOT NULL CHECK (environment IN ('sandbox', 'production')),
+  app_version text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  last_seen_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS pushed_at timestamptz;
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS push_sent int;

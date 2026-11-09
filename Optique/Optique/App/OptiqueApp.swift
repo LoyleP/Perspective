@@ -5,6 +5,7 @@ import OSLog
 @main
 struct OptiqueApp: App {
 
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
@@ -72,7 +73,8 @@ struct OptiqueApp: App {
             .onChange(of: scenePhase) { oldPhase, newPhase in
                 if newPhase == .active {
                     Task {
-                        await NotificationManager.shared.checkForNewStories()
+                        // Alerts now arrive as remote pushes; re-check permission and refresh the device token.
+                        await NotificationManager.shared.checkAuthorizationStatus()
                         await LawFollowStore.shared.checkForUpdates()
                     }
                 }
