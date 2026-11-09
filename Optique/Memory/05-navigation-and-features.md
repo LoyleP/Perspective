@@ -13,7 +13,7 @@ Custom FloatingTabBar (icons only) over three always-alive NavigationStacks (fol
     └── AlertesView (AppHeader) → StoryDetailView
 
 Profile: the avatar button at the left of the header (all three tabs) pushes ProfileView ("Mon Optique")
-  └── MySpectrumView, StoryDetailView, gear → SettingsView (sheet) → TopicPreferencesView, DesignSystemGalleryView (DEBUG)
+  └── MySpectrumView, StoryDetailView, gear → SettingsView (sheet) → TopicPreferencesView, LegalView, DesignSystemGalleryView (DEBUG)
 
 Overlays: OnboardingView (full-screen cover, first launch)
 ```
@@ -37,4 +37,4 @@ Notification tapped → `NotificationManager.pendingStoryID` → RootView select
 7. **Alerts** — bell with unread dot in the feed; list grouped by day with a spectrum line; permission card.
 8. **Onboarding** — live example, topic choice, alerts pre-prompt. Notification permission is never asked at launch.
 9. **Paywall** — soft gate after 5 story opens per session (non-blocking banner) → Optique+ sheet.
-10. **Settings** — standard grouped Form.
+10. **Settings** — standard grouped Form. Sections: Abonnement (PlanCard + restore, only when `paywallEnabled`), Préférences (alert toggle, Thèmes préférés with the topic count as value), Transparence (Méthodologie, Propriété des médias), Données et légal (Informations légales sub-page `LegalView`, Effacer l'historique, version), Développeur (DEBUG).
