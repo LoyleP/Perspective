@@ -1,7 +1,6 @@
 import SwiftUI
-import Charts
 
-/// Who owns the outlets covering a story: a donut chart plus legend, limited to the four
+/// Who owns the outlets covering a story: a stacked bar plus ranked rows, limited to the four
 /// largest owner types and an "Autres" slice, so five sections at most.
 struct OwnershipBreakdownView: View {
 
@@ -20,33 +19,46 @@ struct OwnershipBreakdownView: View {
 
     var body: some View {
         let items = breakdown
-        HStack(alignment: .center, spacing: AppSpacing.l) {
-            Chart(items) { item in
-                SectorMark(
-                    angle: .value("Part", item.count),
-                    innerRadius: .ratio(0.62),
-                    angularInset: 1.5
-                )
-                .cornerRadius(3)
-                .foregroundStyle(item.color)
+        VStack(alignment: .leading, spacing: AppSpacing.m) {
+            GeometryReader { geo in
+                HStack(spacing: 2) {
+                    ForEach(items) { item in
+                        item.color
+                            .frame(width: max(4, (geo.size.width - CGFloat(items.count - 1) * 2) * item.fraction))
+                    }
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 6))
             }
-            .chartLegend(.hidden)
-            .frame(width: 132, height: 132)
+            .frame(height: 16)
             .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: AppSpacing.s) {
+            VStack(spacing: AppSpacing.m) {
                 ForEach(items) { item in
-                    HStack(spacing: AppSpacing.s) {
-                        Circle().fill(item.color).frame(width: 8, height: 8)
-                        Text(item.name)
-                            .typeStyle(.body)
-                            .foregroundStyle(AppColors.Adaptive.textPrimary)
-                            .lineLimit(1)
-                        Spacer(minLength: AppSpacing.s)
-                        Text(item.fraction, format: .percent.precision(.fractionLength(0)))
-                            .typeStyle(.meta)
-                            .monospacedDigit()
-                            .foregroundStyle(AppColors.Adaptive.textMeta)
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(spacing: AppSpacing.s) {
+                            Circle().fill(item.color).frame(width: 8, height: 8)
+                            Text(item.name)
+                                .typeStyle(.body)
+                                .foregroundStyle(AppColors.Adaptive.textPrimary)
+                                .lineLimit(1)
+                            Spacer(minLength: AppSpacing.s)
+                            Text("\(item.count) média\(item.count > 1 ? "s" : "")")
+                                .typeStyle(.meta)
+                                .foregroundStyle(AppColors.Adaptive.textMeta)
+                            Text(item.fraction, format: .percent.precision(.fractionLength(0)))
+                                .typeStyle(.body)
+                                .monospacedDigit()
+                                .foregroundStyle(AppColors.Adaptive.textPrimary)
+                                .frame(minWidth: 44, alignment: .trailing)
+                        }
+                        GeometryReader { geo in
+                            Capsule().fill(item.color.opacity(0.18))
+                                .overlay(alignment: .leading) {
+                                    Capsule().fill(item.color)
+                                        .frame(width: max(4, geo.size.width * item.fraction))
+                                }
+                        }
+                        .frame(height: 4)
                     }
                     .accessibilityElement(children: .combine)
                 }

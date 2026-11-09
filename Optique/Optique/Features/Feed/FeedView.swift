@@ -5,6 +5,8 @@ import SwiftUI
 struct FeedView: View {
 
     @State private var topic: StoryTopic? = .tout
+    /// Where the pages are, in pages (1.5 is halfway between the second and the third), so the black pill follows a swipe.
+    @State private var pageProgress: CGFloat?
     @State private var deepLinkStory: Story?
     @Namespace private var transition
     private let notificationManager = NotificationManager.shared
@@ -14,7 +16,7 @@ struct FeedView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            TopicPills(topics: topics, selection: Binding(get: { current }, set: { topic = $0 }))
+            TopicPills(topics: topics, selection: Binding(get: { current }, set: { topic = $0 }), progress: pageProgress)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 0) {
@@ -30,6 +32,7 @@ struct FeedView: View {
             }
             .scrollTargetBehavior(.paging)
             .scrollPosition(id: $topic)
+            .trackingPageProgress { pageProgress = $0 }
         }
         .background(AppColors.Adaptive.background.ignoresSafeArea())
         .appHeaderToolbar()
@@ -347,3 +350,18 @@ extension View {
         .dynamicTypeSize(.accessibility2)
 }
 #endif
+
+private extension View {
+    /// Reports the horizontal scroll position in pages (iOS 18+; before that nothing is reported and the pill
+    /// follows the selection).
+    @ViewBuilder
+    func trackingPageProgress(_ update: @escaping (CGFloat) -> Void) -> some View {
+        if #available(iOS 18.0, *) {
+            onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.x / max($0.containerSize.width, 1) } action: { _, progress in
+                update(progress)
+            }
+        } else {
+            self
+        }
+    }
+}

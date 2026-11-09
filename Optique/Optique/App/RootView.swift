@@ -98,6 +98,12 @@ struct RootView: View {
             OnboardingView()
         }
         .onChange(of: hasCompletedOnboarding) { wasDone, isDone in
+            // Finishing the onboarding always lands on the home feed, even when it was started from a page
+            // deep in the app (the "new user" test setting restarts it from the profile).
+            if isDone, !wasDone {
+                for tab in 0...3 { _ = navRegistry.popToRoot(tab) }
+                selectedTab = 0
+            }
             // Entering the app after the onboarding: the plan comes up first, for readers who aren't Optique+ yet.
             guard isDone, !wasDone, AppConfig.paywallEnabled, !session.isPremium else { return }
             Task {

@@ -81,6 +81,8 @@ private struct MarqueeRow<Item: Identifiable, Card: View>: View {
             }
         }
         .fixedSize(horizontal: true, vertical: false)
+        // Drawn once into a texture: scrolling then only moves that texture instead of redrawing every card.
+        .drawingGroup()
         .offset(x: -startOffset + shift)
         .frame(width: width, alignment: .leading)
         .onAppear {

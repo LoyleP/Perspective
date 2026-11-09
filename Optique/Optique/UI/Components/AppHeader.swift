@@ -84,6 +84,10 @@ struct PillTabs<Item: Hashable & Identifiable>: View {
     @Binding var selection: Item
     let title: (Item) -> String
     var icon: (Item) -> String? = { _ in nil }
+    /// Where the pages being swiped are, in pills (1.5 is halfway from the second pill to the third). When
+    /// given, the black pill follows it, so it moves with a swipe as well as with a tap; nil falls back to
+    /// the selection.
+    var progress: CGFloat? = nil
     /// Each pill's frame inside the row, so the grey capsules and the highlight can be drawn as
     /// layers of their own: grey capsules, then the highlight, then every label on top.
     @State private var frames: [Item: CGRect] = [:]
@@ -92,8 +96,8 @@ struct PillTabs<Item: Hashable & Identifiable>: View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) {
-                    ForEach(items) { item in
-                        let isSelected = item == selection
+                    ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                        let isSelected = isHighlighted(index: index, item: item)
                         Button {
                             withAnimation(.app) { selection = item }
                         } label: {
@@ -117,13 +121,13 @@ struct PillTabs<Item: Hashable & Identifiable>: View {
                     ZStack(alignment: .topLeading) {
                         ForEach(items) { item in
                             if let frame = frames[item] {
-                                Capsule().fill(AppColors.Adaptive.surfaceElevated)
+                                restPill()
                                     .frame(width: frame.width, height: frame.height)
                                     .offset(x: frame.minX, y: frame.minY)
                             }
                         }
-                        if let frame = frames[selection] {
-                            Capsule().fill(AppColors.Adaptive.textPrimary)
+                        if let frame = highlightFrame() {
+                            selectedPill()
                                 .frame(width: frame.width, height: frame.height)
                                 .offset(x: frame.minX, y: frame.minY)
                         }
@@ -138,19 +142,60 @@ struct PillTabs<Item: Hashable & Identifiable>: View {
             }
         }
     }
+
+    /// Whether this pill's label sits on the black pill: the selected one, or the one the pages are mostly on.
+    private func isHighlighted(index: Int, item: Item) -> Bool {
+        if let progress { return abs(progress - CGFloat(index)) < 0.5 }
+        return item == selection
+    }
+
+    /// The black pill's frame: on the selected pill, or between two pills while a swipe is in between.
+    private func highlightFrame() -> CGRect? {
+        guard let progress, !items.isEmpty else { return frames[selection] }
+        let clamped = min(max(progress, 0), CGFloat(items.count - 1))
+        let lower = Int(clamped.rounded(.down))
+        let fraction = clamped - CGFloat(lower)
+        guard let a = frames[items[lower]] else { return frames[selection] }
+        guard fraction > 0.001, lower + 1 < items.count, let b = frames[items[lower + 1]] else { return a }
+        return CGRect(x: a.minX + (b.minX - a.minX) * fraction, y: a.minY,
+                      width: a.width + (b.width - a.width) * fraction, height: a.height)
+    }
+
+    /// An unselected pill: liquid glass where it exists, a grey capsule before.
+    @ViewBuilder
+    private func restPill() -> some View {
+        if #available(iOS 26.0, *) {
+            Color.clear.glassEffect(.regular, in: Capsule())
+        } else {
+            Capsule().fill(AppColors.Adaptive.surfaceElevated)
+        }
+    }
+
+    /// The selected pill: black, and glass tinted black where glass exists.
+    @ViewBuilder
+    private func selectedPill() -> some View {
+        if #available(iOS 26.0, *) {
+            Color.clear.glassEffect(.regular.tint(AppColors.Adaptive.textPrimary), in: Capsule())
+        } else {
+            Capsule().fill(AppColors.Adaptive.textPrimary)
+        }
+    }
 }
 
 /// The home page's topic pills.
 struct TopicPills: View {
     let topics: [StoryTopic]
     @Binding var selection: StoryTopic
+    /// Position of the pages being swiped, in pills.
+    var progress: CGFloat? = nil
 
     var body: some View {
         PillTabs(
             items: topics,
             selection: $selection,
             title: { $0 == .tout ? "À la une" : $0.rawValue },
-            icon: { $0.lucideIcon }
+            icon: { $0.lucideIcon },
+            progress: progress
         )
     }
 }

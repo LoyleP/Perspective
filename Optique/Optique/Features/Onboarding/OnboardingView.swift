@@ -185,14 +185,7 @@ struct OnboardingView: View {
             "Rouge à gauche, gris au centre, bleu à droite. Chaque carte montre ce qu'un média en dit.",
             fadesEdges: true
         ) {
-            Group {
-                if feed.count >= 3 {
-                    MarqueeGrid(items: feed, cardWidth: 300) { StoryRow(story: $0) }
-                } else {
-                    gridPlaceholder
-                }
-            }
-            .staggerIn(2)
+            grid(items: Array(storyRows), cardWidth: 300) { OnboardingStoryRow(story: $0) }
         }
     }
 
@@ -204,14 +197,7 @@ struct OnboardingView: View {
             "Un sujet repris par un seul bord est signalé : c'est ce que l'autre camp voit à peine.",
             fadesEdges: true
         ) {
-            Group {
-                if blindspots.count >= 3 {
-                    MarqueeGrid(items: blindspots, cardWidth: 230) { StoryHeroCard(story: $0, size: .medium) }
-                } else {
-                    gridPlaceholder
-                }
-            }
-            .staggerIn(2)
+            grid(items: Array(blindspotCards), cardWidth: 250) { OnboardingStoryCard(story: $0) }
         }
     }
 
@@ -223,25 +209,20 @@ struct OnboardingView: View {
             "Où en est chaque texte, ce qui vient ensuite et les articles qui en parlent.",
             fadesEdges: true
         ) {
-            Group {
-                if laws.count >= 3 {
-                    MarqueeGrid(items: laws, cardWidth: 300) { LawRow(law: $0) }
-                } else {
-                    gridPlaceholder
-                }
-            }
-            .staggerIn(2)
+            grid(items: Array(laws.prefix(12)), cardWidth: 300) { OnboardingLawRow(law: $0) }
         }
     }
 
     // MARK: - Step 5: topics
 
     private var topicsStep: some View {
-        visualStep(
-            "Qu'est-ce qui\nvous intéresse ?",
-            "Ces thèmes passent en premier dans votre fil, modifiables dans les Réglages."
-        ) {
-            ChipFlow(spacing: AppSpacing.s, trailing: true) {
+        // Unlike the other steps: the title and the pills sit at the bottom, and the description is one short,
+        // small, centred line between them and the button.
+        VStack(alignment: .leading, spacing: AppSpacing.l) {
+            Spacer(minLength: 0)
+            title("Qu'est-ce qui\nvous intéresse ?")
+                .staggerIn(0)
+            ChipFlow(spacing: AppSpacing.s) {
                 // The chips cascade in, one after the other.
                 ForEach(Array(StoryTopic.selectable.enumerated()), id: \.element) { index, topic in
                     TopicChip(topic: topic, isOn: topics.contains(topic)) {
@@ -251,9 +232,16 @@ struct OnboardingView: View {
                 }
             }
             .sensoryFeedback(.selection, trigger: topics)
-            .padding(.horizontal, AppSpacing.m)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+            Text("Ils passent en premier dans votre fil.")
+                .typeStyle(.meta)
+                .foregroundStyle(AppColors.Adaptive.textMeta)
+                .frame(maxWidth: .infinity)
+                .multilineTextAlignment(.center)
+                .staggerIn(1)
         }
+        .padding(.horizontal, AppSpacing.m)
+        .padding(.bottom, AppSpacing.s)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
     }
 
     // MARK: - Step 6: alerts
@@ -261,29 +249,44 @@ struct OnboardingView: View {
     private var alertsStep: some View {
         visualStep(
             "Les grands sujets,\ndès qu'ils éclatent",
-            "Une alerte quand un sujet est repris par de nombreux médias. Au plus une par heure."
+            nil
         ) {
             NotificationPreview(story: example)
                 .padding(.horizontal, AppSpacing.m)
         }
     }
 
-    /// Stories one side covers almost alone; falls back to the day's stories when there are too few.
-    private var blindspots: [Story] {
-        let alone = feed.filter { $0.computedCoverage?.blindspotSide != nil && $0.leadImageURL != nil }
-        return alone.count >= 6 ? alone : feed.filter { $0.leadImageURL != nil }
+    /// Stories with a photo, newest first, for the story-row backdrop.
+    private var storyRows: ArraySlice<Story> {
+        feed.filter { $0.leadImageURL != nil }.prefix(12)
     }
 
-    private var gridPlaceholder: some View {
-        RoundedRectangle(cornerRadius: AppRadius.xl)
-            .fill(AppColors.Adaptive.placeholder)
-            .frame(height: 280)
-            .padding(.horizontal, AppSpacing.m)
-            .shimmering()
+    /// Stories one side covers almost alone, then the rest of the day's, from the other end of the feed so
+    /// the two backdrops don't show the same stories.
+    private var blindspotCards: ArraySlice<Story> {
+        let withPhoto = feed.filter { $0.leadImageURL != nil }
+        let alone = withPhoto.filter { $0.computedCoverage?.blindspotSide != nil }
+        let rest = withPhoto.reversed().filter { story in !alone.contains { $0.id == story.id } }
+        return (alone + rest).prefix(12)
+    }
+
+    /// A moving backdrop of cards, or a shimmering block while the data loads.
+    @ViewBuilder
+    private func grid<Item: Identifiable, Card: View>(items: [Item], cardWidth: CGFloat, @ViewBuilder card: @escaping (Item) -> Card) -> some View {
+        if items.count >= 3 {
+            MarqueeGrid(items: items, cardWidth: cardWidth, card: card)
+                .fadeIn(delay: 0.24)
+        } else {
+            RoundedRectangle(cornerRadius: AppRadius.xl)
+                .fill(AppColors.Adaptive.placeholder)
+                .frame(height: 280)
+                .padding(.horizontal, AppSpacing.m)
+                .shimmering()
+        }
     }
 
     /// The common layout: the visual fills the room above, title and description sit left-aligned under it, at the same place on every step.
-    private func visualStep<V: View>(_ titleText: String, _ descriptionText: String, fadesEdges: Bool = false, @ViewBuilder visual: () -> V) -> some View {
+    private func visualStep<V: View>(_ titleText: String, _ descriptionText: String?, fadesEdges: Bool = false, @ViewBuilder visual: () -> V) -> some View {
         VStack(spacing: AppSpacing.l) {
             // Clipped to its own area: a moving backdrop must never run under the title, the description or the header.
             // The visual lives in an overlay of an empty box, so however tall it is it cannot push the text away.
@@ -306,7 +309,9 @@ struct OnboardingView: View {
                 .layoutPriority(-1)
             VStack(alignment: .leading, spacing: AppSpacing.s) {
                 title(titleText).multilineTextAlignment(.leading).staggerIn(0)
-                paragraph(descriptionText).multilineTextAlignment(.leading).staggerIn(1)
+                if let descriptionText {
+                    paragraph(descriptionText).multilineTextAlignment(.leading).staggerIn(1)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, AppSpacing.m)
@@ -437,7 +442,7 @@ private extension AnyTransition {
     static func stepExit(forward: Bool, reduceMotion: Bool) -> AnyTransition {
         if reduceMotion { return .opacity }
         return .modifier(
-            active: BlurShift(x: forward ? -56 : 56, y: 0, blur: 10, opacity: 0, scale: 0.97),
+            active: BlurShift(x: forward ? -56 : 56, y: 0, blur: 0, opacity: 0, scale: 0.97),
             identity: BlurShift(x: 0, y: 0, blur: 0, opacity: 1, scale: 1)
         )
     }
@@ -656,11 +661,6 @@ private struct NotificationPreview: View {
                 Haptics.selection()
                 withAnimation(.spring(duration: 0.5, bounce: 0.2)) { expanded.toggle() }
             }
-            Text(expanded ? "Touchez pour replier" : "Touchez la notification pour voir les deux")
-                .typeStyle(.meta)
-                .foregroundStyle(AppColors.Adaptive.textMeta)
-                .contentTransition(.opacity)
-                .animation(.app, value: expanded)
         }
         .onAppear {
             if reduceMotion { olderIn = true; newIn = true; return }
