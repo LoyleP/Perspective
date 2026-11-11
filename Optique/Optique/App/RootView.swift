@@ -26,6 +26,8 @@ struct RootView: View {
     #if DEBUG
     /// Bumped on every InjectionIII reload so the whole tree re-renders with the injected code.
     @State private var injectionCount = 0
+    /// Free-topics badge shown from the debug menu.
+    @State private var debugToastRemaining: Int?
     #endif
 
     var body: some View {
@@ -37,6 +39,26 @@ struct RootView: View {
             }
             .onReceive(NotificationCenter.default.publisher(for: DebugMenu.reloadNotification)) { _ in
                 injectionCount += 1
+            }
+            .overlay(alignment: .bottom) {
+                if let remaining = debugToastRemaining {
+                    FreeTopicToast(remaining: remaining) {
+                        debugToastRemaining = nil
+                        showsWelcomePaywall = true
+                    }
+                    .padding(.bottom, 104)
+                    .transition(.rise)
+                }
+            }
+            .animation(.enter, value: debugToastRemaining)
+            .onReceive(NotificationCenter.default.publisher(for: DebugMenu.freeToastNotification)) { note in
+                guard let remaining = note.object as? Int else { return }
+                Task {
+                    try? await Task.sleep(for: .milliseconds(500))
+                    debugToastRemaining = remaining
+                    try? await Task.sleep(for: .seconds(4))
+                    debugToastRemaining = nil
+                }
             }
             #endif
     }
@@ -77,9 +99,9 @@ struct RootView: View {
             .ignoresSafeArea(.container, edges: .bottom)
             .scaleEffect(tabBarState.isCompact ? 0.82 : 1, anchor: .bottom)
             .offset(y: tabBarState.isHidden || keyboardVisible ? 160 : 0)
-            .animation(.app, value: tabBarState.isHidden)
-            .animation(.app, value: keyboardVisible)
-            .animation(.app, value: tabBarState.isCompact)
+            .animation(.layout, value: tabBarState.isHidden)
+            .animation(.layout, value: keyboardVisible)
+            .animation(.layout, value: tabBarState.isCompact)
             .opacity(tabBarState.isHidden || keyboardVisible ? 0 : 1)
             .allowsHitTesting(!tabBarState.isHidden && !keyboardVisible)
         }
@@ -87,13 +109,14 @@ struct RootView: View {
         // Must come before the .environment calls: the debug menu sheet reads those objects,
         // and a sheet only inherits the environment of the view it is attached to.
         .debugMenu()
-        .sheet(isPresented: $showsWelcomePaywall) {
+        .fullScreenCover(isPresented: $showsWelcomePaywall) {
             PaywallView()
         }
         .environment(session)
         .environment(bookmarks)
         .environment(readingHistory)
         .environment(\.tabBarState, tabBarState)
+        .environment(\.tabBarClearance, max(FloatingTabBar.height - bottomSafeInset, 0))
         .fullScreenCover(isPresented: .constant(!hasCompletedOnboarding)) {
             OnboardingView()
         }

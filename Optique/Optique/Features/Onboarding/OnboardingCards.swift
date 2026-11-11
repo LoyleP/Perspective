@@ -23,7 +23,7 @@ struct OnboardingStoryRow: View {
 
             Color.clear
                 .frame(width: 108)
-                .overlay { RemoteImage(url: story.leadImageURL, maxPixel: 360) }
+                .overlay { RemoteImage(url: story.leadImageURL, maxPixel: 360, topic: story.placeholderTopic, alternates: story.imageAlternates) }
                 .clipped()
         }
         .frame(height: 124)
@@ -41,7 +41,7 @@ struct OnboardingStoryCard: View {
             Color.clear
                 .frame(height: 130)
                 .frame(maxWidth: .infinity)
-                .overlay { RemoteImage(url: story.leadImageURL, maxPixel: 600) }
+                .overlay { RemoteImage(url: story.leadImageURL, maxPixel: 600, topic: story.placeholderTopic, alternates: story.imageAlternates) }
                 .clipped()
             VStack(alignment: .leading, spacing: AppSpacing.st) {
                 Text(story.title)
@@ -69,13 +69,7 @@ struct OnboardingLawRow: View {
         VStack(alignment: .leading, spacing: AppSpacing.st) {
             if let name = law.authorName {
                 HStack(spacing: AppSpacing.s) {
-                    AsyncImage(url: law.authorPhoto.flatMap(URL.init(string:))) { image in
-                        image.resizable().scaledToFill()
-                    } placeholder: {
-                        Circle().fill(AppColors.Adaptive.surfaceElevated)
-                    }
-                    .frame(width: 24, height: 24)
-                    .clipShape(Circle())
+                    AuthorAvatar(url: law.authorPhoto)
                     Text(name)
                         .typeStyle(.meta)
                         .foregroundStyle(AppColors.Adaptive.textMeta)

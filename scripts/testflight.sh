@@ -24,9 +24,19 @@ cat > "$OUT/ExportOptions.plist" <<PLIST
 </dict></plist>
 PLIST
 
+# A different bundle ID has to reach the notification extension too (its ID must start with the app's),
+# which a command-line override can't do, so the project file is rewritten for the build and restored.
+PBX="$ROOT/Optique/Optique.xcodeproj/project.pbxproj"
+if [[ -n "$BUNDLE_ID" && "$BUNDLE_ID" != "com.flow.optique" ]]; then
+  cp "$PBX" "$OUT/project.pbxproj.bak"
+  trap 'cp "$OUT/project.pbxproj.bak" "$PBX"' EXIT
+  sed -i '' -e "s/com\.flow\.optique\.NotificationService/$BUNDLE_ID.NotificationService/g" \
+            -e "s/PRODUCT_BUNDLE_IDENTIFIER = com\.flow\.optique;/PRODUCT_BUNDLE_IDENTIFIER = $BUNDLE_ID;/g" "$PBX"
+fi
+
 xcodebuild archive -project "$ROOT/Optique/Optique.xcodeproj" -scheme Optique -configuration Release \
   -destination 'generic/platform=iOS' -archivePath "$OUT/Optique.xcarchive" \
-  CURRENT_PROJECT_VERSION="$BUILD" PRODUCT_BUNDLE_IDENTIFIER="${BUNDLE_ID:-com.flow.optique}" "${AUTH[@]}" -quiet
+  CURRENT_PROJECT_VERSION="$BUILD" "${AUTH[@]}" -quiet
 xcodebuild -exportArchive -archivePath "$OUT/Optique.xcarchive" -exportOptionsPlist "$OUT/ExportOptions.plist" \
   -exportPath "$OUT/export" "${AUTH[@]}"
 echo "Uploaded build $BUILD"

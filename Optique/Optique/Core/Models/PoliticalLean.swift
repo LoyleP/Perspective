@@ -3,7 +3,7 @@ import SwiftUI
 // French political spectrum in 5 positions. Raw values keep the stored 1–7 scale: the former
 // "centre-gauche" (3) is folded into gauche and "centre-droite" (5) into droite.
 // Convention: red = left, neutral gray = centre, blue = right
-enum PoliticalLean: Int, Codable, CaseIterable, Identifiable {
+nonisolated enum PoliticalLean: Int, Codable, CaseIterable, Identifiable {
     case extremeGauche   = 1
     case gauche          = 2
     case centre          = 4

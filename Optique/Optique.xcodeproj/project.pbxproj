@@ -62,22 +62,16 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		8E871BE72F6EA115000C6A81 /* Optique */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = Optique;
 			sourceTree = "<group>";
 		};
 		8E871BF72F6EA117000C6A81 /* OptiqueTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = OptiqueTests;
 			sourceTree = "<group>";
 		};
 		8E871C012F6EA117000C6A81 /* OptiqueUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = OptiqueUITests;
 			sourceTree = "<group>";
 		};
@@ -144,7 +138,6 @@
 				B16F1310B208BE6560D9CD45 /* NotificationService.swift */,
 				4741E1F95A500880C0733D95 /* Info.plist */,
 			);
-			name = OptiqueNotificationService;
 			path = OptiqueNotificationService;
 			sourceTree = "<group>";
 		};

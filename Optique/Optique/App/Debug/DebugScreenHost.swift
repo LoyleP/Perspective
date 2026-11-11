@@ -77,7 +77,7 @@ struct DebugScreenHost: View {
         // `--free` shows the free account, `--limit` also uses up its free topics.
         let session = SessionState()
         let args = CommandLine.arguments
-        if args.contains("--free") || args.contains("--limit") { session.testPremium = false }
+        if args.contains("--free") || args.contains("--limit") { session.setTestPremium(false) }
         if args.contains("--limit") { session.fillCounter() }
         _session = State(initialValue: session)
     }

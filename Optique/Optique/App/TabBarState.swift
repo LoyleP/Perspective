@@ -43,3 +43,31 @@ extension EnvironmentValues {
         set { self[TabBarStateKey.self] = newValue }
     }
 }
+
+private struct TabBarClearanceKey: EnvironmentKey {
+    static let defaultValue: CGFloat = 0
+}
+
+extension EnvironmentValues {
+    /// Room the floating tab bar takes at the bottom of a pushed page (set by RootView).
+    var tabBarClearance: CGFloat {
+        get { self[TabBarClearanceKey.self] }
+        set { self[TabBarClearanceKey.self] = newValue }
+    }
+}
+
+private struct TabBarClearanceModifier: ViewModifier {
+    @Environment(\.tabBarState) private var tabBar
+    @Environment(\.tabBarClearance) private var clearance
+
+    func body(content: Content) -> some View {
+        content.safeAreaInset(edge: .bottom, spacing: 0) {
+            Color.clear.frame(height: tabBar.isHidden ? 0 : clearance)
+        }
+    }
+}
+
+extension View {
+    /// Pushed pages don't inherit the tab's bottom inset, so they leave room for the floating bar themselves.
+    func tabBarClearance() -> some View { modifier(TabBarClearanceModifier()) }
+}

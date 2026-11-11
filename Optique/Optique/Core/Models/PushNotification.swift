@@ -1,6 +1,6 @@
 import Foundation
 
-struct PushNotification: Codable, Identifiable {
+nonisolated struct PushNotification: Codable, Identifiable {
     let id: UUID
     let title: String
     let body: String

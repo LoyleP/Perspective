@@ -14,9 +14,9 @@ struct PaywallView: View {
     @Environment(\.dismiss) private var systemDismiss
     @Environment(SessionState.self) private var session
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var plan: Plan = .annual
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isPurchasing = false
     @State private var showError = false
     @State private var errorMessage = ""
@@ -35,20 +35,23 @@ struct PaywallView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: AppSpacing.xl) {
+                closeButton
                 hero
                 // The prices come straight after the pitch, so they are on screen without scrolling.
                 plans.staggerIn(2)
                 benefits.staggerIn(3)
             }
             .padding(.horizontal, AppSpacing.m)
-            .padding(.top, 64)
+            .padding(.top, 0)
             .padding(.bottom, AppSpacing.l)
         }
         .scrollBounceBehavior(.basedOnSize)
         .safeAreaInset(edge: .bottom) { purchaseBar }
         .background(alignment: .top) { glow }
-        .background(AppColors.Adaptive.background.ignoresSafeArea())
-        .overlay(alignment: .topTrailing) { closeButton }
+        .background(Color.black.ignoresSafeArea())
+        // Black in light mode too: every token below resolves to its dark value.
+        .environment(\.colorScheme, .dark)
+        .preferredColorScheme(.dark)
         .sensoryFeedback(.selection, trigger: plan)
         .alert("Erreur", isPresented: $showError) {
             Button("OK", role: .cancel) {}
@@ -77,6 +80,7 @@ struct PaywallView: View {
                             )
                     }
                 }
+                .drawingGroup()   // one flattened layer to blur instead of five
                 .blur(radius: 64)
             }
         }
@@ -126,14 +130,14 @@ struct PaywallView: View {
         Button {
             dismiss()
         } label: {
+            // Same look as the system back button: a round glass button on iOS 26, a bordered material circle before.
             NavIcon("x")
                 .foregroundStyle(AppColors.Adaptive.textPrimary)
                 .frame(width: 44, height: 44)
-                .background(AppColors.Adaptive.surfaceElevated, in: Circle())
+                .modifier(RoundNavButtonBackground())
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Fermer")
-        .padding(AppSpacing.m)
     }
 
     // MARK: - Benefits
@@ -206,7 +210,7 @@ struct PaywallView: View {
                          strike: String?, badge: String?) -> some View {
         let selected = plan == option
         return Button {
-            withAnimation(.spring(duration: 0.35, bounce: 0.2)) { plan = option }
+            withAnimation(.select) { plan = option }
         } label: {
             HStack(spacing: AppSpacing.st) {
                 ZStack {
@@ -330,7 +334,7 @@ struct PaywallView: View {
             }
             .buttonStyle(.optiquePrimary)
             .disabled(isPurchasing)
-            .animation(.spring(duration: 0.35, bounce: 0.1), value: plan)
+            .animation(.select, value: plan)
 
             Text(terms)
                 .typeStyle(.meta)
@@ -338,7 +342,7 @@ struct PaywallView: View {
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
                 .contentTransition(.interpolate)
-                .animation(.spring(duration: 0.35, bounce: 0.1), value: plan)
+                .animation(.select, value: plan)
 
             HStack(spacing: AppSpacing.m) {
                 Button("Restaurer") {
@@ -381,7 +385,7 @@ struct PaywallView: View {
         } else {
             // Products not available (StoreKit configuration missing).
             #if DEBUG
-            session.testPremium = true
+            session.setTestPremium(true)
             dismiss()
             #else
             if isReplay { dismiss(); return }
@@ -398,3 +402,18 @@ struct PaywallView: View {
         .environment(SessionState())
 }
 #endif
+
+
+private struct RoundNavButtonBackground: ViewModifier {
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.glassEffect(.regular.interactive(), in: Circle())
+        } else {
+            content
+                .background(.ultraThinMaterial, in: Circle())
+                .overlay(Circle().stroke(AppColors.stroke, lineWidth: 1))
+                .shadow(color: .black.opacity(0.08), radius: 8, y: 2)
+        }
+    }
+}

@@ -14,6 +14,9 @@ struct OptiqueApp: App {
             CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
         }
         AppAppearance.configure()
+        // Sheets and pushed pages are separate hosting views: hide their scroll bars too.
+        UIScrollView.appearance().showsVerticalScrollIndicator = false
+        UIScrollView.appearance().showsHorizontalScrollIndicator = false
 
         #if DEBUG && targetEnvironment(simulator)
         // Live reload: loads InjectionIII's bundle when the InjectionIII app is installed.
@@ -29,6 +32,7 @@ struct OptiqueApp: App {
     }
 
     @State private var showSplash = true
+    @State private var launch = LaunchGate.shared
     #if DEBUG
     /// Screen opened with `--screen`; cleared by the gallery's home button to reach the real app.
     @State private var debugScreen = DebugRoute.screen
@@ -70,6 +74,9 @@ struct OptiqueApp: App {
                 }
             }
             .preferredColorScheme(.light)
+            // No scroll bars anywhere in the app.
+            .scrollIndicators(.hidden)
+            .onAppear { if skipsSplash { launch.entered = true } }
             .onChange(of: scenePhase) { oldPhase, newPhase in
                 if newPhase == .active {
                     Task {

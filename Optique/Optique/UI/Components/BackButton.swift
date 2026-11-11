@@ -11,6 +11,7 @@ private struct AppBackButton: ViewModifier {
         content
             .navigationBarBackButtonHidden(false)
             .background(SwipeBackDisabler(isDisabled: swipeDisabled))
+            .tabBarClearance()
     }
 }
 

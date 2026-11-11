@@ -2,6 +2,7 @@
 import { pool } from "../lib/db.js";
 import { topicTags } from "../lib/topics.js";
 import { writeBriefs } from "../lib/briefs.js";
+import { buildEditionIfDue } from "../lib/editions.js";
 import { sendPendingPush } from "../lib/push.js";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -902,6 +903,11 @@ async function handle(req: Request): Promise<Response> {
     let briefsWritten = 0;
     try { briefsWritten = await writeBriefs(); } catch (e) { console.error("briefs failed:", e); }
 
+    // Phase 3b: the Brief. Once a slot opens (matin from 06:00, soir from 18:00, Paris time) its edition is built
+    // from the briefs just written; a slot already built is left alone.
+    let edition: Record<string, unknown> = {};
+    try { edition = await buildEditionIfDue(); } catch (e) { console.error("edition failed:", e); edition = { error: String(e) }; }
+
     // Phase 4: push the newest alert to registered devices (once briefs exist, so the push carries the
     // reworded title and the description). Respects quiet hours and a minimum gap.
     let push: Record<string, unknown> = {};
@@ -917,6 +923,7 @@ async function handle(req: Request): Promise<Response> {
         },
         cluster: clusterResult,
         briefs_written: briefsWritten,
+        edition,
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );

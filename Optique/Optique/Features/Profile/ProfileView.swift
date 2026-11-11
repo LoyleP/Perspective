@@ -60,10 +60,10 @@ struct ProfileView: View {
         .navigationDestination(item: $openedStory) { story in
             StoryDetailView(story: story)
         }
-        .sheet(isPresented: $showPaywall) { PaywallView() }
+        .fullScreenCover(isPresented: $showPaywall) { PaywallView() }
         .manageSubscriptionsSheet(isPresented: $showManage)
-        .sheet(isPresented: $showSettings) {
-            NavigationStack { SettingsView() }
+        .navigationDestination(isPresented: $showSettings) {
+            SettingsView()
         }
         .sensoryFeedback(.selection, trigger: selectedLean)
         .onAppear {
@@ -73,8 +73,8 @@ struct ProfileView: View {
                 countersShown = true
                 selectedLean = dominantLean
             } else {
-                withAnimation(.spring(duration: 0.9, bounce: 0.1).delay(0.35)) { countersShown = true }
-                withAnimation(.spring(duration: 0.6, bounce: 0.2).delay(0.55)) { selectedLean = dominantLean }
+                withAnimation(.data.delay(0.35)) { countersShown = true }
+                withAnimation(.emphasis.delay(0.55)) { selectedLean = dominantLean }
             }
         }
     }
@@ -104,10 +104,10 @@ struct ProfileView: View {
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
                         .background(AppColors.Brand.accent, in: Capsule())
-                        .transition(.scale.combined(with: .opacity))
+                        .transition(.pop)
                     }
                 }
-                .animation(.spring(duration: 0.4, bounce: 0.2), value: session.isPremium)
+                .animation(.enter, value: session.isPremium)
                 Text("Avec Optique depuis \(sinceText)")
                     .typeStyle(.meta)
                     .foregroundStyle(AppColors.Adaptive.textMeta)
@@ -316,7 +316,7 @@ private struct StoryPoster: View {
     var body: some View {
         Color.clear
             .frame(width: width, height: height)
-            .overlay { RemoteImage(url: story.leadImageURL, tint: tint, maxPixel: 480) }
+            .overlay { RemoteImage(url: story.leadImageURL, tint: tint, maxPixel: 480, topic: story.placeholderTopic, alternates: story.imageAlternates) }
             .overlay(alignment: .bottomLeading) {
                 ZStack(alignment: .bottomLeading) {
                     LinearGradient(colors: [.clear, .black.opacity(0.78)], startPoint: .center, endPoint: .bottom)

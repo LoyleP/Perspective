@@ -7,6 +7,8 @@ import UIKit
 /// Floating debug button (or shake) → full debug menu. Debug builds only.
 enum DebugMenu {
     static let reloadNotification = Notification.Name("DEBUG_RELOAD_APP")
+    static let freeToastNotification = Notification.Name("DEBUG_SHOW_FREE_TOAST")
+    static let coverageTipNotification = Notification.Name("DEBUG_SHOW_COVERAGE_TIP")
     static func reloadApp() { NotificationCenter.default.post(name: reloadNotification, object: nil) }
 }
 
@@ -325,8 +327,16 @@ private struct DebugMenuView: View {
 
     private var subscriptionSection: some View {
         Section {
-            Toggle("Compte Optique+ (test)", isOn: Binding(get: { session.testPremium }, set: { session.testPremium = $0 }))
+            Toggle("Compte Optique+ (test)", isOn: Binding(get: { session.testPremium }, set: { session.setTestPremium($0) }))
                 .sensoryFeedback(.selection, trigger: session.testPremium)
+            Button("Réafficher l'info-bulle de la barre de couverture") {
+                NotificationCenter.default.post(name: DebugMenu.coverageTipNotification, object: nil)
+                dismiss()
+            }
+            Button("Simuler le badge « Plus que 4 sujets gratuits »") {
+                NotificationCenter.default.post(name: DebugMenu.freeToastNotification, object: 4)
+                dismiss()
+            }
             Button {
                 session.resetCounter()
                 Haptics.lightImpact()
@@ -390,7 +400,7 @@ private struct DebugMenuView: View {
     /// Puts the app back in the state of a first launch: onboarding to see again, nothing saved, no
     /// preferences, a full daily allowance and a free account.
     private func resetToNewUser() {
-        session.testPremium = false
+        session.setTestPremium(false)
         session.resetCounter()
         history.reset()
         bookmarks.reset()
@@ -466,10 +476,10 @@ private struct DebugMenuView: View {
     }
 
     private func done(_ text: String) {
-        withAnimation(.app) { message = text }
+        withAnimation(.enter) { message = text }
         Task {
             try? await Task.sleep(for: .seconds(4))
-            withAnimation(.app) { if message == text { message = "" } }
+            withAnimation(.exit) { if message == text { message = "" } }
         }
     }
 }

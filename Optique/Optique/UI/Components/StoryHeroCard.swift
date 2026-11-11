@@ -10,7 +10,7 @@ struct StoryHeroCard: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     enum Size {
-        case large   // 340 pt tall, lead story (big headline)
+        case large   // 290 pt tall, lead story (big headline)
         case medium  // 16:9, feature breaks in the feed
     }
 
@@ -18,7 +18,7 @@ struct StoryHeroCard: View {
         VStack(alignment: .leading, spacing: 0) {
             // The photo touches the card's top, left and right edges; the card's corners clip it.
             cover
-                .overlay { RemoteImage(url: story.leadImageURL, tint: tint) }
+                .overlay { RemoteImage(url: story.leadImageURL, tint: tint, topic: story.placeholderTopic, alternates: story.imageAlternates) }
                 .clipped()
                 .accessibilityHidden(true)
             // Apple Music: the text sits close under the artwork and the lines are tight.
@@ -36,14 +36,14 @@ struct StoryHeroCard: View {
         .accessibilityElement(children: .combine)
     }
 
-    /// The lead story's cover is as tall as the photo at the top of its own page (340 pt); the
+    /// The lead story's cover is as tall as the photo at the top of its own page (it used to match: 340 pt); the
     /// others are 16:9.
     @ViewBuilder
     private var cover: some View {
         if size == .large {
             Color.clear
                 .frame(maxWidth: .infinity)
-                .frame(height: 340)
+                .frame(height: 290)
         } else {
             Color.clear
                 .aspectRatio(16.0 / 9.0, contentMode: .fit)

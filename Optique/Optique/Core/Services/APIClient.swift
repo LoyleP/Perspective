@@ -2,7 +2,9 @@ import CryptoKit
 import Foundation
 import OSLog
 
-final class APIClient: Sendable {
+/// Everything here runs off the main thread (`nonisolated` + `@concurrent`): the project isolates code to the main
+/// actor by default, which used to put JSON decoding and disk reads of the feed on the main thread.
+nonisolated final class APIClient: Sendable {
 
     static let shared = APIClient()
 
@@ -19,7 +21,7 @@ final class APIClient: Sendable {
         return components.url!
     }
 
-    func get<T: Decodable>(_ path: String, query: [String: String] = [:]) async throws -> T {
+    @concurrent func get<T: Decodable>(_ path: String, query: [String: String] = [:]) async throws -> T {
         let url = url(path, query)
         do {
             let data = try await Self.inflight.data(for: url, session: session)
@@ -41,7 +43,7 @@ final class APIClient: Sendable {
 
     /// The last good response for this exact request (memory, then disk), or nil. Screens show it
     /// at once and refresh from the network behind it.
-    func cached<T: Decodable>(_ path: String, query: [String: String] = [:]) async -> T? {
+    @concurrent func cached<T: Decodable>(_ path: String, query: [String: String] = [:]) async -> T? {
         let url = url(path, query)
         guard let data = ResponseCache.data(for: url) else { return nil }
         return try? Self.decoder.decode(T.self, from: data)
@@ -54,7 +56,7 @@ final class APIClient: Sendable {
         error is CancellationError || (error as? URLError)?.code == .cancelled
     }
 
-    func post(_ path: String, body: [String: String]) async throws {
+    @concurrent func post(_ path: String, body: [String: String]) async throws {
         var request = URLRequest(url: baseURL.appendingPathComponent(path))
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -111,7 +113,7 @@ final class APIClient: Sendable {
 }
 
 /// Shares one network call between identical GETs started at the same time.
-private final class InflightRequests: @unchecked Sendable {
+private nonisolated final class InflightRequests: @unchecked Sendable {
     private let lock = NSLock()
     private var tasks: [URL: Task<Data, Error>] = [:]
 
@@ -135,7 +137,7 @@ private final class InflightRequests: @unchecked Sendable {
 }
 
 /// Last successful response body per request URL, on disk in Caches (the system may purge it).
-private enum ResponseCache {
+private nonisolated enum ResponseCache {
     private static let directory: URL = {
         let dir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("api-responses", isDirectory: true)

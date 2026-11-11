@@ -1,7 +1,17 @@
 import { err, json, storiesWithArticles } from "../lib/db.js";
+import { latestEdition } from "../lib/editions.js";
 
 export async function GET(request: Request): Promise<Response> {
   const q = new URL(request.url).searchParams;
+  // The Brief: ?edition=1 returns the latest edition instead of the feed (kept here: the plan allows 12 functions).
+  if (q.get("edition")) {
+    try {
+      return json({ edition: await latestEdition() }, 200, "public, s-maxage=300, stale-while-revalidate=900");
+    } catch (e) {
+      console.error(e);
+      return err("edition failed");
+    }
+  }
   const limit = Math.min(Math.max(Number(q.get("limit") ?? 20), 1), 100);
   const offset = Math.max(Number(q.get("offset") ?? 0), 0);
   const topic = q.get("topic");

@@ -23,132 +23,101 @@ struct SettingsView: View {
     #endif
 
     var body: some View {
-        Form {
-            if AppConfig.paywallEnabled {
-                Section {
+        ScrollView {
+            VStack(alignment: .leading, spacing: AppSpacing.l) {
+                if AppConfig.paywallEnabled {
                     PlanCard(
                         isPremium: session.isPremium,
                         used: session.storiesOpened,
                         total: session.freeLimit,
                         onUpgrade: { showPaywall = true },
-                        onManage: session.storeManager.isPremium ? { showManage = true } : nil
+                        onManage: session.storeManager.isPremium ? { showManage = true } : nil,
+                        dark: true
                     )
-                    .listRowInsets(EdgeInsets())
-                    .listRowBackground(Color.clear)
-                } header: {
-                    Text("Abonnement")
-                }
-
-                Section {
-                    Button {
-                        Task {
-                            isRestoring = true
-                            await session.storeManager.restorePurchases()
-                            isRestoring = false
-                        }
-                    } label: {
-                        HStack {
-                            Label("Restaurer les achats", lucide: "refresh-cw")
-                            if isRestoring {
-                                Spacer()
-                                ProgressView()
+                    group {
+                        tapRow("refresh-cw", "Restaurer les achats", trailing: isRestoring ? AnyView(ProgressView()) : nil) {
+                            Task {
+                                isRestoring = true
+                                await session.storeManager.restorePurchases()
+                                isRestoring = false
                             }
                         }
+                        .disabled(isRestoring)
                     }
-                    .disabled(isRestoring)
                 }
-            }
 
-            Section {
-                Toggle(isOn: $notificationsEnabled) {
-                    Label("Alertes des grands sujets", lucide: "bell")
-                }
-                .onChange(of: notificationsEnabled) { oldValue, newValue in
-                    guard newValue, !oldValue else { return }
-                    Task {
-                        do {
-                            try await NotificationManager.shared.requestAuthorization()
-                            if NotificationManager.shared.authorizationStatus != .authorized {
-                                notificationsEnabled = false
-                            }
-                        } catch {
-                            notificationsEnabled = false
+                group("Préférences", footer: "Au plus une alerte par heure, quand un sujet est couvert par plusieurs médias.") {
+                    rowShell("bell", "Alertes des grands sujets") {
+                        Toggle("", isOn: $notificationsEnabled).labelsHidden()
+                    }
+                    divider
+                    NavigationLink { TopicPreferencesView() } label: {
+                        rowShell("layout-grid", "Thèmes préférés") {
+                            valueChevron(preferredTopicsSummary)
                         }
                     }
+                    .buttonStyle(.plain)
                 }
-                NavigationLink {
-                    TopicPreferencesView()
-                } label: {
-                    LabeledContent {
-                        Text(preferredTopicsSummary)
-                    } label: {
-                        Label("Thèmes préférés", lucide: "layout-grid")
+
+                group("Transparence") {
+                    tapRow("file-text", "Méthodologie", trailing: AnyView(valueChevron(nil))) { showMethodologie = true }
+                    divider
+                    tapRow("building-2", "Propriété des médias", trailing: AnyView(valueChevron(nil))) { showOwnership = true }
+                }
+
+                group("Données et légal") {
+                    NavigationLink { LegalView() } label: {
+                        rowShell("scale", "Informations légales") { valueChevron(nil) }
+                    }
+                    .buttonStyle(.plain)
+                    divider
+                    tapRow("trash-2", "Effacer l'historique", destructive: true) { confirmReset = true }
+                        .disabled(history.leans.isEmpty && history.stories.isEmpty)
+                    divider
+                    rowShell("info", "Version") {
+                        Text(appVersion).typeStyle(.meta).foregroundStyle(AppColors.Adaptive.textMeta)
                     }
                 }
-            } header: {
-                Text("Préférences")
-            } footer: {
-                Text("Au plus une alerte par heure, quand un sujet est couvert par plusieurs médias.")
-            }
 
-            Section("Transparence") {
-                Button {
-                    showMethodologie = true
-                } label: {
-                    Label("Méthodologie", lucide: "file-text")
+                #if DEBUG
+                group("Développeur") {
+                    NavigationLink { DesignSystemGalleryView() } label: {
+                        rowShell("swatch-book", "Design system") { valueChevron(nil) }
+                    }
+                    .buttonStyle(.plain)
+                    divider
+                    tapRow("bell-ring", "Tester les notifications") { Task { await testNotifications() } }
+                    if !notificationTestMessage.isEmpty {
+                        Text(notificationTestMessage)
+                            .typeStyle(.meta)
+                            .foregroundStyle(AppColors.Adaptive.textMeta)
+                            .padding(.horizontal, AppSpacing.m)
+                            .padding(.bottom, AppSpacing.s)
+                    }
                 }
-                Button {
-                    showOwnership = true
-                } label: {
-                    Label("Propriété des médias", lucide: "building-2")
-                }
+                #endif
             }
-
-            Section("Données et légal") {
-                NavigationLink {
-                    LegalView()
-                } label: {
-                    Label("Informations légales", lucide: "scale")
-                }
-                Button(role: .destructive) {
-                    confirmReset = true
-                } label: {
-                    Label("Effacer l'historique", lucide: "trash-2")
-                }
-                .disabled(history.leans.isEmpty && history.stories.isEmpty)
-                LabeledContent("Version", value: appVersion)
-            }
-
-            #if DEBUG
-            Section("Développeur") {
-                NavigationLink {
-                    DesignSystemGalleryView()
-                } label: {
-                    Label("Design system", lucide: "swatch-book")
-                }
-                Button {
-                    Task { await testNotifications() }
-                } label: {
-                    Label("Tester les notifications", lucide: "bell-ring")
-                }
-                if !notificationTestMessage.isEmpty {
-                    Text(notificationTestMessage)
-                        .typeStyle(.meta)
-                        .foregroundStyle(AppColors.Adaptive.textMeta)
-                }
-            }
-            #endif
+            .padding(.horizontal, AppSpacing.m)
+            .padding(.bottom, AppSpacing.xl)
         }
-        .scrollContentBackground(.hidden)
         .background(AppColors.Adaptive.background.ignoresSafeArea())
         .tint(AppColors.Adaptive.textPrimary)
-        .navigationTitle("Réglages")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .confirmationAction) {
-                Button("OK") { dismiss() }
+        .onChange(of: notificationsEnabled) { oldValue, newValue in
+            guard newValue, !oldValue else { return }
+            Task {
+                do {
+                    try await NotificationManager.shared.requestAuthorization()
+                    if NotificationManager.shared.authorizationStatus != .authorized {
+                        notificationsEnabled = false
+                    }
+                } catch {
+                    notificationsEnabled = false
+                }
             }
         }
+        .navigationTitle("Réglages")
+        .navigationBarTitleDisplayMode(.inline)
+        .appBackButton()
         .confirmationDialog("Effacer l'historique ?", isPresented: $confirmReset, titleVisibility: .visible) {
             Button("Effacer", role: .destructive) { history.reset(); Haptics.warning() }
         } message: {
@@ -160,10 +129,71 @@ struct SettingsView: View {
         .sheet(isPresented: $showOwnership) {
             textSheet(title: "Propriété des médias", text: ownershipText)
         }
-        .sheet(isPresented: $showPaywall) {
+        .fullScreenCover(isPresented: $showPaywall) {
             PaywallView(isReplay: true)
         }
         .manageSubscriptionsSheet(isPresented: $showManage)
+    }
+
+    // MARK: - Building blocks
+
+    private var divider: some View {
+        Divider().padding(.leading, 52)
+    }
+
+    private func group<Content: View>(_ title: String? = nil, footer: String? = nil,
+                                      @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: AppSpacing.s) {
+            if let title {
+                Text(title)
+                    .typeStyle(.label)
+                    .foregroundStyle(AppColors.Adaptive.textMeta)
+                    .padding(.horizontal, AppSpacing.s)
+            }
+            VStack(spacing: 0) { content() }
+                .background(AppColors.Adaptive.cardSurface, in: RoundedRectangle(cornerRadius: AppRadius.xl))
+            if let footer {
+                Text(footer)
+                    .typeStyle(.meta)
+                    .foregroundStyle(AppColors.Adaptive.textMeta)
+                    .padding(.horizontal, AppSpacing.s)
+            }
+        }
+    }
+
+    private func rowShell<Trailing: View>(_ icon: String, _ title: String, destructive: Bool = false,
+                                          @ViewBuilder trailing: () -> Trailing) -> some View {
+        HStack(spacing: AppSpacing.m) {
+            LucideIcon(icon, size: 20)
+                .frame(width: 24)
+            Text(title)
+                .typeStyle(.body)
+                .lineLimit(1)
+            Spacer(minLength: AppSpacing.s)
+            trailing()
+        }
+        .foregroundStyle(destructive ? Color.red : AppColors.Adaptive.textPrimary)
+        .padding(.horizontal, AppSpacing.m)
+        .frame(minHeight: 52)
+        .contentShape(Rectangle())
+    }
+
+    private func tapRow(_ icon: String, _ title: String, destructive: Bool = false,
+                        trailing: AnyView? = nil, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            rowShell(icon, title, destructive: destructive) { trailing }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func valueChevron(_ value: String?) -> some View {
+        HStack(spacing: 6) {
+            if let value {
+                Text(value).typeStyle(.meta).foregroundStyle(AppColors.Adaptive.textMeta)
+            }
+            LucideIcon("chevron-right", size: 16)
+                .foregroundStyle(AppColors.Adaptive.textMeta)
+        }
     }
 
     // MARK: - Sheets

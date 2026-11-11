@@ -10,7 +10,7 @@ struct FiveBucketCoverage: Equatable {
     let extDroite: Double  // lean 7
 }
 
-struct CoverageStats: Codable, Hashable {
+nonisolated struct CoverageStats: Codable, Hashable {
     let storyID: UUID
 
     let lean1Count: Int

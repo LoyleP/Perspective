@@ -33,8 +33,6 @@ final class FeedViewModel {
     /// On "À la une": stories where the political lens says nothing (sport, faits divers…), kept
     /// out of the top of the feed and grouped at the end. Empty on topic tabs.
     private(set) var lighterStories: [Story] = []
-    /// Stories covered almost only by one side ("angles morts"), shown on "À la une".
-    private(set) var blindspots: [Story] = []
 
     private func rebuild() {
         stories = allStories
@@ -56,10 +54,7 @@ final class FeedViewModel {
                 .prefix(5)
         )
         let used = Set(([hero?.id].compactMap { $0 }) + essentials.map(\.id))
-        blindspots = splits
-            ? Array(lead.filter { !used.contains($0.id) && $0.computedCoverage?.blindspotSide != nil }.prefix(6))
-            : []
-        let shown = used.union(blindspots.map(\.id))
+        let shown = used
         // The reader's topics (chosen at onboarding or in Réglages) come first among today's stories.
         let preferred = StoryTopic.preferred(from: UserDefaults.standard.string(forKey: "preferredTopics") ?? "")
             .compactMap(\.filterValue)
@@ -69,6 +64,7 @@ final class FeedViewModel {
                 && preferred.contains { story.topicTags.contains($0) || story.topic == $0 }
         }
         feedStories = splits ? rest.filter(isPreferred) + rest.filter { !isPreferred($0) } : rest
+        if splits, !stories.isEmpty { LaunchGate.shared.feedReady = true }
     }
 
     // MARK: - Load

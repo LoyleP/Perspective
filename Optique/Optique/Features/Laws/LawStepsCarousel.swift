@@ -193,7 +193,7 @@ struct LawStepsCarousel: View {
 
             HStack(alignment: .center, spacing: AppSpacing.s) {
                 Text(item.label)
-                    .font(.geist(.heading, .medium))
+                    .typeStyle(.headline)
                     .foregroundStyle(AppColors.Adaptive.textPrimary)
                     .lineLimit(1)
                 if let help = LawExplainer.glossary(item.label) {
@@ -364,7 +364,7 @@ struct LawStepsCarousel: View {
     }
 }
 
-/// Coloured status pill (to-do list style): green adopted, red rejected, amber in progress, blue amended.
+/// Solid coloured status pill with light text (to-do list style): green adopted, red rejected, amber in progress, blue amended.
 private struct StatusTag: View {
     enum Tone { case success, danger, progress, info, neutral }
 
@@ -375,10 +375,10 @@ private struct StatusTag: View {
 
     private var color: Color {
         switch tone {
-        case .success: return Color(light: "15803D", dark: "4ADE80")
-        case .danger: return Color(light: "B91C1C", dark: "F87171")
-        case .progress: return Color(light: "B45309", dark: "FBBF24")
-        case .info: return Color(light: "1D4ED8", dark: "60A5FA")
+        case .success: return Color(light: "22A857", dark: "4ADE80")
+        case .danger: return Color(light: "E04545", dark: "F87171")
+        case .progress: return Color(light: "E08A1E", dark: "FBBF24")
+        case .info: return Color(light: "3B72E8", dark: "60A5FA")
         case .neutral: return AppColors.Adaptive.textMeta
         }
     }
@@ -389,12 +389,12 @@ private struct StatusTag: View {
             Text(text)
                 .typeStyle(.meta)
         }
-        .foregroundStyle(color)
+        .foregroundStyle(AppColors.Adaptive.background)
         .lineLimit(1)
         .padding(.leading, 8)
         .padding(.trailing, 10)
         .padding(.vertical, 3)
-        .background(color.opacity(0.16), in: Capsule())
+        .background(color, in: Capsule())
     }
 }
 

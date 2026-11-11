@@ -6,7 +6,7 @@ struct CoverageSummaryView: View {
 
     var body: some View {
         if let coverage = story.computedCoverage {
-            CoverageBar(shares: PoliticalLean.allCases.map { ($0, coverage.share(of: $0)) })
+            CoverageBar(shares: PoliticalLean.allCases.map { ($0, coverage.share(of: $0)) }, verdict: coverage.leanVerdictKind.text)
                 .padding(.horizontal, AppSpacing.m)
         }
     }

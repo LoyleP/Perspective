@@ -72,7 +72,7 @@ struct OnboardingView: View {
             .opacity(step == 0 ? 0 : 1)
             .scaleEffect(step == 0 ? 0.6 : 1)
             .blur(radius: step == 0 ? 4 : 0)
-            .animation(.spring(duration: 0.35, bounce: 0.2), value: step == 0)
+            .animation(.enter, value: step == 0)
             .disabled(step == 0)
             .accessibilityLabel("Retour")
 
@@ -85,7 +85,7 @@ struct OnboardingView: View {
                             Capsule()
                                 .fill(AppColors.Brand.accent)
                                 .scaleEffect(x: index <= step ? 1 : 0.001, anchor: .leading)
-                                .animation(.spring(duration: 0.5, bounce: 0.1).delay(index == step ? 0.12 : 0), value: step)
+                                .animation(.select.delay(index == step ? Motion.delay(0.12) : 0), value: step)
                         }
                         .frame(height: 4)
                 }
@@ -97,7 +97,7 @@ struct OnboardingView: View {
                 .typeStyle(.meta)
                 .foregroundStyle(AppColors.Adaptive.textMeta)
                 .opacity(step == stepCount - 1 ? 0 : 1)
-                .animation(.app, value: step == stepCount - 1)
+                .animation(.fade, value: step == stepCount - 1)
                 .disabled(step == stepCount - 1)
         }
         .padding(.horizontal, AppSpacing.m)
@@ -109,7 +109,7 @@ struct OnboardingView: View {
             Button(action: primaryAction) {
                 Text(primaryTitle)
                     .contentTransition(.interpolate)
-                    .animation(.spring(duration: 0.4, bounce: 0.1), value: primaryTitle)
+                    .animation(.layout, value: primaryTitle)
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.optiquePrimary)
@@ -124,7 +124,7 @@ struct OnboardingView: View {
                     .transition(.blurRise)
             }
         }
-        .animation(.spring(duration: 0.4, bounce: 0.1), value: step)
+        .animation(.layout, value: step)
         .padding(.horizontal, AppSpacing.m)
         .padding(.top, AppSpacing.s)
         .padding(.bottom, AppSpacing.m)
@@ -352,7 +352,7 @@ struct OnboardingView: View {
         // The direction is set first, in its own update, so the leaving step picks it up for its exit.
         forward = newStep > step
         Task { @MainActor in
-            withAnimation(.spring(duration: 0.42, bounce: 0.12)) { step = newStep }
+            withAnimation(.surface) { step = newStep }
         }
     }
 
@@ -373,7 +373,7 @@ struct OnboardingView: View {
         example = s
         feed = f
         laws = w
-        withAnimation(.app) { sources = l }
+        withAnimation(.fade) { sources = l }
     }
 
     private static func loadFeed() async -> [Story] {
@@ -504,7 +504,7 @@ private struct SourceArc: View {
                             .overlay(Circle().stroke(source.lean?.spectrumColor ?? .clear, lineWidth: 2))
                             .scaleEffect(shown || reduceMotion ? 1 : 0.4)
                             .opacity(shown || reduceMotion ? 1 : 0)
-                            .animation(.spring(duration: 0.55, bounce: 0.3).delay(0.3 + Double(index) * 0.035), value: shown)
+                            .animation(.emphasis.delay(Motion.delay(0.3) + Motion.stagger(index, step: 0.035)), value: shown)
                             .position(point(center, onOuter ? outer : inner, angle))
                     }
                 }
@@ -567,7 +567,7 @@ private struct TopicChip: View {
             .contentShape(Capsule())
         }
         .buttonStyle(CardPressStyle())
-        .animation(.app, value: isOn)
+        .animation(.select, value: isOn)
         .accessibilityAddTraits(isOn ? .isSelected : [])
     }
 }
@@ -659,13 +659,13 @@ private struct NotificationPreview: View {
             .onTapGesture {
                 guard newIn else { return }
                 Haptics.selection()
-                withAnimation(.spring(duration: 0.5, bounce: 0.2)) { expanded.toggle() }
+                withAnimation(.emphasis) { expanded.toggle() }
             }
         }
         .onAppear {
             if reduceMotion { olderIn = true; newIn = true; return }
-            withAnimation(.spring(duration: 0.5, bounce: 0.15).delay(0.25)) { olderIn = true }
-            withAnimation(.spring(duration: 0.6, bounce: 0.3).delay(0.75)) { newIn = true }
+            withAnimation(.enter.delay(0.25)) { olderIn = true }
+            withAnimation(.emphasis.delay(0.75)) { newIn = true }
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Exemple d'alerte : \(line)")

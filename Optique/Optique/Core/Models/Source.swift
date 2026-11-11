@@ -2,7 +2,7 @@ import Foundation
 import SwiftUI
 import UIKit
 
-enum OwnerType: String, Codable {
+nonisolated enum OwnerType: String, Codable {
     case billionaire = "billionaire"
     case publicMedia = "public"
     case stateOwned = "state_owned"
@@ -89,7 +89,7 @@ enum OwnerType: String, Codable {
     }
 }
 
-struct Source: Codable, Identifiable, Hashable {
+nonisolated struct Source: Codable, Identifiable, Hashable {
     let id: UUID
     let name: String
     let url: String

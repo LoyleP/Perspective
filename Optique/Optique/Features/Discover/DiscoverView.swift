@@ -23,14 +23,11 @@ struct DiscoverView: View {
             }
         }
         .shrinksTabBarOnScroll()
+        // Room for the pinned search bar, which floats over the page like the home header.
+        .safeAreaInset(edge: .top, spacing: 0) { Color.clear.frame(height: 44) }
         .background(AppColors.Adaptive.background.ignoresSafeArea())
-        .appHeaderToolbar()
-        .searchable(
-            text: $searchText,
-            placement: .navigationBarDrawer(displayMode: .always),
-            prompt: "Rechercher un sujet"
-        )
-        .searchFocusedIfAvailable($searchFocused)
+        .overlay(alignment: .top) { searchBar }
+        .toolbar(.hidden, for: .navigationBar)
         .onChange(of: focusToken) { _, _ in searchFocused = true }
         .onChange(of: searchText, initial: true) { _, text in
             viewModel.searchText = text
@@ -51,6 +48,24 @@ struct DiscoverView: View {
             SourcesView()
         }
         .task { await viewModel.load() }
+    }
+
+    /// Pinned at the top exactly like the home header's search: a glass field and, while typing, the round cross.
+    private var searchBar: some View {
+        let active = searchFocused || !searchText.isEmpty
+        return HStack(spacing: AppSpacing.s) {
+            GlassSearchField(text: $searchText, focus: $searchFocused)
+            if active {
+                GlassCloseButton {
+                    searchText = ""
+                    searchFocused = false
+                }
+                .transition(.pop)
+            }
+        }
+        .animation(.morph, value: active)
+        .padding(.horizontal, AppSpacing.m)
+        .frame(height: 44)
     }
 
     // MARK: - Idle
@@ -190,7 +205,7 @@ struct DiscoverView: View {
 // MARK: - Theme tile
 
 /// A coloured card for one theme: its name bottom left, its icon large and cropped at the right.
-private struct ThemeTile: View {
+struct ThemeTile: View {
     let topic: StoryTopic
 
     var body: some View {
@@ -218,7 +233,7 @@ private struct ThemeTile: View {
     }
 }
 
-private extension StoryTopic {
+extension StoryTopic {
     /// Gradient of the theme's tile, light at the top.
     var tileColors: (top: String, bottom: String) {
         switch self {

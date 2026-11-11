@@ -28,9 +28,17 @@ struct StoryDetailView: View {
 
     // MARK: - Reading limit
 
-    private var isLocked: Bool { session.isLocked(story.id) }
+    /// Fixed when the page first appears: other topics opened meanwhile, or the day changing, never flip this
+    /// page between locked and open. Until then (the very first frame) it is read without counting anything.
+    @State private var admission: SessionState.Access?
+    private var access: SessionState.Access {
+        guard AppConfig.paywallEnabled, !session.isPremium else { return .unlimited }   // Optique+ unlocks at once
+        return admission ?? session.access(for: story.id)
+    }
+    private var isLocked: Bool { access.isLocked }
+    @State private var toastTask: Task<Void, Never>?
 
-    /// Past the free allowance the page keeps its headline and standfirst; everything below is a blurred
+    /// Past the free allowance the page keeps its headline only; the bullet points and everything below is a blurred
     /// preview behind the limit card.
     @ViewBuilder
     private func gated<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
@@ -57,15 +65,20 @@ struct StoryDetailView: View {
         }
     }
 
-    private func showFreeToastIfNeeded() {
-        guard AppConfig.paywallEnabled, !session.isPremium, !session.isLocked(story.id),
-              session.remainingFree <= 2 else { return }
-        let remaining = session.remainingFree
-        Task {
+    /// The heads-up under the free allowance, shown only on a topic opened for the first time today, never on
+    /// a locked one nor on a topic opened again.
+    private func showFreeToastIfNeeded(for access: SessionState.Access) {
+        guard case .free(let position, let isNew) = access, isNew else { return }
+        let remaining = session.freeLimit - (position + 1)
+        guard remaining <= 2 else { return }
+        toastTask?.cancel()
+        toastTask = Task {
             try? await Task.sleep(for: .milliseconds(900))
+            guard !Task.isCancelled else { return }
             toastRemaining = remaining
             Haptics.lightImpact()
             try? await Task.sleep(for: .seconds(4))
+            guard !Task.isCancelled else { return }
             toastRemaining = nil
         }
     }
@@ -76,10 +89,10 @@ struct StoryDetailView: View {
                 header
 
                 // What happened, in one sentence, right under the headline.
-                if let summary = story.standfirst {
+                if let summary = story.standfirst, !isLocked {
                     DescriptionBullets(text: summary)
                         .padding(.horizontal, AppSpacing.m)
-                        .padding(.top, AppSpacing.st)
+                        .padding(.top, AppSpacing.l)
                 }
 
                 gated {
@@ -114,6 +127,7 @@ struct StoryDetailView: View {
             .noTopBounce()
         }
         .shrinksTabBarOnScroll()
+        .tabBarClearance()
         .trackingScrollTop { isAtTop = $0 }
         .simultaneousGesture(
             DragGesture(minimumDistance: 12)
@@ -161,11 +175,11 @@ struct StoryDetailView: View {
                     showPaywallSheet = true
                 }
                 .padding(.bottom, 104)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .transition(.rise)
             }
         }
-        .animation(.spring(duration: 0.45, bounce: 0.15), value: isLocked)
-        .sheet(isPresented: $showPaywallSheet) {
+        .animation(.enter, value: isLocked)
+        .fullScreenCover(isPresented: $showPaywallSheet) {
             PaywallView()
         }
         .overlay {
@@ -179,12 +193,20 @@ struct StoryDetailView: View {
             }
         }
         .onAppear {
-            session.registerOpen(story.id)
+            // Counted once per visit to this page, however many times it reappears (back from a sheet, a cancelled swipe).
+            if admission == nil {
+                let granted = session.admit(story.id)
+                admission = granted
+                showFreeToastIfNeeded(for: granted)
+            }
             Analytics.track(.storyOpen, ["story": story.id.uuidString, "has_summary": story.spectrumSummary == nil ? "0" : "1"])
             readingHistory.recordOpen(story)
-            showFreeToastIfNeeded()
         }
-        .onDisappear { tabBar.isCompact = false }
+        .onDisappear {
+            tabBar.isCompact = false
+            toastTask?.cancel()
+            toastRemaining = nil
+        }
         .task { await viewModel.triggerSummaryGeneration() }
     }
 
@@ -288,8 +310,8 @@ struct StoryDetailView: View {
             // overflow can't widen the layout.
             Color.clear
                 .frame(maxWidth: .infinity)
-                .frame(height: story.leadImageURL == nil ? 120 : 340)
-                .overlay { RemoteImage(url: story.leadImageURL, tint: leadTint) }
+                .frame(height: story.leadImageURL == nil ? 220 : 340)
+                .overlay { RemoteImage(url: story.leadImageURL, tint: leadTint, topic: story.placeholderTopic, alternates: story.imageAlternates) }
                 .clipped()
                 .accessibilityHidden(true)
 

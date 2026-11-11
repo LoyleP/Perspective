@@ -14,7 +14,7 @@ final class BookmarkStore {
         return d
     }()
 
-    private static let encoder: JSONEncoder = {
+    nonisolated(unsafe) private static let encoder: JSONEncoder = {
         let e = JSONEncoder()
         e.dateEncodingStrategy = .iso8601
         return e
@@ -37,7 +37,8 @@ final class BookmarkStore {
     /// Forgets every saved story.
     func reset() {
         stories = []
-        defaults.removeObject(forKey: storageKey)
+        let defaults = defaults, key = storageKey
+        PersistQueue.queue.async { defaults.removeObject(forKey: key) }
     }
 
     func isBookmarked(_ story: Story) -> Bool {
@@ -45,8 +46,11 @@ final class BookmarkStore {
     }
 
     private func save() {
-        guard let data = try? Self.encoder.encode(stories) else { return }
-        defaults.set(data, forKey: storageKey)
+        let snapshot = stories, defaults = defaults, key = storageKey
+        PersistQueue.queue.async {
+            guard let data = try? Self.encoder.encode(snapshot) else { return }
+            defaults.set(data, forKey: key)
+        }
     }
 
     private func load() {

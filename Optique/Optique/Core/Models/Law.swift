@@ -1,7 +1,7 @@
 import Foundation
 
 /// One parliamentary group's share of a vote.
-struct LawVoteGroup: Codable, Hashable {
+nonisolated struct LawVoteGroup: Codable, Hashable {
     let name: String
     /// Stored position (1 extrême gauche, 2 gauche, 4 centre, 6 droite, 7 extrême droite); 0 = unaffiliated.
     let lean: Int
@@ -15,7 +15,7 @@ struct LawVoteGroup: Codable, Hashable {
 }
 
 /// The public vote that closed a reading: how many members voted yes, no, or abstained.
-struct LawVote: Codable, Hashable {
+nonisolated struct LawVote: Codable, Hashable {
     let chamber: String
     let date: String?
     let adopted: Bool
@@ -33,7 +33,7 @@ struct LawVote: Codable, Hashable {
 }
 
 /// One reading (or final stage) of a law's path through Parliament, e.g. "1re lecture" at the Sénat.
-struct LawStep: Codable, Hashable, Identifiable {
+nonisolated struct LawStep: Codable, Hashable, Identifiable {
     var id: String { code }
     /// Source code: AN1, SN1, AN2, CMP, CC, PROM…
     let code: String
@@ -69,7 +69,7 @@ struct LawStep: Codable, Hashable, Identifiable {
     var isRejected: Bool { decision?.lowercased().hasPrefix("rejet") ?? false }
 }
 
-struct Law: Codable, Hashable, Identifiable {
+nonisolated struct Law: Codable, Hashable, Identifiable {
     var id: String { uid }
     let uid: String
     let title: String
@@ -127,7 +127,7 @@ struct Law: Codable, Hashable, Identifiable {
     }
 }
 
-struct LawsPage: Decodable {
+nonisolated struct LawsPage: Decodable {
     let checkedAt: Date?
     let laws: [Law]
 

@@ -23,7 +23,7 @@ final class ReadingHistoryStore {
         return d
     }()
 
-    private static let encoder: JSONEncoder = {
+    nonisolated(unsafe) private static let encoder: JSONEncoder = {
         let e = JSONEncoder()
         e.dateEncodingStrategy = .iso8601
         return e
@@ -66,16 +66,17 @@ final class ReadingHistoryStore {
         leans = []
         stories = []
         defaults.removeObject(forKey: leansKey)
-        try? FileManager.default.removeItem(at: storiesURL)
+        let url = storiesURL
+        PersistQueue.queue.async { try? FileManager.default.removeItem(at: url) }
     }
 
     private func saveStories() {
-        guard let data = try? Self.encoder.encode(stories) else { return }
-        try? FileManager.default.createDirectory(
-            at: storiesURL.deletingLastPathComponent(),
-            withIntermediateDirectories: true
-        )
-        try? data.write(to: storiesURL, options: .atomic)
+        let snapshot = stories, url = storiesURL
+        PersistQueue.queue.async {
+            guard let data = try? Self.encoder.encode(snapshot) else { return }
+            try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try? data.write(to: url, options: .atomic)
+        }
     }
 
     // MARK: - Derived

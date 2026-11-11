@@ -51,21 +51,25 @@ struct LawsView: View {
     @State private var viewModel = LawsViewModel()
     @State private var selected: Law?
     @State private var position: LawFilter? = .all
+    @State private var pageProgress: CGFloat?
+    @State private var pillsScroll = PillsScroll()
     var isActive = true
 
     private static let refreshInterval: Duration = .seconds(300)
 
     var body: some View {
-        VStack(spacing: 0) {
+        ScrollAwayPills(model: pillsScroll) {
             PillTabs(
                 items: LawFilter.allCases,
                 selection: Binding(get: { position ?? .all }, set: { position = $0 }),
-                title: \.rawValue
+                title: \.rawValue,
+                progress: pageProgress
             )
+        } pages: {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 0) {
                     ForEach(LawFilter.allCases) { filter in
-                        LawsFilterPage(filter: filter, viewModel: viewModel) { selected = $0 }
+                        LawsFilterPage(filter: filter, isCurrent: filter == (position ?? .all), viewModel: viewModel) { selected = $0 }
                             .containerRelativeFrame(.horizontal)
                             .id(filter)
                     }
@@ -74,6 +78,7 @@ struct LawsView: View {
             }
             .scrollTargetBehavior(.paging)
             .scrollPosition(id: $position)
+            .trackingPageProgress { pageProgress = $0 }
         }
         .background(AppColors.Adaptive.background.ignoresSafeArea())
         .appHeaderToolbar()
@@ -96,6 +101,7 @@ struct LawsView: View {
 /// One filter's list of laws, grouped by what is happening now.
 private struct LawsFilterPage: View {
     let filter: LawFilter
+    let isCurrent: Bool
     let viewModel: LawsViewModel
     let onSelect: (Law) -> Void
     @State private var collapsed: Set<LawSection> = []
@@ -114,6 +120,7 @@ private struct LawsFilterPage: View {
             .padding(.horizontal, AppSpacing.m)
             .padding(.bottom, AppSpacing.xxl)
         }
+        .scrollsAwayPills(isCurrent: isCurrent)
         .refreshable { await viewModel.load() }
         .shrinksTabBarOnScroll()
         .sensoryFeedback(.selection, trigger: collapsed)
@@ -121,9 +128,17 @@ private struct LawsFilterPage: View {
 
     private var visibleLaws: [Law] { viewModel.laws.filter(filter.includes) }
 
+    /// The text of the moment: the one most relayed by the press (still on its way to becoming a law), shown on top.
+    private var featured: Law? {
+        visibleLaws
+            .filter { ($0.storyCount ?? 0) > 0 && !$0.isPromulgated }
+            .max { ($0.storyCount ?? 0, $0.lastActAt ?? .distantPast) < ($1.storyCount ?? 0, $1.lastActAt ?? .distantPast) }
+    }
+
     private var groups: [(section: LawSection, laws: [Law])] {
         LawSection.allCases.compactMap { section in
             let laws = visibleLaws
+                .filter { $0.id != featured?.id }
                 .filter { LawSection.of($0) == section }
                 .sorted { ($0.storyCount ?? 0, $0.lastActAt ?? .distantPast) > ($1.storyCount ?? 0, $1.lastActAt ?? .distantPast) }
             return laws.isEmpty ? nil : (section, laws)
@@ -139,11 +154,16 @@ private struct LawsFilterPage: View {
         } else if visibleLaws.isEmpty {
             ContentUnavailableView("Aucun texte", lucide: "scroll-text", description: Text("Aucun texte ne correspond à ce filtre pour le moment."))
         } else {
+            if let law = featured {
+                Button { onSelect(law) } label: { FeaturedLawCard(law: law) }
+                    .buttonStyle(CardPressStyle())
+                    .padding(.top, AppSpacing.m)
+            }
             // Grouped by what is happening now, the most talked-about texts first in each group.
             ForEach(Array(groups.enumerated()), id: \.element.section) { index, group in
                 let isCollapsed = collapsed.contains(group.section)
                 let toggle = {
-                    withAnimation(.app) {
+                    withAnimation(.layout) {
                         if isCollapsed { collapsed.remove(group.section) } else { collapsed.insert(group.section) }
                     }
                 }
@@ -217,7 +237,7 @@ struct LawProgressBar: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
-        .animation(.app, value: lit)
+        .animation(.select, value: lit)
         .accessibilityElement()
         .accessibilityLabel("Avancement : \(Int(current)) étapes sur 4")
     }
@@ -242,6 +262,46 @@ struct LawProgressBar: View {
                 }
             }
             .frame(height: 4)
+    }
+}
+
+/// The most relayed text on top of the list: big title and where it stands.
+struct FeaturedLawCard: View {
+    let law: Law
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.st) {
+            HStack(spacing: 6) {
+                LucideIcon("trending-up", size: 14)
+                Text("Tendance")
+                    .typeStyle(.metaMedium)
+            }
+            .foregroundStyle(AppColors.Brand.onInk)
+            .padding(.horizontal, 10)
+            .frame(height: 26)
+            .background(AppColors.Brand.accent, in: Capsule())
+
+            Text(law.displayTitle)
+                .typeStyle(.headline)
+                .foregroundStyle(AppColors.Adaptive.textPrimary)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+
+            VStack(alignment: .leading, spacing: AppSpacing.s) {
+                Text(LawExplainer.headline(for: law))
+                    .typeStyle(.body)
+                    .foregroundStyle(AppColors.Adaptive.textBody)
+                    .multilineTextAlignment(.leading)
+                LawProgressBar(law: law, showsLabels: true)
+            }
+            .padding(.top, AppSpacing.xs)
+
+        }
+        .padding(AppSpacing.m)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(AppColors.Adaptive.cardSurface, in: RoundedRectangle(cornerRadius: AppRadius.xl))
+        .contentShape(RoundedRectangle(cornerRadius: AppRadius.xl))
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -288,13 +348,7 @@ struct LawRow: View {
         VStack(alignment: .leading, spacing: AppSpacing.st) {
             if let name = law.authorName {
                 HStack(spacing: AppSpacing.s) {
-                    AsyncImage(url: law.authorPhoto.flatMap(URL.init(string:))) { image in
-                        image.resizable().scaledToFill()
-                    } placeholder: {
-                        Circle().fill(AppColors.Adaptive.surfaceElevated)
-                    }
-                    .frame(width: 24, height: 24)
-                    .clipShape(Circle())
+                    AuthorAvatar(url: law.authorPhoto)
                     Text(name)
                         .typeStyle(.meta)
                         .foregroundStyle(AppColors.Adaptive.textMeta)

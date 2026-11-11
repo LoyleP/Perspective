@@ -3,13 +3,16 @@ import SwiftUI
 /// Full-width, 52 pt gray call to action (the law page's "Voir tout le parcours"). Put the label,
 /// and an optional icon, in the button's content.
 struct GrayCTAStyle: ButtonStyle {
+    /// Dark fill with white content instead of grey.
+    var dark = false
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .typeStyle(.ui)
-            .foregroundStyle(AppColors.Adaptive.textPrimary)
+            .foregroundStyle(dark ? Color.white : AppColors.Adaptive.textPrimary)
             .frame(maxWidth: .infinity)
             .frame(height: 52)
-            .background(Color(light: AppColors.Zinc.Hex.z200, dark: AppColors.Zinc.Hex.z800), in: Capsule())
+            .background(dark ? Color(hex: "0A0A0A") : Color(light: AppColors.Zinc.Hex.z200, dark: AppColors.Zinc.Hex.z800), in: Capsule())
             .contentShape(Capsule())
             .opacity(configuration.isPressed ? 0.7 : 1)
     }
@@ -17,4 +20,5 @@ struct GrayCTAStyle: ButtonStyle {
 
 extension ButtonStyle where Self == GrayCTAStyle {
     static var grayCTA: GrayCTAStyle { GrayCTAStyle() }
+    static var darkCTA: GrayCTAStyle { GrayCTAStyle(dark: true) }
 }

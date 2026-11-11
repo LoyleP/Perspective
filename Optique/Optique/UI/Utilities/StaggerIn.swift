@@ -14,7 +14,7 @@ struct StaggerIn: ViewModifier {
             .blur(radius: !blurs || shown || reduceMotion ? 0 : 8)
             .offset(y: !blurs || shown || reduceMotion ? 0 : 18)
             .onAppear {
-                withAnimation(.spring(duration: 0.6, bounce: 0.15).delay(reduceMotion ? 0 : delay)) { shown = true }
+                withAnimation(.enter.delay(Motion.delay(delay))) { shown = true }
             }
     }
 }

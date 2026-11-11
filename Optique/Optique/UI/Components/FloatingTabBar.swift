@@ -48,7 +48,7 @@ struct FloatingTabBar: View {
         return Button {
             onTap?(item.id)
             guard selection != item.id else { return }
-            withAnimation(.app) { selection = item.id }
+            withAnimation(.select) { selection = item.id }
         } label: {
             icon(for: item, isSelected: isSelected)
                 .overlay(alignment: .topTrailing) {
@@ -98,10 +98,14 @@ struct FloatingTabBar: View {
     @ViewBuilder
     private var barBackground: some View {
         if #available(iOS 26.0, *) {
-            Capsule().fill(.clear).glassEffect(.regular, in: .capsule)
+            Capsule()
+                .fill(AppColors.Adaptive.background.opacity(0.25))
+                .background(.regularMaterial, in: Capsule())
+                .glassEffect(.regular, in: .capsule)
         } else {
             Capsule()
-                .fill(.ultraThinMaterial)
+                .fill(.regularMaterial)
+                .overlay(Capsule().fill(AppColors.Adaptive.background.opacity(0.25)))
                 .overlay(Capsule().stroke(AppColors.stroke, lineWidth: 1))
                 .shadow(color: .black.opacity(0.18), radius: 14, y: 6)
         }

@@ -57,7 +57,7 @@ struct CoverageDial: View {
                         .compositingGroup()
                         .opacity(dimmed ? 0.35 : 1)
                 }
-                .animation(.app, value: selected)
+                .animation(.select, value: selected)
 
                 VStack(spacing: 2) {
                     Text(selectedLabel)

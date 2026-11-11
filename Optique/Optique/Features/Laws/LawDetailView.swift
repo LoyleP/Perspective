@@ -87,13 +87,7 @@ struct LawDetailView: View {
         VStack(alignment: .leading, spacing: AppSpacing.s) {
             if let name = shown.authorName {
                 HStack(spacing: AppSpacing.s) {
-                    AsyncImage(url: shown.authorPhoto.flatMap(URL.init(string:))) { image in
-                        image.resizable().scaledToFill()
-                    } placeholder: {
-                        Circle().fill(AppColors.Adaptive.surfaceElevated)
-                    }
-                    .frame(width: 24, height: 24)
-                    .clipShape(Circle())
+                    AuthorAvatar(url: shown.authorPhoto)
                     Text(name)
                         .typeStyle(.meta)
                         .foregroundStyle(AppColors.Adaptive.textMeta)
@@ -117,8 +111,8 @@ struct LawDetailView: View {
         VStack(alignment: .leading, spacing: AppSpacing.m) {
             VStack(alignment: .leading, spacing: AppSpacing.st) {
                 Text(LawExplainer.headline(for: shown))
-                    .typeStyle(.section)
-                    .foregroundStyle(AppColors.Adaptive.textPrimary)
+                    .typeStyle(.body)
+                    .foregroundStyle(AppColors.Adaptive.textBody)
                 LawProgressBar(law: shown, showsLabels: true)
                 if let next = LawExplainer.next(for: shown) {
                     Text("Prochaine étape : \(next)")
@@ -128,10 +122,12 @@ struct LawDetailView: View {
                 Button { showsPath = true } label: {
                     HStack(spacing: AppSpacing.s) {
                         Text("Voir tout le parcours")
-                        LucideIcon("chevron-right", size: 16)
+                        // Lucide ships the left arrow only; mirrored it is the right one.
+                        LucideIcon("arrow-left", size: 16)
+                            .scaleEffect(x: -1)
                     }
                 }
-                .buttonStyle(.grayCTA)
+                .buttonStyle(.darkCTA)
                 .padding(.top, AppSpacing.s)
             }
             .padding(.horizontal, AppSpacing.m)

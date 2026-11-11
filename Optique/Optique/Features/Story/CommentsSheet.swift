@@ -77,8 +77,8 @@ struct CommentsSheet: View {
 
                 panel
                     .padding(.top, compact ? 0 : topGap(screenHeight: screenHeight) - geo.safeAreaInsets.top)
-                    .animation(.app, value: focused)
-                    .animation(.app, value: fullHeight)
+                    .animation(.surface, value: focused)
+                    .animation(.surface, value: fullHeight)
                     .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { panelHeight = $0 }
                     .offset(y: visible ? dragOffset : hiddenOffset)
             }
@@ -90,10 +90,10 @@ struct CommentsSheet: View {
                 fallbackTask = Task {
                     try? await Task.sleep(for: .milliseconds(700))
                     guard !Task.isCancelled else { return }
-                    withAnimation(.app) { shownWithoutKeyboard = true }
+                    withAnimation(.surface) { shownWithoutKeyboard = true }
                 }
             } else {
-                withAnimation(.app) { shown = true }
+                withAnimation(.surface) { shown = true }
             }
         }
         .onDisappear { tabBar.isHidden = false }
@@ -120,9 +120,9 @@ struct CommentsSheet: View {
         focused = false
         if compact && !shownWithoutKeyboard { return }
         if compact {
-            withAnimation(.app) { shownWithoutKeyboard = false } completion: { onClose() }
+            withAnimation(.surface) { shownWithoutKeyboard = false } completion: { onClose() }
         } else {
-            withAnimation(.app) { shown = false } completion: { onClose() }
+            withAnimation(.surface) { shown = false } completion: { onClose() }
         }
     }
 
@@ -191,18 +191,18 @@ struct CommentsSheet: View {
                     if lift > 0 {
                         // Snap to full height, or settle back.
                         let snaps = lift > 60 || predicted < -200
-                        withAnimation(.app) {
+                        withAnimation(.surface) {
                             if snaps { fullHeight = true }
                             lift = 0
                         }
                     } else if value.translation.height > 120 || predicted > 300 {
                         if fullHeight && !focused {
-                            withAnimation(.app) { fullHeight = false; dragOffset = 0 }   // back to medium
+                            withAnimation(.surface) { fullHeight = false; dragOffset = 0 }   // back to medium
                         } else {
                             close()
                         }
                     } else {
-                        withAnimation(.app) { dragOffset = 0 }
+                        withAnimation(.surface) { dragOffset = 0 }
                     }
                 }
         )
@@ -419,7 +419,7 @@ struct CommentsSheet: View {
         emojiTask = Task {
             for count in 1...Self.quickEmojis.count {
                 guard !Task.isCancelled else { return }
-                withAnimation(.app) { emojisShown = count }
+                withAnimation(.enter) { emojisShown = count }
                 try? await Task.sleep(for: .milliseconds(25))
             }
         }

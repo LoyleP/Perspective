@@ -21,7 +21,7 @@ struct OptiqueButtonStyle: ButtonStyle {
                 in: Capsule()
             )
             .scaleEffect(configuration.isPressed ? 0.98 : 1)
-            .animation(.app, value: configuration.isPressed)
+            .animation(.press, value: configuration.isPressed)
             .opacity(configuration.isPressed ? 0.85 : 1)
     }
 }

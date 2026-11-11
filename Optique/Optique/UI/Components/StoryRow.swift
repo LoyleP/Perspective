@@ -9,7 +9,7 @@ struct StoryRow: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
-        let showsImage = story.leadImageURL != nil && !dynamicTypeSize.isAccessibilitySize
+        let showsImage = !dynamicTypeSize.isAccessibilitySize
         PhotoTrailingLayout(padding: AppSpacing.m, photoWidth: 108) {
             HStack(alignment: .firstTextBaseline, spacing: AppSpacing.s) {
                 if let rank {
@@ -33,7 +33,7 @@ struct StoryRow: View {
 
             if showsImage {
                 Color.clear
-                    .overlay { RemoteImage(url: story.leadImageURL, maxPixel: 360) }
+                    .overlay { RemoteImage(url: story.leadImageURL, maxPixel: 360, topic: story.placeholderTopic, alternates: story.imageAlternates) }
                     .clipped()
                     .accessibilityHidden(true)
             }
@@ -101,7 +101,7 @@ struct StoryMetaLine: View {
     }
 
     var body: some View {
-        if showsTag, let coverage = story.computedCoverage, story.hasPoliticalAngle {
+        if showsTag, let coverage = story.computedCoverage {
             VStack(alignment: .leading, spacing: AppSpacing.s) {
                 SpectrumBar(coverage: coverage, barHeight: 6)
                 time

@@ -19,18 +19,6 @@ struct ProfileAvatarButton: View {
     }
 }
 
-/// The Optique mark shown at the center of the header.
-struct HeaderLogo: View {
-    var body: some View {
-        Image("AppLogo")
-            .resizable()
-            .scaledToFit()
-            .frame(width: 30, height: 30)
-            .foregroundStyle(AppColors.Adaptive.textPrimary)
-            .accessibilityHidden(true)
-    }
-}
-
 /// App header for screens that hide the navigation bar: profile avatar at the left, logo in the
 /// center, nothing at the right (the leading button's width is mirrored to keep the logo centered).
 struct AppHeader: View {
@@ -47,8 +35,6 @@ struct AppHeader: View {
             }
             .accessibilityLabel("Mon Optique")
             Spacer()
-            HeaderLogo()
-            Spacer()
             Color.clear.frame(width: 44, height: 44)
         }
         .padding(.horizontal, AppSpacing.s)
@@ -58,23 +44,45 @@ struct AppHeader: View {
 }
 
 private struct AppHeaderToolbar: ViewModifier {
-    @State private var showsProfile = false
+    var onSearch: (() -> Void)?
 
     func body(content: Content) -> some View {
         content
             .navigationBarTitleDisplayMode(.inline)
+            // No frosted band behind the avatar and the logo: the content shows through.
+            .toolbarBackground(.hidden, for: .navigationBar)
+            .modifier(HiddenTopEdgeEffect())
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) { ProfileAvatarButton { showsProfile = true } }
-                ToolbarItem(placement: .principal) { HeaderLogo() }
+                if let onSearch {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button(action: onSearch) {
+                            LucideIcon("search", size: 18)
+                                .foregroundStyle(AppColors.Adaptive.textPrimary)
+                                .frame(width: 34, height: 34)
+                        }
+                        .accessibilityLabel("Rechercher")
+                    }
+                }
             }
-            .navigationDestination(isPresented: $showsProfile) { ProfileView() }
+    }
+}
+
+private struct HiddenTopEdgeEffect: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.scrollEdgeEffectHidden(true, for: .top)
+        } else {
+            content
+        }
     }
 }
 
 extension View {
     /// Same header as `AppHeader`, built from navigation-bar items: the profile picture as a toolbar
     /// button (a circle) and the logo at the centre.
-    func appHeaderToolbar() -> some View { modifier(AppHeaderToolbar()) }
+    func appHeaderToolbar(onSearch: (() -> Void)? = nil) -> some View {
+        modifier(AppHeaderToolbar(onSearch: onSearch))
+    }
 }
 
 /// Pills under the header: rounded chips (with an optional icon), the selected one filled. The fill
@@ -99,7 +107,7 @@ struct PillTabs<Item: Hashable & Identifiable>: View {
                     ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                         let isSelected = isHighlighted(index: index, item: item)
                         Button {
-                            withAnimation(.app) { selection = item }
+                            withAnimation(.select) { selection = item }
                         } label: {
                             HStack(spacing: 5) {
                                 if let name = icon(item) { LucideIcon(name, size: 14) }
@@ -138,7 +146,7 @@ struct PillTabs<Item: Hashable & Identifiable>: View {
                 .padding(.vertical, AppSpacing.s)
             }
             .onChange(of: selection) { _, new in
-                withAnimation(.app) { proxy.scrollTo(new, anchor: .center) }
+                withAnimation(.select) { proxy.scrollTo(new, anchor: .center) }
             }
         }
     }
@@ -188,6 +196,8 @@ struct TopicPills: View {
     @Binding var selection: StoryTopic
     /// Position of the pages being swiped, in pills.
     var progress: CGFloat? = nil
+    /// Read here, in the pills' own body, so only they redraw while the pages move.
+    var tracker: PageProgress? = nil
 
     var body: some View {
         PillTabs(
@@ -195,7 +205,7 @@ struct TopicPills: View {
             selection: $selection,
             title: { $0 == .tout ? "À la une" : $0.rawValue },
             icon: { $0.lucideIcon },
-            progress: progress
+            progress: tracker?.value ?? progress
         )
     }
 }

@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - Spectrum summary models
 
-struct SpectrumPerspective: Codable, Hashable, Identifiable {
+nonisolated struct SpectrumPerspective: Codable, Hashable, Identifiable {
     var id: String { String(lean.rawValue) }
     let lean: PoliticalLean
     let summary: String
@@ -60,7 +60,7 @@ struct SpectrumPerspective: Codable, Hashable, Identifiable {
     }
 }
 
-struct SpectrumSummary: Codable, Hashable {
+nonisolated struct SpectrumSummary: Codable, Hashable {
     let generatedAt: Date
     let perspectives: [SpectrumPerspective]
 
@@ -72,7 +72,7 @@ struct SpectrumSummary: Codable, Hashable {
 
 // MARK: - Story
 
-struct Story: Codable, Identifiable, Hashable {
+nonisolated struct Story: Codable, Identifiable, Hashable {
     let id: UUID
     let title: String
     let summary: String?
@@ -102,6 +102,10 @@ struct Story: Codable, Identifiable, Hashable {
     let computedCoverage: CoverageStats?
     let sources: [Source]
     let leadImageURL: URL?
+    /// The story's other possible photos, tried in order when the lead one turns out too small once downloaded.
+    let imageAlternates: [URL]
+    /// The topic whose colours and icon stand in for a missing or low-quality photo.
+    let placeholderTopic: StoryTopic
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -151,7 +155,8 @@ struct Story: Codable, Identifiable, Hashable {
         dek = try container.decodeIfPresent(String.self, forKey: .dek).flatMap { $0.isEmpty ? nil : Self.cleanedTitle($0) }
         topic = try container.decodeIfPresent(String.self, forKey: .topic)
         isPolitical = try container.decodeIfPresent(Bool.self, forKey: .isPolitical)
-        (computedCoverage, sources, leadImageURL) = Self.derive(id: id, articles: articles, coverage: coverage)
+        (computedCoverage, sources, leadImageURL, imageAlternates) = Self.derive(id: id, articles: articles, coverage: coverage)
+        placeholderTopic = Self.placeholderTopic(topic: topic, tags: topicTags)
     }
 
     init(
@@ -188,10 +193,16 @@ struct Story: Codable, Identifiable, Hashable {
         self.dek = dek
         self.topic = topic
         self.isPolitical = isPolitical
-        (computedCoverage, self.sources, leadImageURL) = Self.derive(id: id, articles: articles, coverage: coverage)
+        (computedCoverage, self.sources, leadImageURL, imageAlternates) = Self.derive(id: id, articles: articles, coverage: coverage)
+        placeholderTopic = Self.placeholderTopic(topic: topic, tags: topicTags)
     }
 
     var sourceCount: Int { articles.count }
+
+    private static func placeholderTopic(topic: String?, tags: [String]) -> StoryTopic {
+        let all = [topic].compactMap { $0 } + tags
+        return all.lazy.compactMap { tag in StoryTopic.allCases.first { $0.filterValue == tag } }.first ?? .tout
+    }
 
     /// The line under the title: the written dek, else the story's own summary.
     var standfirst: String? { dek ?? summary.flatMap { $0.isEmpty ? nil : $0 } }
@@ -214,14 +225,27 @@ struct Story: Codable, Identifiable, Hashable {
     // the joined `coverage` (story_coverage_view), which can be stale and skew
     // the spectrum. Falls back to the view only when no article carries a lean.
     private static func derive(id: UUID, articles: [Article], coverage: CoverageStats?)
-        -> (CoverageStats?, [Source], URL?) {
+        -> (CoverageStats?, [Source], URL?, [URL]) {
         var seen = Set<UUID>()
         let sources = articles
             .compactMap(\.source)
             .filter { seen.insert($0.id).inserted }
             .sorted { $0.politicalLean < $1.politicalLean }
-        let lead = articles.lazy.compactMap { $0.imageURL.flatMap(URL.init) }.first(where: Self.isCoverQuality)
-        return (CoverageStats.from(storyID: id, articles: articles) ?? coverage, sources, lead)
+        // Some feeds ship HTML-escaped URLs ("&amp;"): unescaped, they point at a different (often rejected) image.
+        let candidates = Self.imageCandidates(articles)
+        // Only sharp photos lead a story; without one, the views show a placeholder in the topic's colours.
+        let lead = candidates.first(where: Self.isCoverQuality)
+        var seenURLs = Set<URL>()
+        let alternates = candidates
+            .filter { Self.isCoverQuality($0) && $0 != lead && seenURLs.insert($0).inserted }
+            .prefix(4).map { $0 }
+        return (CoverageStats.from(storyID: id, articles: articles) ?? coverage, sources, lead, alternates)
+    }
+
+    private static func imageCandidates(_ articles: [Article]) -> [URL] {
+        articles.compactMap {
+            $0.imageURL.flatMap { URL(string: $0.replacingOccurrences(of: "&amp;", with: "&")) }
+        }
     }
 
     /// Covers must be sharp photos: no thumbnails, logos, icons, vector or animated images, and
